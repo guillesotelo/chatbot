@@ -14,6 +14,7 @@
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
     "react-spinners": "^0.14.1",
+    "react-toastify": "^10.0.6",
     "sass": "^1.81.0",
     "typescript": "^4.9.5",
     "usehooks-ts": "^3.1.0",
