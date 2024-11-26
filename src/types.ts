@@ -12,4 +12,6 @@ export type message = {
     sources?: dataObj
     score?: boolean
     time?: number
+    error?: boolean
+    stopped?: boolean
 }

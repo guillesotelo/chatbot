@@ -50,6 +50,7 @@ export default function Dropdown(props: Props) {
         const dropdownListener = () => window.addEventListener('mouseup', (e: MouseEvent) => {
             try {
                 const className = (e.target as HTMLElement).className || ''
+                if (!className || typeof className !== 'string') return
                 if (className.includes('section') && [dropRef.current, selectRef.current].includes(e.target as HTMLDivElement)) return
                 if (!className.includes('dropdown')) setOpenDrop(false)
                 if (className.includes('dropdown')

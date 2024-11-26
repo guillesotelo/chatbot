@@ -12,7 +12,49 @@
     <title>HP Assistant</title>
   </head>
   <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/components/prism-xml.min.js"></script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", async () => {
+          // Retrieve all active service worker registrations
+          const registrations =
+            await navigator.serviceWorker.getRegistrations();
+
+          // Unregister all service workers
+          for (const registration of registrations) {
+            try {
+              await registration.unregister();
+              console.log("Service worker unregistered");
+            } catch (error) {
+              console.error("Error unregistering service worker:", error);
+            }
+          }
+
+          // Clear all caches to prevent the service worker from reactivating
+          if (caches) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+              await caches.delete(cacheName);
+              console.log(`Cache ${cacheName} cleared`);
+            }
+          }
+
+          // Ensure that no service worker is registered afterward
+          navigator.serviceWorker.ready.then((registration) => {
+            // If the service worker is still there, unregister it
+            if (registration.active) {
+              registration.unregister().then(() => {
+                console.log("Service worker unregistered after ready");
+              });
+            }
+          });
+
+          // Prevent the service worker from re-registering automatically
+          delete window.navigator.serviceWorker; // Disables any further registration of service workers
+        });
+      }
+    </script>
   </body>
 </html>

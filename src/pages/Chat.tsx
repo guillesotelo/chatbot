@@ -41,6 +41,8 @@ import 'prismjs/components/prism-latex';
 import 'prismjs/components/prism-haskell';
 import 'prismjs/components/prism-elixir';
 import 'prismjs/components/prism-coffeescript';
+import 'prismjs/components/prism-xml-doc';
+import 'prismjs/components/prism-gradle';
 import 'prismjs/themes/prism.css';
 import { AppContext } from '../AppContext';
 import NewTab from '../assets/icons/maximize.svg'
@@ -48,6 +50,8 @@ import Close from '../assets/icons/close.svg'
 import Switch from '../components/Switch';
 import { dataObj, message } from '../types';
 import { toast } from 'react-toastify';
+import { API_URL, LOCAL_API_URL, TECH_ISSUE_LLM } from '../constants/app';
+import { sleep } from '../helpers';
 
 const MODES = [
     {
@@ -74,14 +78,16 @@ export function Chat() {
     const [selectedFiles, setSelectedFiles] = useLocalStorage<string[]>('selected-files', [])
     const [greetings, setGreetings] = useState(' ⬤')
     const [prod, setProd] = useState(true)
-    const [renderFullApp, setRenderFullApp] = useState(true)
-    const [minimized, setMinimized] = useState(false)
+    const [renderFullApp, setRenderFullApp] = useState(false)
+    const [minimized, setMinimized] = useState(true)
     const [completion, setCompletion] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [useDocumentContext, setUseDocumentContext] = useState<boolean>(mode === 'query' || true)
     const [scrollLocked, setScrollLocked] = useState(false)
     const [timePassed, setTimePassed] = useState(0)
     const [useMemory, setUseMemory] = useState(false)
+    const [stopGeneration, setStopGeneration] = useState(false)
+    const [streamId, setStreamId] = useState<null | string | number>(null)
     const { theme, setTheme } = useContext(AppContext)
     const scrollLockedRef = useRef(scrollLocked)
     let greetingsItervalId: any = null
@@ -94,11 +100,12 @@ export function Chat() {
 
     useEffect(() => {
         const newTab = new URLSearchParams(window.location.search).get('newTab')
-        const theme = new URLSearchParams(window.location.search).get('theme')
+        const _theme = new URLSearchParams(window.location.search).get('theme')
         if (newTab) {
             setRenderFullApp(true)
             setMinimized(false)
         }
+        if (_theme) setTheme('--dark')
         const handleScroll = () => {
             const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 10;
             if (!isAtBottom) {
@@ -132,21 +139,21 @@ export function Chat() {
             if (stopwatchIntervalId.current) clearInterval(stopwatchIntervalId.current)
         }
         renderCodeBlockHeaders()
+        Prism.highlightAll()
     }, [completion])
 
     useEffect(() => {
         window.scrollTo(0, document.body.scrollHeight)
         if (messages.length) {
             const userMessage = messages[messages.length - 1].role === 'user'
-            if (userMessage) {
-                getModelResponse()
-                if (!timePassed && !stopwatchIntervalId.current) startStopwatch()
-            } else if (stopwatchIntervalId.current) {
+            if (userMessage && !timePassed && !stopwatchIntervalId.current) startStopwatch()
+            else if (stopwatchIntervalId.current) {
                 clearInterval(stopwatchIntervalId.current)
                 stopwatchIntervalId.current = null
             }
         }
         renderCodeBlockHeaders();
+        Prism.highlightAll()
     }, [messages])
 
     useEffect(() => {
@@ -160,44 +167,44 @@ export function Chat() {
         }, 100)
     }
 
-    const getModelResponse = async () => {
+    const getModelResponse = async (content: string) => {
+        if (isLoading) return
         try {
             setIsLoading(true)
-            const { content } = messages[messages.length - 1];
-            const response = await fetch('http://127.0.0.1:5110/api/prompt_route', {
+            const apiURl = process.env.REACT_APP_ENV === 'production' ? API_URL : LOCAL_API_URL
+
+            const response = await fetch(`${apiURl}/api/prompt_route`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
+                    'Cache-Control': 'no-cache',
                 },
                 body: new URLSearchParams({
                     user_prompt: content || '',
                     use_context: useDocumentContext ? 'true' : 'false',
-                    use_history: useMemory ? 'true' : 'false',
+                    // use_history: useMemory ? 'true' : 'false',
+                    // stream_id: streamId ? String(streamId) : ''
                 }),
-            });
+            })
+            setStreamId(response.headers.get('Stream-ID') || null)
 
-            if (response && response.body) {
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let done = false;
-                let result = ''; // Initialize result as an empty string to accumulate response tokens
+            if (response && response.ok && response.body) {
+                const reader = response.body.getReader()
+                const decoder = new TextDecoder()
+                let done = false
+                let result = ''
 
                 while (!done) {
-                    // Read the next chunk
-                    const { value, done: doneReading } = await reader.read();
-                    done = doneReading;
-
-                    if (value) {  // Ensure there's a value to decode
-                        // Decode the current chunk to text
-                        const chunk = decoder.decode(value, { stream: true });
-
-                        // Accumulate and update `result` and display it incrementally
-                        result += chunk;
-                        setCompletion(result); // This updates `completion` with the new token(s)
+                    const { value, done: doneReading } = await reader.read()
+                    done = doneReading
+                    
+                    if (value) {
+                        if (stopGeneration) return setIsLoading(false)
+                        const chunk = decoder.decode(value, { stream: true })
+                        result += chunk
+                        setCompletion(result)
                     }
                 }
-
-                // Once complete, finalize the message in `messages`
                 setIsLoading(false)
                 const time = timePassedRef.current
                 setMessages((prev: message[]) => {
@@ -206,13 +213,46 @@ export function Chat() {
                     return [...prev, { role: 'assistant', content: finalContent, time }]
                 })
                 setTimeout(() => setTimePassed(0), 100)
+                setStreamId(null)
             } else {
-                console.error('Failed to fetch streamed answer');
+                renderErrorResponse(timePassedRef.current)
+                console.error('Failed to fetch streamed answer')
             }
         } catch (error) {
-            console.error(error);
+            renderErrorResponse(timePassedRef.current)
+            console.error(error)
         }
     };
+
+    const renderErrorResponse = async (time: number) => {
+        setIsLoading(false)
+        setStreamId(null)
+
+        if (completion) setCompletion(c => c + '\n\n')
+
+        const randomIndex = Math.floor(Math.random() * TECH_ISSUE_LLM.length)
+        const issueResponse = TECH_ISSUE_LLM[randomIndex]
+        let index = 0
+        let chunk = completion || ''
+
+        while (index < issueResponse.length - 1) {
+            chunk += issueResponse[index]
+            setCompletion(chunk)
+            await sleep(20)
+            index++
+        }
+
+        setMessages((prev: message[]) => [
+            ...prev,
+            {
+                role: 'assistant',
+                content: issueResponse,
+                time,
+                error: true
+            },
+        ])
+        setCompletion('')
+    }
 
     const resizeIframe = (h?: number, w?: number) => {
         const height = h || document.body.scrollHeight;
@@ -236,18 +276,17 @@ export function Chat() {
                 const headerCopy = document.createElement('div')
                 headerCopy.className = 'chat__code-header-copy'
                 headerCopy.innerHTML = `
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
-          </svg>
-          <p class="chat__code-header-copy-text">Copy code</p>
-        `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
+                    </svg>
+                    <p class="chat__code-header-copy-text">Copy code</p>
+                `
                 headerCopy.onclick = () => copyCodeToClipboard(index)
 
                 header.appendChild(headerCopy)
                 codeBlock.prepend(header)
             }
         })
-        Prism.highlightAll();
     }
 
     const clearCurrentChat = () => {
@@ -275,23 +314,60 @@ export function Chat() {
         }, 50)
     }
 
-    const stopGenerating = () => {
-        console.log('completion', completion)
-        console.log('messages', messages)
-        console.log('isLoading', isLoading)
-        // stop()
+    const stopGenerating = async () => {
+        setStopGeneration(true)
+        setStreamId(null)
+        const truncatedMessage = completion
+        const time = timePassedRef.current
+        setMessages((prev: message[]) => [
+            ...prev,
+            {
+                role: 'assistant',
+                content: truncatedMessage,
+                time,
+                stopped: true
+            },
+        ])
+        setCompletion('')
+        setTimeout(() => setTimePassed(0), 100)
+
+        if (!streamId) {
+            console.error("No stream ID found. Cannot stop stream.");
+            return;
+        }
+
+        try {
+            const apiURl = process.env.NODE_ENV === 'production' ? API_URL : LOCAL_API_URL
+            const response = await fetch(`${apiURl}/api/prompt_route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Cache-Control': 'no-cache',
+                },
+                body: new URLSearchParams({
+                    stream_id: String(streamId),
+                    stop: 'true'
+                }),
+            })
+
+            const data = await response.json()
+            if (data.error) return console.error('An error occurred trying to stop chat response')
+
+        } catch (error) {
+            console.error(error)
+        }
     }
 
     const handleSubmit = (event: any) => {
         event.preventDefault()
-        if (!input.trim() || (messages.length && messages[messages.length - 1].role === 'user')) return
         const content = input.trim()
-        addMessage({ role: 'user', content })
-    }
+        if (!content || isLoading) return
 
-    const addMessage = (message: message) => {
+        const message = { role: 'user', content }
         setMessages((prev: message[]) => [...prev, message])
         setInput('')
+
+        getModelResponse(content)
     }
 
     const resizeTextArea = (textarea: any) => {
@@ -603,7 +679,7 @@ export function Chat() {
                                         </div>
                                     </div>
                                 ))}
-                            {messages.length && messages[messages.length - 1].role === 'user' ? (
+                            {completion ? (
                                 <div className='chat__message chat__message-assistant chat__message-completion'>
                                     <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
                                     <div className="chat__message-bubble">
@@ -615,7 +691,18 @@ export function Chat() {
                                         />
                                     </div>
                                 </div>
-                            ) : ''}
+                            ) : isLoading ?
+                                <div className='chat__message chat__message-assistant chat__message-completion'>
+                                    <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
+                                    <div className="chat__message-bubble">
+                                        <div
+                                            className={`chat__message-content${theme} chat__message-content-assistant chat__message-loading`}
+                                            dangerouslySetInnerHTML={{
+                                                __html: ' ⬤'
+                                            }}
+                                        />
+                                    </div>
+                                </div> : ''}
                         </div>
                     </div>
                     <div className={`chat__form-container${theme}`} style={{ position: messages.length ? 'fixed' : 'unset' }}>
