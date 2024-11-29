@@ -48,10 +48,11 @@ import { AppContext } from '../AppContext';
 import NewTab from '../assets/icons/maximize.svg'
 import Close from '../assets/icons/close.svg'
 import Switch from '../components/Switch';
-import { dataObj, message } from '../types';
+import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { API_URL, LOCAL_API_URL, TECH_ISSUE_LLM } from '../constants/app';
 import { sleep } from '../helpers';
+import ChatOptions from '../assets/icons/options.svg'
 
 const MODES = [
     {
@@ -68,18 +69,19 @@ const MODES = [
 
 export function Chat() {
     const messageRef = useRef<HTMLTextAreaElement>(null);
-    const [mode, setMode] = useLocalStorage<(typeof MODES)[number]['value']>('chat-mode', 'chat')
+    const [mode, setMode] = useLocalStorage<(typeof MODES)[number]['value']>('chat-mode', 'query')
     const [input, setInput] = useState('')
     const [copyMessage, setCopyMessage] = useState(-1)
     const [goodScore, setGoodScore] = useState(-1)
     const [badScore, setBadScore] = useState(-1)
     const [systemPrompt, setSystemPrompt] = useLocalStorage<string>('system-prompt', '')
-    const [messages, setMessages] = useLocalStorage<message[]>('messages', [])
+    const [messages, setMessages] = useLocalStorage<messageType[]>('messages', [])
     const [selectedFiles, setSelectedFiles] = useLocalStorage<string[]>('selected-files', [])
     const [greetings, setGreetings] = useState(' ⬤')
     const [prod, setProd] = useState(true)
-    const [renderFullApp, setRenderFullApp] = useState(false)
-    const [minimized, setMinimized] = useState(true)
+    const [renderFullApp, setRenderFullApp] = useState(window.innerWidth > 1050)
+    const [renderAdmin, setRenderAdmin] = useState(false)
+    const [minimized, setMinimized] = useState(false)
     const [completion, setCompletion] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [useDocumentContext, setUseDocumentContext] = useState<boolean>(mode === 'query' || true)
@@ -87,6 +89,8 @@ export function Chat() {
     const [timePassed, setTimePassed] = useState(0)
     const [useMemory, setUseMemory] = useState(false)
     const [stopGeneration, setStopGeneration] = useState(false)
+    const [localSessions, setLocalSessions] = useState<sessionType[]>([])
+    const [session, setSession] = useState<sessionType>({ date: new Date().getTime(), messages: [], name: '' })
     const [streamId, setStreamId] = useState<null | string | number>(null)
     const { theme, setTheme } = useContext(AppContext)
     const scrollLockedRef = useRef(scrollLocked)
@@ -95,27 +99,35 @@ export function Chat() {
     const timePassedRef = useRef(timePassed);
 
     useEffect(() => {
-        setUseDocumentContext(mode === 'query')
-    }, [mode])
-
-    useEffect(() => {
         const newTab = new URLSearchParams(window.location.search).get('newTab')
+        const token = new URLSearchParams(window.location.search).get('token')
         const _theme = new URLSearchParams(window.location.search).get('theme')
         if (newTab) {
             setRenderFullApp(true)
             setMinimized(false)
         }
+        if (token === process.env.REACT_APP_ADMIN_TOKEN) setRenderAdmin(true)
+
         if (_theme) setTheme('--dark')
         const handleScroll = () => {
             const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 10;
             if (!isAtBottom) {
                 setScrollLocked(true);
             }
-        };
+        }
+        getChatSessions()
 
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, [])
+
+    useEffect(() => {
+        setUseDocumentContext(mode === 'query')
+    }, [mode])
+
+    useEffect(() => {
+        setMessages(session.messages || [])
+    }, [session])
 
     useEffect(() => {
         const textarea = document.getElementById('message')
@@ -151,6 +163,7 @@ export function Chat() {
                 clearInterval(stopwatchIntervalId.current)
                 stopwatchIntervalId.current = null
             }
+            updateSession()
         }
         renderCodeBlockHeaders();
         Prism.highlightAll()
@@ -160,11 +173,25 @@ export function Chat() {
         if (!minimized) generateGreetings()
     }, [minimized])
 
+    const getChatSessions = () => {
+        const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
+        if (sessions.length) {
+            setLocalSessions(sessions)
+            setSession(sessions[0])
+        }
+    }
+
     const startStopwatch = () => {
         if (stopwatchIntervalId.current) clearInterval(stopwatchIntervalId.current)
         stopwatchIntervalId.current = window.setInterval(() => {
             setTimePassed(t => t + 100)
         }, 100)
+    }
+
+    const removeUnwantedChars = (str: string) => {
+        const unwantedPatterns = [' ', 'Assistant:']
+        const regex = new RegExp(unwantedPatterns.join('|'), 'g')
+        return str.replace(regex, '')
     }
 
     const getModelResponse = async (content: string) => {
@@ -197,34 +224,39 @@ export function Chat() {
                 while (!done) {
                     const { value, done: doneReading } = await reader.read()
                     done = doneReading
-                    
+
                     if (value) {
                         if (stopGeneration) return setIsLoading(false)
                         const chunk = decoder.decode(value, { stream: true })
-                        result += chunk
+                        result += removeUnwantedChars(chunk)
                         setCompletion(result)
                     }
                 }
                 setIsLoading(false)
                 const time = timePassedRef.current
-                setMessages((prev: message[]) => {
-                    const finalContent = result.replace('⬤', '')
-                    setCompletion('')
-                    return [...prev, { role: 'assistant', content: finalContent, time }]
-                })
+                const finalContent = result.replace('⬤', '')
+                const newMessage = {
+                    role: 'assistant',
+                    content: finalContent,
+                    time
+                }
+                setMessages(prev => [...prev, newMessage])
+                setCompletion('')
+
                 setTimeout(() => setTimePassed(0), 100)
                 setStreamId(null)
             } else {
-                renderErrorResponse(timePassedRef.current)
+                renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
             }
         } catch (error) {
-            renderErrorResponse(timePassedRef.current)
+            renderErrorResponse()
             console.error(error)
         }
     };
 
-    const renderErrorResponse = async (time: number) => {
+    const renderErrorResponse = async () => {
+        const time = timePassedRef.current
         setIsLoading(false)
         setStreamId(null)
 
@@ -242,16 +274,39 @@ export function Chat() {
             index++
         }
 
-        setMessages((prev: message[]) => [
-            ...prev,
-            {
-                role: 'assistant',
-                content: issueResponse,
-                time,
-                error: true
-            },
-        ])
+        const newMessage = {
+            role: 'assistant',
+            content: issueResponse,
+            time,
+            error: true
+        }
+
+        setMessages(prev => ([...prev, newMessage]))
         setCompletion('')
+        setTimeout(() => setTimePassed(0), 100)
+    }
+
+    const updateSession = () => {
+        const name = session.name || `Chat [${new Date(session.date).toLocaleString()}]`
+        let exists = false
+        let sessions = localSessions.map(s => {
+            // Save existing session
+            if (s.id === session.id) {
+                exists = true
+                s = { ...session, messages, name }
+            }
+            return s
+        })
+
+        // Save as new session
+        if (!exists) sessions = sessions.concat({
+            ...session,
+            messages,
+            name,
+            id: new Date().getTime()
+        })
+        localStorage.setItem('chatSessions', JSON.stringify(sessions))
+        setLocalSessions(sessions)
     }
 
     const resizeIframe = (h?: number, w?: number) => {
@@ -289,14 +344,6 @@ export function Chat() {
         })
     }
 
-    const clearCurrentChat = () => {
-        setCompletion('')
-        if (messages.length) {
-            setMessages([])
-            generateGreetings()
-        }
-    }
-
     const generateGreetings = () => {
         clearInterval(greetingsItervalId)
         setGreetings('')
@@ -319,7 +366,7 @@ export function Chat() {
         setStreamId(null)
         const truncatedMessage = completion
         const time = timePassedRef.current
-        setMessages((prev: message[]) => [
+        setMessages((prev: messageType[]) => [
             ...prev,
             {
                 role: 'assistant',
@@ -364,7 +411,7 @@ export function Chat() {
         if (!content || isLoading) return
 
         const message = { role: 'user', content }
-        setMessages((prev: message[]) => [...prev, message])
+        setMessages((prev: messageType[]) => [...prev, message])
         setInput('')
 
         getModelResponse(content)
@@ -398,11 +445,11 @@ export function Chat() {
         if (copyDiv && copyDiv.innerHTML.includes('Copy code')) {
             const prevHtml = copyDiv.innerHTML
             copyDiv.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path>
-      </svg>
-      <p class="chat__code-header-copy-text">Copied!</p>
-    `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path>
+                </svg>
+                <p class="chat__code-header-copy-text">Copied!</p>
+            `
             setTimeout(() => copyDiv.innerHTML = prevHtml, 2000)
         }
 
@@ -443,7 +490,7 @@ export function Chat() {
     const openInNewTab = () => {
         window.parent.postMessage({ hpai_open_tab: true, hpai_open: false })
         const anchor = document.createElement('a')
-        anchor.href = `http://localhost:5173/chat?newTab=true&theme=${theme === '--dark'}`
+        anchor.href = `/chat?newTab=true&theme=${theme === '--dark'}`
         anchor.target = '_blank'
         anchor.click()
     }
@@ -464,7 +511,19 @@ export function Chat() {
         }
     }
 
-    const renderFullAppPanel = () => {
+    const startNewChat = () => {
+        if (!isLoading && messages.length) {
+            updateSession()
+
+            setTimeout(() => {
+                setCompletion('')
+                setMessages([])
+                generateGreetings()
+            }, 100)
+        }
+    }
+
+    const renderAdminPanel = () => {
         return (
             <>
                 <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
@@ -481,66 +540,66 @@ export function Chat() {
                             }}
                         />
                         {/* {['query', 'search'].includes(mode) && (
-              <>
-                <div className='chat__file-list-ingested'>
-                  <p className="chat__file-title">Files</p>
-                  {isFetchingFiles ? (
-                    <p>Fetching files...</p>
-                  ) : (
-                    <div className='chat__file-list' style={{ background: theme ? '#2F2F2F' : '#f3f3f3' }}>
-                      {files && files.length > 0 ? (
-                        files.map((file, index) => (
-                          <div key={index} className='chat__file-list-item'>
-                            <p className='chat__file-list-item-filename'>{file.fileName}</p>
-                            <Button
-                              onClick={(e: any) => {
-                                e.preventDefault();
-                                deleteFile(file.fileName);
-                                setSelectedFiles(
-                                  selectedFiles.filter(
-                                    (f) => f !== file.fileName,
-                                  ),
-                                );
-                              }}
-                              style={{ borderRadius: '.5rem', lineHeight: '.2rem', height: '1.5rem', width: '1.5rem', padding: '0 0 .1rem .1rem', fontSize: '1rem' }}
-                              label='x'
-                              className={`button__outline${theme}`} />
-                          </div>
-                        ))
-                      ) : (
-                        <p>No files ingested</p>
-                      )}
-                      {isUploadingFile && <p>Uploading file...</p>}
-                    </div>
-                  )}
-                </div>
-                {mode === 'query' && files && files.length > 1 ? isFetchingFiles ?
-                  <p>Fetching files...</p>
-                  : (
-                    <div className='chat__file-list-checked'>
-                      <p className="chat__file-title">Select where to look into</p>
-                      <div className='chat__file-list'>
-                        {files && files.length > 0 ? (
-                          files.map((file, index) => (
-                            <div key={index} className='chat__file-list-item'>
-                              <p className='chat__file-list-item-filename'>{file.fileName}</p>
-                              <input
-                                type='checkbox'
-                                checked={selectedFiles.includes(file.fileName)}
-                                onChange={() => selectFile(file)}
-                                style={{ cursor: 'pointer' }}
-                              />
+                        <>
+                            <div className='chat__file-list-ingested'>
+                            <p className="chat__file-title">Files</p>
+                            {isFetchingFiles ? (
+                                <p>Fetching files...</p>
+                            ) : (
+                                <div className='chat__file-list' style={{ background: theme ? '#2F2F2F' : '#f3f3f3' }}>
+                                {files && files.length > 0 ? (
+                                    files.map((file, index) => (
+                                    <div key={index} className='chat__file-list-item'>
+                                        <p className='chat__file-list-item-filename'>{file.fileName}</p>
+                                        <Button
+                                        onClick={(e: any) => {
+                                            e.preventDefault();
+                                            deleteFile(file.fileName);
+                                            setSelectedFiles(
+                                            selectedFiles.filter(
+                                                (f) => f !== file.fileName,
+                                            ),
+                                            );
+                                        }}
+                                        style={{ borderRadius: '.5rem', lineHeight: '.2rem', height: '1.5rem', width: '1.5rem', padding: '0 0 .1rem .1rem', fontSize: '1rem' }}
+                                        label='x'
+                                        className={`button__outline${theme}`} />
+                                    </div>
+                                    ))
+                                ) : (
+                                    <p>No files ingested</p>
+                                )}
+                                {isUploadingFile && <p>Uploading file...</p>}
+                                </div>
+                            )}
                             </div>
-                          ))
-                        ) : (
-                          <p>No files ingested</p>
-                        )}
-                        {isUploadingFile && <p>Uploading file...</p>}
-                      </div>
-                    </div>
-                  ) : ''}
-              </>
-            )} */}
+                            {mode === 'query' && files && files.length > 1 ? isFetchingFiles ?
+                            <p>Fetching files...</p>
+                            : (
+                                <div className='chat__file-list-checked'>
+                                <p className="chat__file-title">Select where to look into</p>
+                                <div className='chat__file-list'>
+                                    {files && files.length > 0 ? (
+                                    files.map((file, index) => (
+                                        <div key={index} className='chat__file-list-item'>
+                                        <p className='chat__file-list-item-filename'>{file.fileName}</p>
+                                        <input
+                                            type='checkbox'
+                                            checked={selectedFiles.includes(file.fileName)}
+                                            onChange={() => selectFile(file)}
+                                            style={{ cursor: 'pointer' }}
+                                        />
+                                        </div>
+                                    ))
+                                    ) : (
+                                    <p>No files ingested</p>
+                                    )}
+                                    {isUploadingFile && <p>Uploading file...</p>}
+                                </div>
+                                </div>
+                            ) : ''}
+                        </>
+                        )} */}
 
                         <div className="chat__panel-prompt">
                             <p className='chat__panel-prompt-title'>System prompt</p>
@@ -553,7 +612,7 @@ export function Chat() {
                                 rows={window.innerWidth > 1150 ? 5 : 1}
                             />
                         </div>
-                        <Button onClick={clearCurrentChat} label='Clear chat' className={`button__outline${theme}`} />
+                        {messages.length || Object.keys(localSessions).length ? <Button onClick={startNewChat} label='New chat' className={`button__outline${theme}`} /> : ''}
                         <div className="chat__panel-switches">
                             <Switch
                                 label='Dark Mode'
@@ -579,18 +638,48 @@ export function Chat() {
         )
     }
 
-    const renderEmbeddedPanel = () => {
+    const renderFullAppPanel = () => {
         return (
-            <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
-                <div className="chat__panel-hp">
-                    <p className='chat__panel-hp-clear' onClick={clearCurrentChat}>Clear chat</p>
-                    <p className='chat__panel-hp-title'>HP Assistant</p>
-                    <div className="chat__panel-hp-controls">
-                        <img src={NewTab} alt="Open in new tab" onClick={openInNewTab} className={`chat__panel-hp-svg${theme}`} />
-                        <img src={Close} alt="Close" onClick={minimize} className={`chat__panel-hp-svg${theme}`} />
+            <>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
+                    <div className="chat__panel-form">
+                        {messages.length || Object.keys(localSessions).length ? <Button onClick={startNewChat} label='New chat' className={`button__outline${theme}`} /> : ''}
+                        <div className="chat__panel-sessions">
+                            {localSessions.map(s =>
+                                <div
+                                    key={s.id}
+                                    className={`chat__panel-session${theme}`}
+                                    onClick={() => setSession(s)}
+                                    style={{
+                                        filter: s.id === String(session.id) ? 'contrast(0.8)' : ''
+                                    }}>
+                                    <p className='chat__panel-session-name'>{s.name}</p>
+                                    <img src={ChatOptions} alt="Chat options" className="chat__panel-session-options" />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+                <div className="chat__panel-ghost" />
+            </>
+        )
+    }
+
+    const renderEmbeddedPanel = () => {
+        return (
+            <>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
+                    <div className="chat__panel-hp">
+                        {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''}
+                        <p className='chat__panel-hp-title'>HP Assistant</p>
+                        <div className="chat__panel-hp-controls">
+                            <img src={NewTab} alt="Open in new tab" onClick={openInNewTab} className={`chat__panel-hp-svg${theme}`} />
+                            <img src={Close} alt="Close" onClick={minimize} className={`chat__panel-hp-svg${theme}`} />
+                        </div>
+                    </div>
+                </div>
+                <div className="chat__panel-ghost" />
+            </>
         )
     }
 
@@ -639,7 +728,7 @@ export function Chat() {
                         <div className="chat__box-list">
                             {!messages.length ?
                                 <p className='chat__box-hi'>{greetings}</p>
-                                : messages.map((message: message, index: number) => (
+                                : messages.map((message, index) => (
                                     <div key={index} className={`chat__message chat__message-${message.role || ''}`}>
                                         {message.role === 'assistant' ? <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} /> : ''}
                                         <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}>
