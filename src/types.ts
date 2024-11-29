@@ -6,7 +6,7 @@ export type AppContextType = {
     setTheme: (value: string) => void
 }
 
-export type message = {
+export type messageType = {
     role?: string,
     content?: string,
     sources?: dataObj
@@ -14,4 +14,11 @@ export type message = {
     time?: number
     error?: boolean
     stopped?: boolean
+}
+
+export type sessionType = dataObj & {
+    name?: string,
+    messages?: messageType[],
+    id?: string | number,
+    date: number | Date | string
 }

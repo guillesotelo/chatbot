@@ -17,6 +17,6 @@ export const TECH_ISSUE_LLM = [
     "Thank you for your patience! I'm unavailable right now due to a system update or issue. Please come back shortly, and I'll do my best to help you."
 ]
 
-export const API_URL = 'http://10.55.101.133'
+export const API_URL = ''
 
-export const LOCAL_API_URL = 'http://127.0.0.1:5110'
+export const LOCAL_API_URL = 'http://127.0.0.1:5000'

@@ -76,6 +76,61 @@
             gap: 1.5rem;
         }
 
+        &-sessions {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: .5rem;
+        }
+
+        &-session {
+            display: flex;
+            flex-direction: row;
+            cursor: pointer;
+            transition: .2s;
+            border-radius: .5rem;
+            position: relative;
+
+            &-options {
+                display: none;
+                height: 1rem;
+                position: absolute;
+                right: .8rem;
+                top: .5rem;
+                transition: 0;
+            }
+
+            &--dark {
+                display: flex;
+                flex-direction: row;
+                cursor: pointer;
+                transition: .2s;
+                border-radius: .5rem;
+                position: relative;
+
+                &:hover .chat__panel-session-options {
+                    display: block;
+                }
+
+                &:hover {
+                    background-color: #1f1f1f;
+                }
+            }
+
+            &-name {
+                margin: .5rem;
+                font-size: .9rem;
+            }
+
+            &:hover .chat__panel-session-options {
+                display: block;
+            }
+
+            &:hover {
+                background-color: lightgray;
+            }
+        }
+
         &-hp {
             display: flex;
             flex-direction: row;
@@ -83,7 +138,7 @@
             align-items: center;
             margin: .5rem 1.2rem;
 
-            &-clear {
+            &-new {
                 cursor: pointer;
                 transition: .2s;
                 font-size: .9rem;
