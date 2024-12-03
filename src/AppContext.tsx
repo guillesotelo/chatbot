@@ -15,7 +15,7 @@ type Props = {
 
 export const AppProvider = ({ children }: Props) => {
     const [isMobile, setIsMobile] = useState<boolean>(false)
-    const [theme, setTheme] = useState('--dark')
+    const [theme, setTheme] = useState('')
     const [windowLoading, setWindowLoading] = useState(true)
 
     useEffect(() => {
