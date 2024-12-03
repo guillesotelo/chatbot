@@ -14,11 +14,11 @@ export type messageType = {
     time?: number
     error?: boolean
     stopped?: boolean
+    sessionId?: number | string
 }
 
 export type sessionType = dataObj & {
     name?: string,
-    messages?: messageType[],
-    id?: string | number,
-    date: number | Date | string
+    messages: messageType[],
+    id?: number | null,
 }
