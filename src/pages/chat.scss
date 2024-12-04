@@ -60,6 +60,7 @@
         width: 18rem;
         height: 100vh;
         background: #0c0c0c;
+        z-index: 1;
 
         & * {
             background: inherit;
@@ -133,14 +134,26 @@
 
             &-options {
                 position: absolute;
-                background-color: gray;
-                right: -5rem;
+                background-color: #efefef;
+                right: -5.5rem;
                 top: 0;
                 height: fit-content;
                 z-index: 3;
                 border-radius: .5rem;
                 border-top-left-radius: 0;
                 overflow: hidden;
+
+                &--dark {
+                    position: absolute;
+                    background-color: #1e1e1e;
+                    right: -5.5rem;
+                    top: 0;
+                    height: fit-content;
+                    z-index: 3;
+                    border-radius: .5rem;
+                    border-top-left-radius: 0;
+                    overflow: hidden;
+                }
 
                 &-img {
                     display: none;
@@ -154,10 +167,10 @@
 
             &-option {
                 margin: 0;
-                padding: .5rem;
+                padding: .8rem;
 
                 &:hover {
-                    background-color: rgb(102, 102, 102);
+                    filter: brightness(.9);
                 }
             }
 
@@ -685,7 +698,6 @@
 
         &__panel {
             width: 100vw;
-            z-index: 1;
             height: fit-content;
             position: relative;
 
