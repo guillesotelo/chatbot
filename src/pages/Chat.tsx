@@ -258,7 +258,7 @@ export function Chat() {
                                 if (s.id === getSession().id) {
                                     return {
                                         ...s,
-                                        completion: result
+                                        completion: removeUnwantedChars(result)
                                     }
                                 }
                                 return s
@@ -269,7 +269,7 @@ export function Chat() {
 
                 setIsLoading(false)
                 const time = timePassedRef.current
-                const finalContent = result.replace('⬤', '')
+                const finalContent = removeUnwantedChars(result).replace('⬤', '')
                 const newMessage = {
                     role: 'assistant',
                     content: finalContent,
@@ -816,9 +816,9 @@ export function Chat() {
                                             {/* <p className='chat__panel-session-name'>{s.name}</p> */}
                                             <img src={ChatOptions} onClick={() => setShowOptions(s.id)} alt="Chat options" className="chat__panel-session-options-img" />
                                             {showOptions === s.id ?
-                                                <div className="chat__panel-session-options">
+                                                <div className={`chat__panel-session-options${theme}`}>
                                                     <p onClick={() => renameSession(s.id)} className='chat__panel-session-option'>Rename</p>
-                                                    <p onClick={e => deleteSession(s.id, e)} className='chat__panel-session-option'>Delete</p>
+                                                    <p onClick={e => deleteSession(s.id, e)} className='chat__panel-session-option' style={{ color: 'red' }}>Delete</p>
                                                 </div> : ''}
                                         </div>
                                     </div>
@@ -882,7 +882,7 @@ export function Chat() {
             <p className='chat__minimized-label'>HP AI</p>
         </div>
         :
-        <div className={`chat__container${theme}`}>
+        <div className={`chat__container${theme}`} style={{ background: renderFullApp && theme ? '#14181E' : '' }}>
             {renderFullApp ? renderFullAppPanel() : renderEmbeddedPanel()}
             <main
                 className="chat__main"
@@ -961,7 +961,13 @@ export function Chat() {
                                 </div> : ''}
                         </div>
                     </div>
-                    <div className={`chat__form-container${theme}`} style={{ position: getSession().messages.length ? 'fixed' : 'unset' }}>
+                    <div
+                        className={`chat__form-container${theme}`}
+                        style={{
+                            position: getSession().messages.length ? 'fixed' : 'unset',
+                            background: renderFullApp && theme ? '#14181E' : ''
+                        }}>
+
                         <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
                             {!prod ? <div className="chat__form-attachment">
                                 <svg className={`chat__form-attachment-svg${theme}`} onClick={uploadDocuments}
