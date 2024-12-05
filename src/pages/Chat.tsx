@@ -43,6 +43,7 @@ import 'prismjs/components/prism-elixir';
 import 'prismjs/components/prism-coffeescript';
 import 'prismjs/components/prism-xml-doc';
 import 'prismjs/components/prism-gradle';
+import 'prismjs/components/prism-cmake';
 import 'prismjs/themes/prism.css';
 import { AppContext } from '../AppContext';
 import NewTab from '../assets/icons/maximize.svg'
@@ -50,7 +51,7 @@ import Close from '../assets/icons/close.svg'
 import Switch from '../components/Switch';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
-import { API_URL, LOCAL_API_URL, TECH_ISSUE_LLM } from '../constants/app';
+import { API_URL, APP_VERSION, LOCAL_API_URL, TECH_ISSUE_LLM } from '../constants/app';
 import { sleep } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 
@@ -120,12 +121,14 @@ export function Chat() {
         }
 
         getLocalSessions()
+        const codeBlocksIntervalId = setInterval(renderCodeBlockHeaders, 500)
 
         window.addEventListener('scroll', handleScroll)
         document.addEventListener('click', hideSessionOptions)
         return () => {
             window.removeEventListener('scroll', handleScroll)
             document.removeEventListener('click', hideSessionOptions)
+            clearInterval(codeBlocksIntervalId)
         }
     }, [])
 
@@ -165,9 +168,7 @@ export function Chat() {
                 stopwatchIntervalId.current = null
             }
         }
-        renderCodeBlockHeaders()
         Prism.highlightAll()
-        // if (sessionId && sessions[0].messages.length) localStorage.setItem('chatSessions', JSON.stringify(sessions))
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
     }, [sessions])
 
@@ -200,7 +201,7 @@ export function Chat() {
     }
 
     const removeUnwantedChars = (str: string) => {
-        const unwantedPatterns = [' ', 'Assistant:']
+        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:']
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
         return str.replace(regex, '')
     }
@@ -394,7 +395,7 @@ export function Chat() {
     }
 
     const renderCodeBlockHeaders = () => {
-        const codeBlocks = document.querySelectorAll('pre[class*="language-"]')
+        const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
         codeBlocks.forEach((codeBlock, index) => {
             if (!codeBlock.innerHTML.includes('chat__code-header')) {
                 const language = codeBlock.className.replace('language-', '')
@@ -416,6 +417,13 @@ export function Chat() {
                 header.appendChild(headerCopy)
                 codeBlock.prepend(header)
             }
+        })
+
+        // Adding link curation here too
+        Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
+            Array.from(message.querySelectorAll('a')).forEach(anchor => {
+                anchor.target = '_blank'
+            })
         })
     }
 
@@ -513,7 +521,14 @@ export function Chat() {
         })
         setInput('')
 
-        getModelResponse(content)
+        getModelResponse(curatePrompt(content))
+    }
+
+    const curatePrompt = (userPrompt: string) => {
+        let prompt = userPrompt
+        const lastChar = prompt.split('')[prompt.length - 1]
+        if (lastChar !== '?' && lastChar !== '.') prompt += '?'
+        return prompt
     }
 
     const resizeTextArea = (textarea: any) => {
@@ -826,6 +841,7 @@ export function Chat() {
                             )}
                         </div>
                     </div>
+                    <p className='chat__panel-version'>v{APP_VERSION}</p>
                 </div>
                 <div className="chat__panel-ghost" />
             </>
@@ -930,7 +946,7 @@ export function Chat() {
                                                         <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
                                                         : <svg onClick={() => scoreMessage(index, false)} style={{ stroke: message.score === false ? 'blue' : '' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M11.8727 21.4961C11.6725 21.8466 11.2811 22.0423 10.8805 21.9922L10.4267 21.9355C7.95958 21.6271 6.36855 19.1665 7.09975 16.7901L7.65054 15H6.93226C4.29476 15 2.37923 12.4921 3.0732 9.94753L4.43684 4.94753C4.91145 3.20728 6.49209 2 8.29589 2H18.0045C19.6614 2 21.0045 3.34315 21.0045 5V12C21.0045 13.6569 19.6614 15 18.0045 15H16.0045C15.745 15 15.5054 15.1391 15.3766 15.3644L11.8727 21.4961ZM14.0045 4H8.29589C7.39399 4 6.60367 4.60364 6.36637 5.47376L5.00273 10.4738C4.65574 11.746 5.61351 13 6.93226 13H9.00451C9.32185 13 9.62036 13.1506 9.8089 13.4059C9.99743 13.6612 10.0536 13.9908 9.96028 14.2941L9.01131 17.3782C8.6661 18.5002 9.35608 19.6596 10.4726 19.9153L13.6401 14.3721C13.9523 13.8258 14.4376 13.4141 15.0045 13.1902V5C15.0045 4.44772 14.5568 4 14.0045 4ZM17.0045 13V5C17.0045 4.64937 16.9444 4.31278 16.8338 4H18.0045C18.5568 4 19.0045 4.44772 19.0045 5V12C19.0045 12.5523 18.5568 13 18.0045 13H17.0045Z" fill="currentColor"></path></svg>
                                                     }
-                                                    {message.time ? <span> ({message.time / 1000}s)</span> : ''}
+                                                    {message.time && renderAdmin ? <span> ({message.time / 1000}s)</span> : ''}
                                                 </div> : ''}
                                         </div>
                                     </div>
