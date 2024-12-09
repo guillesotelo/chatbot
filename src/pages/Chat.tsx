@@ -52,7 +52,7 @@ import Switch from '../components/Switch';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { API_URL, APP_VERSION, LOCAL_API_URL, TECH_ISSUE_LLM } from '../constants/app';
-import { sleep } from '../helpers';
+import { autoScroll, sleep } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 
 const MODES = [
@@ -94,8 +94,7 @@ export function Chat() {
     const [showOptions, setShowOptions] = useState<null | number | undefined>(null)
     const [sessionNames, setSessionNames] = useState<dataObj>({})
     const { theme, setTheme } = useContext(AppContext)
-    const scrollLockedRef = useRef(scrollLocked)
-    let greetingsItervalId: any = null
+    const greetingsItervalId = useRef<NodeJS.Timeout | null>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
     const timePassedRef = useRef(timePassed)
 
@@ -117,7 +116,7 @@ export function Chat() {
             }
         }
         const hideSessionOptions = (e: any) => {
-            if (!e.target.className.includes('chat__panel-session-option')) setShowOptions(null)
+            if (e.target && e.target.className && !e.target.className.includes('chat__panel-session-option')) setShowOptions(null)
         }
 
         getLocalSessions()
@@ -129,6 +128,7 @@ export function Chat() {
             window.removeEventListener('scroll', handleScroll)
             document.removeEventListener('click', hideSessionOptions)
             clearInterval(codeBlocksIntervalId)
+            if (greetingsItervalId.current) clearInterval(greetingsItervalId.current)
         }
     }, [])
 
@@ -146,19 +146,10 @@ export function Chat() {
     }, [timePassed])
 
     useEffect(() => {
-        scrollLockedRef.current = scrollLocked;
-    }, [scrollLocked])
-
-    useEffect(() => {
-        window.scrollTo(0, document.body.scrollHeight)
         const s = getSession()
 
-        if (s.completion) {
-            if (!scrollLockedRef.current) {
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-            }
-            setScrollLocked(false)
-            if (stopwatchIntervalId.current) clearInterval(stopwatchIntervalId.current)
+        if (s.completion && stopwatchIntervalId.current) {
+            clearInterval(stopwatchIntervalId.current)
         }
         if (s.messages.length) {
             const userMessage = s.messages[s.messages.length - 1].role === 'user'
@@ -186,6 +177,7 @@ export function Chat() {
             const newSessionBook = [{ id: newId, messages: [], name: 'New chat' }]
             setSessions(newSessionBook)
             setSessionId(newId)
+            generateGreetings()
         }
     }
 
@@ -240,6 +232,7 @@ export function Chat() {
             setStreamId(response.headers.get('Stream-ID') || null)
 
             if (response && response.ok && response.body) {
+                autoScroll()
                 const reader = response.body.getReader()
                 const decoder = new TextDecoder()
                 let done = false
@@ -250,6 +243,7 @@ export function Chat() {
                     done = doneReading
 
                     if (value) {
+                        if (!result) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
                         if (stopGeneration) return setIsLoading(false)
                         const chunk = decoder.decode(value, { stream: true })
                         result += removeUnwantedChars(chunk)
@@ -329,6 +323,7 @@ export function Chat() {
         let chunk = getSession().completion || ''
 
         while (index < issueResponse.length - 1) {
+            autoScroll()
             chunk += issueResponse[index]
             setSessions(prev => {
                 return prev.map(s => {
@@ -382,7 +377,10 @@ export function Chat() {
             return s
         }).concat(newSession)
         setSessions(updated)
-        setSessionId(newId)
+        setTimeout(() => {
+            setSessionId(newId)
+            generateGreetings()
+        }, 100)
     }
 
     const resizeIframe = (h?: number, w?: number) => {
@@ -428,18 +426,21 @@ export function Chat() {
     }
 
     const generateGreetings = () => {
-        clearInterval(greetingsItervalId)
+        if (greetingsItervalId.current) clearInterval(greetingsItervalId.current)
         setGreetings('')
+
         const string = ' Hi, what can I help you with today?'
         let index = 0
 
-        greetingsItervalId = setInterval(() => {
+        greetingsItervalId.current = setInterval(() => {
             if (index === string.length - 1) {
                 setTimeout(() => setGreetings(string), 1000)
-                return clearInterval(greetingsItervalId)
+                clearInterval(greetingsItervalId.current!)
+                greetingsItervalId.current = null
+                return
             }
 
-            setGreetings(g => g.replace(' ⬤', '') + string[index] + ' ⬤')
+            setGreetings(prev => prev.replace(' ⬤', '') + string[index] + ' ⬤')
             index++
         }, 50)
     }
@@ -501,6 +502,7 @@ export function Chat() {
     }
 
     const handleSubmit = (event: any) => {
+        window.scrollTo({ top: document.body.scrollHeight + 100, behavior: 'smooth' })
         event.preventDefault()
         const content = input.trim()
         if (!content || isLoading) return
@@ -614,7 +616,7 @@ export function Chat() {
     const openInNewTab = () => {
         window.parent.postMessage({ height: 70, width: 70 }, '*')
         const anchor = document.createElement('a')
-        anchor.href = `/chat?newTab=true&theme=${theme === '--dark'}`
+        anchor.href = `https://hpdevp.volvocars.net/More/Chat.html`
         anchor.target = '_blank'
         anchor.click()
     }
@@ -684,7 +686,10 @@ export function Chat() {
                 name: 'New chat'
             }
             setSessions([newSession])
-            setTimeout(() => setSessionId(newId), 100)
+            setTimeout(() => {
+                setSessionId(newId)
+                generateGreetings()
+            }, 100)
         }
     }
 
@@ -815,7 +820,10 @@ export function Chat() {
                                     <div
                                         key={s.id}
                                         className={`chat__panel-session${theme}`}
-                                        onClick={() => setSessionId(s.id)}
+                                        onClick={() => {
+                                            setSessionId(s.id)
+                                            autoScroll()
+                                        }}
                                         style={{
                                             filter: s.id === getSession().id ? 'contrast(0.8)' : '',
                                             border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
@@ -899,6 +907,7 @@ export function Chat() {
         </div>
         :
         <div className={`chat__container${theme}`} style={{ background: renderFullApp && theme ? '#14181E' : '' }}>
+            <p className='chat__banner-message'>🚧 Maintenance 🚧</p>
             {renderFullApp ? renderFullAppPanel() : renderEmbeddedPanel()}
             <main
                 className="chat__main"
