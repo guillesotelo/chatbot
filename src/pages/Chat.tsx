@@ -172,6 +172,7 @@ export function Chat() {
         if (localSessions.length) {
             setSessions(localSessions)
             setSessionId(localSessions[localSessions.length - 1].id)
+            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
         } else {
             const newId = new Date().getTime()
             const newSessionBook = [{ id: newId, messages: [], name: 'New chat' }]
@@ -232,7 +233,6 @@ export function Chat() {
             setStreamId(response.headers.get('Stream-ID') || null)
 
             if (response && response.ok && response.body) {
-                autoScroll()
                 const reader = response.body.getReader()
                 const decoder = new TextDecoder()
                 let done = false
@@ -243,7 +243,6 @@ export function Chat() {
                     done = doneReading
 
                     if (value) {
-                        if (!result) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
                         if (stopGeneration) return setIsLoading(false)
                         const chunk = decoder.decode(value, { stream: true })
                         result += removeUnwantedChars(chunk)
@@ -259,6 +258,7 @@ export function Chat() {
                                 return s
                             })
                         })
+                        autoScroll()
                     }
                 }
 
@@ -502,7 +502,6 @@ export function Chat() {
     }
 
     const handleSubmit = (event: any) => {
-        window.scrollTo({ top: document.body.scrollHeight + 100, behavior: 'smooth' })
         event.preventDefault()
         const content = input.trim()
         if (!content || isLoading) return
@@ -522,6 +521,7 @@ export function Chat() {
             })
         })
         setInput('')
+        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 5)
 
         getModelResponse(curatePrompt(content))
     }
@@ -822,7 +822,7 @@ export function Chat() {
                                         className={`chat__panel-session${theme}`}
                                         onClick={() => {
                                             setSessionId(s.id)
-                                            autoScroll()
+                                            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
                                         }}
                                         style={{
                                             filter: s.id === getSession().id ? 'contrast(0.8)' : '',
@@ -907,7 +907,7 @@ export function Chat() {
         </div>
         :
         <div className={`chat__container${theme}`} style={{ background: renderFullApp && theme ? '#14181E' : '' }}>
-            <p className='chat__banner-message'>🚧 Maintenance 🚧</p>
+            {/* <p className='chat__banner-message'>🚧 Maintenance 🚧</p> */}
             {renderFullApp ? renderFullAppPanel() : renderEmbeddedPanel()}
             <main
                 className="chat__main"
