@@ -53,6 +53,7 @@ import EditDark from '../assets/icons/edit-dark.svg'
 import Trash from '../assets/icons/trash.svg'
 import Export from '../assets/icons/export.svg'
 import ExportDark from '../assets/icons/export-dark.svg'
+import Reload from '../assets/icons/reload.svg'
 import Switch from '../components/Switch';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
@@ -61,6 +62,7 @@ import { autoScroll, sleep } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
+import Tooltip from '../components/Tooltip';
 
 const MODES = [
     {
@@ -94,6 +96,7 @@ export function Chat() {
     const [scrollLocked, setScrollLocked] = useState(false)
     const [timePassed, setTimePassed] = useState(0)
     const [useMemory, setUseMemory] = useState(false)
+    const [memory, setMemory] = useState<dataObj>({})
     const [sessions, setSessions] = useState<sessionType[]>([])
     const [sessionId, setSessionId] = useState<null | number | undefined>(null)
     const [showOptions, setShowOptions] = useState<null | number | undefined>(null)
@@ -104,6 +107,7 @@ export function Chat() {
     const timePassedRef = useRef(timePassed)
     const stopGenerationRef = useRef(false)
     const streamIdRef = useRef<string | null>(null)
+    const resetMemoryRef = useRef<null | HTMLImageElement>(null)
 
     useEffect(() => {
         const fullScreen = new URLSearchParams(window.location.search).get('fullScreen')
@@ -172,11 +176,21 @@ export function Chat() {
         }
         Prism.highlightAll()
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
+
+        updateMemory(s.id)
     }, [sessions])
 
     useEffect(() => {
         if (!minimized) generateGreetings()
     }, [minimized])
+
+    const updateMemory = (id: number) => {
+        let chatContext = ''
+        getSession().messages.slice(getSession().messages.length - 4).map((m: messageType) => {
+            chatContext += `${m.content && TECH_ISSUE_LLM.includes(m.content) ? '' : m.content?.replaceAll(' [STOPPED]', '')}\n`
+        })
+        setMemory(prev => ({ ...prev, [id]: chatContext }))
+    }
 
     const getLocalSessions = () => {
         const localSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
@@ -525,11 +539,7 @@ export function Chat() {
         let prompt = userPrompt
         const lastChar = prompt.split('')[prompt.length - 1]
         if (lastChar !== '?' && lastChar !== '.') prompt += '?'
-
-        let chatContext = ''
-        getSession().messages.slice(getSession().messages.length - 4).map((m: messageType) => {
-            chatContext += `${m.content && TECH_ISSUE_LLM.includes(m.content) ? '' : m.content}\n`
-        })
+        const chatContext = memory[sessionId || ''] || ''
         return chatContext + prompt
     }
 
@@ -919,7 +929,7 @@ export function Chat() {
                         </div>
                     </div>
                 </div>
-                <div className="chat__panel-ghost" />
+                <div className="chat__panel-ghost" />resetMemoryRef
             </>
         )
     }
@@ -951,13 +961,25 @@ export function Chat() {
         input.remove()
     }
 
+    const resetMemory = () => {
+        if (sessionId) {
+            if (resetMemoryRef.current) {
+                resetMemoryRef.current.style.animation = 'spin-reload .7s ease-in'
+                setTimeout(() => {
+                    if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
+                }, 700)
+            }
+            setMemory(prev => ({ ...prev, [sessionId]: '' }))
+            toast.success('Our conversation is now forgotten.')
+        }
+    }
+
     return minimized ?
         <div className="chat__minimized" onClick={maximize}>
             <p className='chat__minimized-label'>HP AI</p>
         </div>
         :
         <div className={`chat__container${theme}`} style={{ background: renderFullApp && theme ? '#14181E' : '' }}>
-            <ToastContainer position="top-center" theme={theme ? 'dark' : 'light'} autoClose={1500} />
             {/* <p className='chat__banner-message'>🚧 Maintenance 🚧</p> */}
             {renderFullApp ? renderFullAppPanel() : renderEmbeddedPanel()}
             <main
@@ -966,6 +988,7 @@ export function Chat() {
                     justifyContent: getSession().messages.length ? 'flex-start' : 'center',
                     margin: !getSession().messages.length ? 'auto' : ''
                 }}>
+                <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
                 <div className="chat__output">
                     <div className="chat__box">
                         <div className="chat__box-list">
@@ -1076,6 +1099,18 @@ export function Chat() {
                                     marginLeft: prod ? '1.5rem' : ''
                                 }}
                             />
+                            <Tooltip tooltip='Reset memory' inline>
+                                <div
+                                    className='chat__form-send'
+                                    onClick={resetMemory}
+                                    style={{
+                                        background: 'transparent',
+                                        cursor: isLoading ? 'not-allowed' : '',
+                                        marginRight: 0
+                                    }}>
+                                    <img src={Reload} ref={resetMemoryRef} className={`chat__form-send-svg-reload${theme}`} style={{ padding: '.5rem' }} />
+                                </div>
+                            </Tooltip>
                             {isLoading ? (
                                 <div
                                     className='chat__form-send'
