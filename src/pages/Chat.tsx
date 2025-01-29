@@ -96,7 +96,6 @@ export function Chat() {
     const [scrollLocked, setScrollLocked] = useState(false)
     const [timePassed, setTimePassed] = useState(0)
     const [useMemory, setUseMemory] = useState(false)
-    const [memory, setMemory] = useState<dataObj>({})
     const [sessions, setSessions] = useState<sessionType[]>([])
     const [sessionId, setSessionId] = useState<null | number | undefined>(null)
     const [showOptions, setShowOptions] = useState<null | number | undefined>(null)
@@ -108,6 +107,7 @@ export function Chat() {
     const stopGenerationRef = useRef(false)
     const streamIdRef = useRef<string | null>(null)
     const resetMemoryRef = useRef<null | HTMLImageElement>(null)
+    const memoryRef = useRef<dataObj>({})
 
     useEffect(() => {
         const fullScreen = new URLSearchParams(window.location.search).get('fullScreen')
@@ -173,23 +173,33 @@ export function Chat() {
                 clearInterval(stopwatchIntervalId.current)
                 stopwatchIntervalId.current = null
             }
+            updateMemory()
         }
         Prism.highlightAll()
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
-
-        updateMemory(s.id)
     }, [sessions])
+
+    useEffect(() => {
+        if (sessionId) updateMemory()
+    }, [sessionId])
 
     useEffect(() => {
         if (!minimized) generateGreetings()
     }, [minimized])
 
-    const updateMemory = (id: number) => {
-        let chatContext = ''
-        getSession().messages.slice(getSession().messages.length - 4).map((m: messageType) => {
-            chatContext += `${m.content && TECH_ISSUE_LLM.includes(m.content) ? '' : m.content?.replaceAll(' [STOPPED]', '')}\n`
+    const updateMemory = () => {
+        if (!sessionId) return
+        let chatContext = 'Taking this text in account: "'
+        let count = 0
+        getSession().messages.slice(getSession().messages.length - 3).map((m: messageType) => {
+            if (m.role === 'assistant' && m.content && !TECH_ISSUE_LLM.includes(m.content)
+                && !m.content.toLowerCase().includes('sorry')) {
+                chatContext += `${m.content?.replaceAll(' [STOPPED]', '')}\n`
+                count++
+            }
         })
-        setMemory(prev => ({ ...prev, [id]: chatContext }))
+        chatContext += '" respond to the following: '
+        memoryRef.current = { ...memoryRef.current, [sessionId]: count ? chatContext : '' }
     }
 
     const getLocalSessions = () => {
@@ -539,7 +549,7 @@ export function Chat() {
         let prompt = userPrompt
         const lastChar = prompt.split('')[prompt.length - 1]
         if (lastChar !== '?' && lastChar !== '.') prompt += '?'
-        const chatContext = memory[sessionId || ''] || ''
+        const chatContext = sessionId ? memoryRef.current[sessionId] || '' : ''
         return chatContext + prompt
     }
 
@@ -720,7 +730,6 @@ export function Chat() {
         const a = document.createElement('a')
         a.href = url
         a.download = `HP Chatbot - ${getSession().name.replace(/[<>:"\/\\|?*\x00-\x1F]/g, '')}`
-        console.log('title', a.download)
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -929,7 +938,7 @@ export function Chat() {
                         </div>
                     </div>
                 </div>
-                <div className="chat__panel-ghost" />resetMemoryRef
+                <div className="chat__panel-ghost" />
             </>
         )
     }
@@ -962,16 +971,14 @@ export function Chat() {
     }
 
     const resetMemory = () => {
-        if (sessionId) {
-            if (resetMemoryRef.current) {
-                resetMemoryRef.current.style.animation = 'spin-reload .7s ease-in'
-                setTimeout(() => {
-                    if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
-                }, 700)
-            }
-            setMemory(prev => ({ ...prev, [sessionId]: '' }))
-            toast.success('This conversation is now forgotten.')
+        if (resetMemoryRef.current) {
+            resetMemoryRef.current.style.animation = 'spin-reload .7s ease-in'
+            setTimeout(() => {
+                if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
+            }, 700)
         }
+        memoryRef.current = sessionId ? { ...memoryRef.current, [sessionId]: '' } : memoryRef.current
+        toast.success('This conversation is now forgotten.')
     }
 
     return minimized ?
