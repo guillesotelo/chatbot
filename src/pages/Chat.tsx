@@ -463,7 +463,7 @@ export function Chat() {
         if (greetingsItervalId.current) clearInterval(greetingsItervalId.current)
         setGreetings('')
 
-        const string = ' Hi, what can I help you with today?'
+        const string = '  Hi, what can I help you with today?'
         let index = 0
 
         greetingsItervalId.current = setInterval(() => {
@@ -970,7 +970,7 @@ export function Chat() {
                 }, 700)
             }
             setMemory(prev => ({ ...prev, [sessionId]: '' }))
-            toast.success('Our conversation is now forgotten.')
+            toast.success('This conversation is now forgotten.')
         }
     }
 
