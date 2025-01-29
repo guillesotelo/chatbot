@@ -48,12 +48,19 @@ import 'prismjs/themes/prism.css';
 import { AppContext } from '../AppContext';
 import NewTab from '../assets/icons/maximize.svg'
 import Close from '../assets/icons/close.svg'
+import Edit from '../assets/icons/edit.svg'
+import EditDark from '../assets/icons/edit-dark.svg'
+import Trash from '../assets/icons/trash.svg'
+import Export from '../assets/icons/export.svg'
+import ExportDark from '../assets/icons/export-dark.svg'
 import Switch from '../components/Switch';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { API_URL, APP_VERSION, LOCAL_API_URL, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, sleep } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
+import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 const MODES = [
     {
@@ -79,24 +86,24 @@ export function Chat() {
     const [selectedFiles, setSelectedFiles] = useLocalStorage<string[]>('selected-files', [])
     const [greetings, setGreetings] = useState(' ⬤')
     const [prod, setProd] = useState(true)
-    const [renderFullApp, setRenderFullApp] = useState(window.innerWidth > 1050)
+    const [renderFullApp, setRenderFullApp] = useState(true) // Change to window.innerWidth > 1050 when ready to use popup mode
     const [renderAdmin, setRenderAdmin] = useState(false)
-    const [minimized, setMinimized] = useState(true)
+    const [minimized, setMinimized] = useState(false) // Set to default true only for production (to use the button) * default false fixes Firefox issue
     const [isLoading, setIsLoading] = useState(false)
     const [useDocumentContext, setUseDocumentContext] = useState<boolean>(mode === 'query' || true)
     const [scrollLocked, setScrollLocked] = useState(false)
     const [timePassed, setTimePassed] = useState(0)
     const [useMemory, setUseMemory] = useState(false)
-    const [stopGeneration, setStopGeneration] = useState(false)
     const [sessions, setSessions] = useState<sessionType[]>([])
-    const [streamId, setStreamId] = useState<null | string | number>(null)
     const [sessionId, setSessionId] = useState<null | number | undefined>(null)
     const [showOptions, setShowOptions] = useState<null | number | undefined>(null)
     const [sessionNames, setSessionNames] = useState<dataObj>({})
-    const { theme, setTheme } = useContext(AppContext)
+    const { theme, setTheme, isMobile } = useContext(AppContext)
     const greetingsItervalId = useRef<NodeJS.Timeout | null>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
     const timePassedRef = useRef(timePassed)
+    const stopGenerationRef = useRef(false)
+    const streamIdRef = useRef<string | null>(null)
 
     useEffect(() => {
         const fullScreen = new URLSearchParams(window.location.search).get('fullScreen')
@@ -116,7 +123,11 @@ export function Chat() {
             }
         }
         const hideSessionOptions = (e: any) => {
-            if (e.target && e.target.className && !e.target.className.includes('chat__panel-session-option')) setShowOptions(null)
+            if (e.target && e.target.className && typeof e.target.className === 'string' &&
+                !e.target.className.includes('chat__panel-session-option')) {
+                setShowOptions(null)
+                setSessionNames({})
+            }
         }
 
         getLocalSessions()
@@ -215,7 +226,8 @@ export function Chat() {
                 })
             })
 
-            const apiURl = process.env.REACT_APP_ENV === 'production' ? API_URL : LOCAL_API_URL
+            // const apiURl = process.env.REACT_APP_ENV === 'production' ? API_URL : LOCAL_API_URL
+            const apiURl = process.env.REACT_APP_SERVER_URL
 
             const response = await fetch(`${apiURl}/api/prompt_route`, {
                 method: 'POST',
@@ -230,7 +242,7 @@ export function Chat() {
                     // stream_id: streamId ? String(streamId) : ''
                 }),
             })
-            setStreamId(response.headers.get('Stream-ID') || null)
+            streamIdRef.current = response.headers.get('Stream-ID') || null
 
             if (response && response.ok && response.body) {
                 const reader = response.body.getReader()
@@ -242,8 +254,13 @@ export function Chat() {
                     const { value, done: doneReading } = await reader.read()
                     done = doneReading
 
+                    if (stopGenerationRef.current) {
+                        reader.cancel()
+                        setIsLoading(false)
+                        break
+                    }
+
                     if (value) {
-                        if (stopGeneration) return setIsLoading(false)
                         const chunk = decoder.decode(value, { stream: true })
                         result += removeUnwantedChars(chunk)
 
@@ -264,11 +281,12 @@ export function Chat() {
 
                 setIsLoading(false)
                 const time = timePassedRef.current
-                const finalContent = removeUnwantedChars(result).replace('⬤', '')
+                const finalContent = removeUnwantedChars(result).replace('⬤', '') + (stopGenerationRef.current ? ' [STOPPED].' : '')
                 const newMessage = {
                     role: 'assistant',
                     content: finalContent,
-                    time
+                    time,
+                    stopped: stopGenerationRef.current || false
                 }
 
                 setSessions(prev => {
@@ -286,7 +304,8 @@ export function Chat() {
                 })
 
                 setTimeout(() => setTimePassed(0), 100)
-                setStreamId(null)
+                streamIdRef.current = null
+                stopGenerationRef.current = false
             } else {
                 renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
@@ -298,9 +317,10 @@ export function Chat() {
     };
 
     const renderErrorResponse = async () => {
+        stopGenerationRef.current = false
         const time = timePassedRef.current
         setIsLoading(false)
-        setStreamId(null)
+        streamIdRef.current = null
 
         if (getSession().completion) {
             setSessions(prev => {
@@ -372,7 +392,7 @@ export function Chat() {
         const updated = sessions.map(s => {
             if (s.name === 'New chat') return {
                 ...s,
-                name: `New chat [${new Date().toLocaleString()}]`
+                name: `New chat [${new Date().toLocaleString('sv-SE')}]`
             }
             return s
         }).concat(newSession)
@@ -446,65 +466,40 @@ export function Chat() {
     }
 
     const stopGenerating = async () => {
-        setStopGeneration(true)
-        setStreamId(null)
-        const truncatedMessage = getSession().completion || ''
-        const time = timePassedRef.current
+        stopGenerationRef.current = true
 
-        const newMessage = {
-            role: 'assistant',
-            content: truncatedMessage,
-            time,
-            stopped: true
-        }
+        // It's weird to use the same route to stop a streaming (right now the API waits for a call to accept another)
+        // if (!streamIdRef.current) {
+        //     console.error("No stream ID found. Cannot stop stream.");
+        //     return;
+        // }
 
-        setSessions(prev => {
-            return prev.map(s => {
-                if (s.id === getSession().id) {
-                    return {
-                        ...s,
-                        messages: [...s.messages, newMessage],
-                        completion: null,
-                        isLoading: false
-                    }
-                }
-                return s
-            })
-        })
+        // try {
+        //     const apiURl = process.env.NODE_ENV === 'production' ? API_URL : LOCAL_API_URL
+        //     const response = await fetch(`${apiURl}/api/prompt_route`, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/x-www-form-urlencoded',
+        //             'Cache-Control': 'no-cache',
+        //         },
+        //         body: new URLSearchParams({
+        //             stream_id: String(streamIdRef.current),
+        //             stop: 'true'
+        //         }),
+        //     })
 
-        setTimeout(() => setTimePassed(0), 100)
+        //     const data = await response.json()
+        //     if (data.error) return console.error('An error occurred trying to stop chat response')
 
-        if (!streamId) {
-            console.error("No stream ID found. Cannot stop stream.");
-            return;
-        }
-
-        try {
-            const apiURl = process.env.NODE_ENV === 'production' ? API_URL : LOCAL_API_URL
-            const response = await fetch(`${apiURl}/api/prompt_route`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Cache-Control': 'no-cache',
-                },
-                body: new URLSearchParams({
-                    stream_id: String(streamId),
-                    stop: 'true'
-                }),
-            })
-
-            const data = await response.json()
-            if (data.error) return console.error('An error occurred trying to stop chat response')
-
-        } catch (error) {
-            console.error(error)
-        }
+        // } catch (error) {
+        //     console.error(error)
+        // }
     }
 
     const handleSubmit = (event: any) => {
         event.preventDefault()
         const content = input.trim()
-        if (!content || isLoading) return
+        if (!content || isLoading || forbidSubmit()) return
 
         const newMessage = { role: 'user', content }
         setSessions(prev => {
@@ -530,7 +525,12 @@ export function Chat() {
         let prompt = userPrompt
         const lastChar = prompt.split('')[prompt.length - 1]
         if (lastChar !== '?' && lastChar !== '.') prompt += '?'
-        return prompt
+
+        let chatContext = ''
+        getSession().messages.slice(getSession().messages.length - 4).map((m: messageType) => {
+            chatContext += `${m.content && TECH_ISSUE_LLM.includes(m.content) ? '' : m.content}\n`
+        })
+        return chatContext + prompt
     }
 
     const resizeTextArea = (textarea: any) => {
@@ -662,7 +662,7 @@ export function Chat() {
                     if (s.id === id) {
                         return {
                             ...s,
-                            name: sessionNames[id || ''] || `New chat [${new Date(s.id || '').toLocaleString()}]`
+                            name: sessionNames[id || ''] || `New chat [${new Date(s.id || '').toLocaleString('sv-SE')}]`
                         }
                     }
                     return s
@@ -674,6 +674,7 @@ export function Chat() {
 
     const deleteSession = (id: number | null | undefined, e: any) => {
         setSessionId(null)
+        setShowOptions(null)
         const remainingSessions = sessions.filter(s => s.id !== id)
         if (remainingSessions.length && remainingSessions[0].messages.length) {
             setSessions(prev => ([...prev.filter(s => s.id !== id)]))
@@ -691,6 +692,33 @@ export function Chat() {
                 generateGreetings()
             }, 100)
         }
+    }
+
+    const exportSession = (id: number | null | undefined) => {
+        setSessionId(null)
+        setShowOptions(null)
+        let sessionText = ''
+        const sessionDate = new Date(id || new Date()).toLocaleString('sv-SE')
+        const separator = '_____________________________________________________________\n\n\n'
+        const sessionTitle = `HP Chatbot - Chat session "${getSession().name}" (${sessionDate})\n` + separator
+        getSession().messages.map((m: messageType) => {
+            sessionText += `${sessionText ? '' : sessionTitle}${m.role === 'user' ? '\n\n' : ''}${m.role?.toUpperCase()}: ${m.content}\n`
+        })
+
+        const blob = new Blob([sessionText], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `HP Chatbot - ${getSession().name.replace(/[<>:"\/\\|?*\x00-\x1F]/g, '')}`
+        console.log('title', a.download)
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
+    const forbidSubmit = () => {
+        return !input || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')
     }
 
     const renderAdminPanel = () => {
@@ -814,42 +842,64 @@ export function Chat() {
                 <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
                     <div className="chat__panel-form">
                         {getSession().messages.length && noNewChats() ? <Button onClick={createSession} label='New chat session' className={`button__outline${theme}`} /> : ''}
-                        <div className="chat__panel-sessions">
-                            {[...sessions].reverse().map(s =>
-                                s.name ?
-                                    <div
-                                        key={s.id}
-                                        className={`chat__panel-session${theme}`}
-                                        onClick={() => {
-                                            setSessionId(s.id)
-                                            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
-                                        }}
-                                        style={{
-                                            filter: s.id === getSession().id ? 'contrast(0.8)' : '',
-                                            border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
-                                        }}>
-                                        <div className="chat__panel-session-item">
-                                            {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
-                                                <input
-                                                    className='chat__panel-session-rename'
-                                                    value={sessionNames[s.id || '']}
-                                                    onChange={e => setSessionNames({ [s.id || '']: e.target.value })}
-                                                    onKeyDown={(e) => updateSessionName(e, s.id)} />
-                                                : <p className='chat__panel-session-name'>{s.name}</p>}
-                                            {/* <p className='chat__panel-session-name'>{s.name}</p> */}
-                                            <img src={ChatOptions} onClick={() => setShowOptions(s.id)} alt="Chat options" className="chat__panel-session-options-img" />
-                                            {showOptions === s.id ?
-                                                <div className={`chat__panel-session-options${theme}`}>
-                                                    <p onClick={() => renameSession(s.id)} className='chat__panel-session-option'>Rename</p>
-                                                    <p onClick={e => deleteSession(s.id, e)} className='chat__panel-session-option' style={{ color: 'red' }}>Delete</p>
-                                                </div> : ''}
+                        {isMobile ?
+                            <Dropdown
+                                label=''
+                                options={[...sessions].reverse().filter(s => s.name)}
+                                objKey='name'
+                                selected={getSession()}
+                                setSelected={(s) => {
+                                    setSessionId(s.id)
+                                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
+                                }}
+                                value={getSession()}
+                            />
+                            : <div className="chat__panel-sessions">
+                                {[...sessions].reverse().map(s =>
+                                    s.name ?
+                                        <div
+                                            key={s.id}
+                                            className={`chat__panel-session${theme}`}
+                                            onClick={() => {
+                                                setSessionId(s.id)
+                                                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
+                                            }}
+                                            style={{
+                                                background: s.id === getSession().id ? theme ? '#2d2d2d' : '#d6d6d6' : '',
+                                                border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
+                                            }}>
+                                            <div className="chat__panel-session-item">
+                                                {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
+                                                    <input
+                                                        className='chat__panel-session-rename'
+                                                        value={sessionNames[s.id || '']}
+                                                        onChange={e => setSessionNames({ [s.id || '']: e.target.value })}
+                                                        onKeyDown={(e) => updateSessionName(e, s.id)} />
+                                                    : <p className='chat__panel-session-name'>{s.name}</p>}
+                                                {/* <p className='chat__panel-session-name'>{s.name}</p> */}
+                                                {showOptions ? '' : <img src={ChatOptions} onClick={() => setShowOptions(s.id)} alt="Chat options" className="chat__panel-session-options-img" />}
+                                                {showOptions === s.id ?
+                                                    <div className={`chat__panel-session-options${theme}`}>
+                                                        <div className={`chat__panel-session-option${theme}`} onClick={() => renameSession(s.id)}>
+                                                            <img src={theme ? EditDark : Edit} alt="Rename" className={`chat__panel-session-option-img`} />
+                                                            <p className="chat__panel-session-option-text">Rename</p>
+                                                        </div>
+                                                        <div className={`chat__panel-session-option${theme}`} onClick={() => exportSession(s.id)}>
+                                                            <img src={theme ? ExportDark : Export} alt="Rename" className={`chat__panel-session-option-img`} />
+                                                            <p className="chat__panel-session-option-text">Export</p>
+                                                        </div>
+                                                        <div className={`chat__panel-session-option${theme}`} onClick={e => deleteSession(s.id, e)}>
+                                                            <img src={Trash} alt="Rename" className={`chat__panel-session-option-img`} />
+                                                            <p className="chat__panel-session-option-text" style={{ color: 'red' }}>Delete</p>
+                                                        </div>
+                                                    </div> : ''}
+                                            </div>
                                         </div>
-                                    </div>
-                                    : ''
-                            )}
-                        </div>
+                                        : ''
+                                )}
+                            </div>}
                     </div>
-                    <p className='chat__panel-version'>v{APP_VERSION}</p>
+                    {isMobile ? '' : <p className='chat__panel-version'>v{APP_VERSION}</p>}
                 </div>
                 <div className="chat__panel-ghost" />
             </>
@@ -907,6 +957,7 @@ export function Chat() {
         </div>
         :
         <div className={`chat__container${theme}`} style={{ background: renderFullApp && theme ? '#14181E' : '' }}>
+            <ToastContainer position="top-center" theme={theme ? 'dark' : 'light'} autoClose={1500} />
             {/* <p className='chat__banner-message'>🚧 Maintenance 🚧</p> */}
             {renderFullApp ? renderFullAppPanel() : renderEmbeddedPanel()}
             <main
@@ -1010,11 +1061,13 @@ export function Chat() {
                                 rows={1}
                                 onKeyDown={(event) => {
                                     if (!isLoading && event.key === 'Enter' && !event.shiftKey) {
-                                        event.preventDefault();
-                                        if (!input.trim() || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')) return
-                                        event.currentTarget.form?.dispatchEvent(
-                                            new Event('submit', { bubbles: true }),
-                                        );
+                                        // * * * Commenting this block to fix Firefox incompatibility * * *
+                                        // event.preventDefault();
+                                        // if (!input.trim() || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')) return
+                                        // event.currentTarget.form?.dispatchEvent(
+                                        //     new Event('submit', { bubbles: true }),
+                                        // );
+                                        handleSubmit(event)
                                     }
                                 }}
                                 autoFocus
@@ -1037,7 +1090,7 @@ export function Chat() {
                                     className='chat__form-send'
                                     style={{
                                         background: input ? theme ? 'lightgray' : 'black' : theme ? 'gray' : '#d2d2d2',
-                                        cursor: !input || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user') ? 'not-allowed' : ''
+                                        cursor: forbidSubmit() ? 'not-allowed' : ''
                                     }}
                                     onClick={handleSubmit} >
                                     <svg className='chat__form-send-svg' width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill={theme ? '#2F2F2F' : '#fff'} fillRule="evenodd" clipRule="evenodd" d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z"></path>
@@ -1048,5 +1101,6 @@ export function Chat() {
                     </div>
                 </div>
             </main>
+            {isMobile ? <p className='chat__panel-version'>v{APP_VERSION}</p> : ''}
         </div>
 }
