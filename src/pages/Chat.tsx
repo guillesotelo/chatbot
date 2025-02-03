@@ -100,6 +100,7 @@ export function Chat() {
     const [sessionId, setSessionId] = useState<null | number | undefined>(null)
     const [showOptions, setShowOptions] = useState<null | number | undefined>(null)
     const [sessionNames, setSessionNames] = useState<dataObj>({})
+    const [sessionOptionStyles, setSessionOptionStyles] = useState<dataObj>({})
     const { theme, setTheme, isMobile } = useContext(AppContext)
     const greetingsItervalId = useRef<NodeJS.Timeout | null>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
@@ -560,17 +561,17 @@ export function Chat() {
         style.height = `${textarea.scrollHeight + 2}px`
 
         const form = document.querySelector(`.chat__form${theme}`) as HTMLDivElement
-        const send = document.querySelector(`.chat__form-send`) as HTMLDivElement
+        const send = document.querySelectorAll(`.chat__form-send`) as NodeListOf<HTMLDivElement>
         const outputChat = document.querySelector(`.chat__output`) as HTMLDivElement
 
         form.style.alignItems = 'center'
-        send.style.marginBottom = '0'
+        send.forEach(s => s.style.marginBottom = '0')
 
         outputChat.style.marginBottom = textarea.scrollHeight > 80 ? '46vh' : '6rem'
         if (textarea.scrollHeight > 60) {
             style.padding = '1rem 0'
             form.style.alignItems = 'flex-end'
-            send.style.marginBottom = '1rem'
+            send.forEach(s => s.style.marginBottom = '.6rem')
         }
     }
 
@@ -740,6 +741,16 @@ export function Chat() {
         return !input || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')
     }
 
+    const renderOptions = (id: number | null | undefined, event: React.MouseEvent<HTMLImageElement, MouseEvent>) => {
+        const positionY = window.innerHeight - event.clientY <250 ? event.clientY - 155 : event.clientY - 15
+        setSessionOptionStyles(prev => ({
+            ...prev, [id || Math.random()]: {
+                transform: `translateY(${positionY}px)`
+            }
+        }))
+        setShowOptions(id)
+    }
+
     const renderAdminPanel = () => {
         return (
             <>
@@ -896,27 +907,27 @@ export function Chat() {
                                                         onKeyDown={(e) => updateSessionName(e, s.id)} />
                                                     : <p className='chat__panel-session-name'>{s.name}</p>}
                                                 {/* <p className='chat__panel-session-name'>{s.name}</p> */}
-                                                {showOptions ? '' : <img src={ChatOptions} onClick={() => setShowOptions(s.id)} alt="Chat options" className="chat__panel-session-options-img" />}
-                                                {showOptions === s.id ?
-                                                    <div className={`chat__panel-session-options${theme}`}>
-                                                        <div className={`chat__panel-session-option${theme}`} onClick={() => renameSession(s.id)}>
-                                                            <img src={theme ? EditDark : Edit} alt="Rename" className={`chat__panel-session-option-img`} />
-                                                            <p className="chat__panel-session-option-text">Rename</p>
-                                                        </div>
-                                                        <div className={`chat__panel-session-option${theme}`} onClick={() => exportSession(s.id)}>
-                                                            <img src={theme ? ExportDark : Export} alt="Rename" className={`chat__panel-session-option-img`} />
-                                                            <p className="chat__panel-session-option-text">Export</p>
-                                                        </div>
-                                                        <div className={`chat__panel-session-option${theme}`} onClick={e => deleteSession(s.id, e)}>
-                                                            <img src={Trash} alt="Rename" className={`chat__panel-session-option-img`} />
-                                                            <p className="chat__panel-session-option-text" style={{ color: 'red' }}>Delete</p>
-                                                        </div>
-                                                    </div> : ''}
+                                                {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
                                             </div>
                                         </div>
                                         : ''
                                 )}
                             </div>}
+                        {showOptions ?
+                            <div className={`chat__panel-session-options${theme}`} style={sessionOptionStyles[showOptions] || {}}>
+                                <div className={`chat__panel-session-option${theme}`} onClick={() => renameSession(showOptions)}>
+                                    <img src={theme ? EditDark : Edit} alt="Rename" className={`chat__panel-session-option-img`} />
+                                    <p className="chat__panel-session-option-text">Rename</p>
+                                </div>
+                                <div className={`chat__panel-session-option${theme}`} onClick={() => exportSession(showOptions)}>
+                                    <img src={theme ? ExportDark : Export} alt="Rename" className={`chat__panel-session-option-img`} />
+                                    <p className="chat__panel-session-option-text">Export</p>
+                                </div>
+                                <div className={`chat__panel-session-option${theme}`} onClick={e => deleteSession(showOptions, e)}>
+                                    <img src={Trash} alt="Rename" className={`chat__panel-session-option-img`} />
+                                    <p className="chat__panel-session-option-text" style={{ color: 'red' }}>Delete</p>
+                                </div>
+                            </div> : ''}
                     </div>
                     {isMobile ? '' : <p className='chat__panel-version'>v{APP_VERSION}</p>}
                 </div>
@@ -973,10 +984,10 @@ export function Chat() {
     const resetMemory = () => {
         if (isLoading || !memoryRef.current[sessionId || '']) return
         if (resetMemoryRef.current) {
-            resetMemoryRef.current.style.animation = 'spin-reload .7s ease-in'
+            resetMemoryRef.current.style.animation = 'transform-reload 1s ease-in'
             setTimeout(() => {
                 if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
-            }, 700)
+            }, 1050)
         }
         memoryRef.current = sessionId ? { ...memoryRef.current, [sessionId]: '' } : memoryRef.current
         toast.success('This conversation is now forgotten.')
@@ -1134,7 +1145,7 @@ export function Chat() {
                                     </div>
                                 </Tooltip>
                             ) : (
-                                <Tooltip tooltip='Send message' inline show={Boolean(input)}>
+                                <Tooltip tooltip={input ? 'Send message' : 'Write a message to send'} inline show={Boolean(input)}>
                                     <div
                                         className='chat__form-send'
                                         style={{
