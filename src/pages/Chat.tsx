@@ -53,7 +53,7 @@ import EditDark from '../assets/icons/edit-dark.svg'
 import Trash from '../assets/icons/trash.svg'
 import Export from '../assets/icons/export.svg'
 import ExportDark from '../assets/icons/export-dark.svg'
-import Reload from '../assets/icons/reload.svg'
+import Reload from '../assets/icons/reload3.png'
 import Switch from '../components/Switch';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
@@ -971,6 +971,7 @@ export function Chat() {
     }
 
     const resetMemory = () => {
+        if (isLoading || !memoryRef.current[sessionId || '']) return
         if (resetMemoryRef.current) {
             resetMemoryRef.current.style.animation = 'spin-reload .7s ease-in'
             setTimeout(() => {
@@ -1091,12 +1092,6 @@ export function Chat() {
                                 rows={1}
                                 onKeyDown={(event) => {
                                     if (!isLoading && event.key === 'Enter' && !event.shiftKey) {
-                                        // * * * Commenting this block to fix Firefox incompatibility * * *
-                                        // event.preventDefault();
-                                        // if (!input.trim() || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')) return
-                                        // event.currentTarget.form?.dispatchEvent(
-                                        //     new Event('submit', { bubbles: true }),
-                                        // );
                                         handleSubmit(event)
                                     }
                                 }}
@@ -1106,38 +1101,51 @@ export function Chat() {
                                     marginLeft: prod ? '1.5rem' : ''
                                 }}
                             />
-                            <Tooltip tooltip='Reset memory' inline>
+                            <Tooltip tooltip={!memoryRef.current[sessionId || ''] ? 'Memory is empty' : 'Forget conversation'} inline>
                                 <div
                                     className='chat__form-send'
                                     onClick={resetMemory}
                                     style={{
                                         background: 'transparent',
-                                        cursor: isLoading ? 'not-allowed' : '',
+                                        cursor: isLoading || !memoryRef.current[sessionId || ''] ? 'not-allowed' : '',
                                         marginRight: 0
                                     }}>
-                                    <img src={Reload} ref={resetMemoryRef} className={`chat__form-send-svg-reload${theme}`} style={{ padding: '.5rem' }} />
+                                    <img
+                                        src={Reload}
+                                        ref={resetMemoryRef}
+                                        className={`chat__form-send-svg-reload${theme}`}
+                                        style={{
+                                            filter: memoryRef.current[sessionId || ''] ? theme ?
+                                                'invert(96%) sepia(9%) saturate(0%) hue-rotate(172deg) brightness(91%) contrast(85%)'
+                                                : 'none' : ''
+                                        }}
+                                    />
                                 </div>
                             </Tooltip>
                             {isLoading ? (
-                                <div
-                                    className='chat__form-send'
-                                    onClick={stopGenerating}
-                                    style={{
-                                        background: theme ? 'lightgray' : 'black'
-                                    }}>
-                                    <svg className='chat__form-send-svg' style={{ padding: '.5rem' }} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="15" height="15" rx="1.25" fill={theme ? '#2F2F2F' : '#fff'}></rect></svg>
-                                </div>
+                                <Tooltip tooltip='Stop generation' inline>
+                                    <div
+                                        className='chat__form-send'
+                                        onClick={stopGenerating}
+                                        style={{
+                                            background: theme ? 'lightgray' : 'black'
+                                        }}>
+                                        <svg className='chat__form-send-svg' style={{ padding: '.5rem' }} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="15" height="15" rx="1.25" fill={theme ? '#2F2F2F' : '#fff'}></rect></svg>
+                                    </div>
+                                </Tooltip>
                             ) : (
-                                <div
-                                    className='chat__form-send'
-                                    style={{
-                                        background: input ? theme ? 'lightgray' : 'black' : theme ? 'gray' : '#d2d2d2',
-                                        cursor: forbidSubmit() ? 'not-allowed' : ''
-                                    }}
-                                    onClick={handleSubmit} >
-                                    <svg className='chat__form-send-svg' width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill={theme ? '#2F2F2F' : '#fff'} fillRule="evenodd" clipRule="evenodd" d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z"></path>
-                                    </svg>
-                                </div>
+                                <Tooltip tooltip='Send message' inline show={Boolean(input)}>
+                                    <div
+                                        className='chat__form-send'
+                                        style={{
+                                            background: input ? theme ? 'lightgray' : 'black' : theme ? 'gray' : '#d2d2d2',
+                                            cursor: forbidSubmit() ? 'not-allowed' : ''
+                                        }}
+                                        onClick={handleSubmit} >
+                                        <svg className='chat__form-send-svg' width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill={theme ? '#2F2F2F' : '#fff'} fillRule="evenodd" clipRule="evenodd" d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z"></path>
+                                        </svg>
+                                    </div>
+                                </Tooltip>
                             )}
                         </form>
                     </div>
