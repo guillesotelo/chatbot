@@ -55,7 +55,7 @@ import Export from '../assets/icons/export.svg'
 import ExportDark from '../assets/icons/export-dark.svg'
 import Reload from '../assets/icons/reload3.png'
 import Switch from '../components/Switch';
-import { dataObj, messageType, sessionType } from '../types';
+import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { API_URL, APP_VERSION, LOCAL_API_URL, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, sleep } from '../helpers';
@@ -63,6 +63,8 @@ import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import Tooltip from '../components/Tooltip';
+import Modal from '../components/Modal';
+import InputField from '../components/InputField';
 
 const MODES = [
     {
@@ -77,8 +79,10 @@ const MODES = [
     },
 ]
 
+// const apiURl = process.env.REACT_APP_ENV === 'production' ? API_URL : LOCAL_API_URL
+const apiURl = process.env.REACT_APP_SERVER_URL
+
 export function Chat() {
-    const messageRef = useRef<HTMLTextAreaElement>(null)
     const [mode, setMode] = useLocalStorage<(typeof MODES)[number]['value']>('chat-mode', 'query')
     const [input, setInput] = useState('')
     const [copyMessage, setCopyMessage] = useState(-1)
@@ -101,7 +105,9 @@ export function Chat() {
     const [showOptions, setShowOptions] = useState<null | number | undefined>(null)
     const [sessionNames, setSessionNames] = useState<dataObj>({})
     const [sessionOptionStyles, setSessionOptionStyles] = useState<dataObj>({})
+    const [feedbackData, setFeedbackData] = useState<sessionType | dataObj | null>(null)
     const { theme, setTheme, isMobile } = useContext(AppContext)
+    const messageRef = useRef<HTMLTextAreaElement>(null)
     const greetingsItervalId = useRef<NodeJS.Timeout | null>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
     const timePassedRef = useRef(timePassed)
@@ -136,14 +142,13 @@ export function Chat() {
         }
 
         getLocalSessions()
-        const codeBlocksIntervalId = setInterval(renderCodeBlockHeaders, 500)
+        getFeedback()
 
         window.addEventListener('scroll', handleScroll)
         document.addEventListener('click', hideSessionOptions)
         return () => {
             window.removeEventListener('scroll', handleScroll)
             document.removeEventListener('click', hideSessionOptions)
-            clearInterval(codeBlocksIntervalId)
             if (greetingsItervalId.current) clearInterval(greetingsItervalId.current)
         }
     }, [])
@@ -177,12 +182,15 @@ export function Chat() {
             updateMemory()
         }
         Prism.highlightAll()
+        renderCodeBlockHeaders()
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
     }, [sessions])
 
     useEffect(() => {
         if (sessionId) updateMemory()
-    }, [sessionId])
+        Prism.highlightAll()
+        renderCodeBlockHeaders()
+    }, [sessionId, feedbackData])
 
     useEffect(() => {
         if (!minimized) generateGreetings()
@@ -207,7 +215,7 @@ export function Chat() {
         const localSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
         if (localSessions.length) {
             setSessions(localSessions)
-            setSessionId(localSessions[localSessions.length - 1].id)
+            setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
         } else {
             const newId = new Date().getTime()
@@ -230,7 +238,7 @@ export function Chat() {
     }
 
     const removeUnwantedChars = (str: string) => {
-        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:']
+        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:', 'User: ']
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
         return str.replace(regex, '')
     }
@@ -250,9 +258,6 @@ export function Chat() {
                     return s
                 })
             })
-
-            // const apiURl = process.env.REACT_APP_ENV === 'production' ? API_URL : LOCAL_API_URL
-            const apiURl = process.env.REACT_APP_SERVER_URL
 
             const response = await fetch(`${apiURl}/api/prompt_route`, {
                 method: 'POST',
@@ -440,7 +445,7 @@ export function Chat() {
     const renderCodeBlockHeaders = () => {
         const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
         codeBlocks.forEach((codeBlock, index) => {
-            if (!codeBlock.innerHTML.includes('chat__code-header')) {
+            if (!codeBlock.innerHTML.includes('chat__code-header') || !codeBlock.outerHTML.includes('chat__code-header')) {
                 const language = codeBlock.className.replace('language-', '')
 
                 const header = document.createElement('div')
@@ -462,7 +467,7 @@ export function Chat() {
             }
         })
 
-        // Adding link curation here too
+        // Making links on responses add new tab
         Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
             Array.from(message.querySelectorAll('a')).forEach(anchor => {
                 anchor.target = '_blank'
@@ -620,6 +625,14 @@ export function Chat() {
             })
         })
 
+        if (!score) {
+            setFeedbackData(prev => ({
+                ...prev,
+                ...getSession(),
+                messages: [scoredMessages[index - 1] || {}, scoredMessages[index]]
+            }))
+        }
+
         setTimeout(() => score ? setGoodScore(index) : setBadScore(index), 100)
         setTimeout(() => score ? setGoodScore(-1) : setBadScore(-1), 1500)
     }
@@ -720,7 +733,7 @@ export function Chat() {
         setShowOptions(null)
         let sessionText = ''
         const sessionDate = new Date(id || new Date()).toLocaleString('sv-SE')
-        const separator = '_____________________________________________________________\n\n\n'
+        const separator = '_________________________________________________________________\n\n\n'
         const sessionTitle = `HP Chatbot - Chat session "${getSession().name}" (${sessionDate})\n` + separator
         getSession().messages.map((m: messageType) => {
             sessionText += `${sessionText ? '' : sessionTitle}${m.role === 'user' ? '\n\n' : ''}${m.role?.toUpperCase()}: ${m.content}\n`
@@ -742,7 +755,7 @@ export function Chat() {
     }
 
     const renderOptions = (id: number | null | undefined, event: React.MouseEvent<HTMLImageElement, MouseEvent>) => {
-        const positionY = window.innerHeight - event.clientY <250 ? event.clientY - 155 : event.clientY - 15
+        const positionY = window.innerHeight - event.clientY < 250 ? event.clientY - 155 : event.clientY - 15
         setSessionOptionStyles(prev => ({
             ...prev, [id || Math.random()]: {
                 transform: `translateY(${positionY}px)`
@@ -751,10 +764,102 @@ export function Chat() {
         setShowOptions(id)
     }
 
+    const selectSession = (session: sessionType) => {
+        setSessionId(session.id)
+        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
+        localStorage.setItem('currentSession', JSON.stringify(session.id))
+    }
+
+    const updateFeedbackData = (key: string, e: onChangeEventType) => {
+        const value = e.target.value
+        setFeedbackData({ ...feedbackData, [key]: value })
+    }
+
+    const uploadDocuments = () => {
+        const input = document.createElement('input') as HTMLInputElement
+        input.type = 'file'
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement)?.files?.[0]
+            if (!file) return
+
+            const formData = new FormData()
+            formData.append("document", file)
+
+            try {
+                const response = await fetch('/api/save_document', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) toast.success('File(s) uploaded successfully')
+                else toast.error('Error uploading file(s)')
+            } catch (error) {
+                toast.error('Error uploading file(s)')
+                console.error("Error uploading file:", error)
+            }
+        }
+        input.click()
+        input.remove()
+    }
+
+    const resetMemory = () => {
+        if (isLoading || !memoryRef.current[sessionId || '']) return
+        if (resetMemoryRef.current) {
+            resetMemoryRef.current.style.animation = 'transform-reload 1s ease-in'
+            setTimeout(() => {
+                if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
+            }, 1050)
+        }
+        memoryRef.current = sessionId ? { ...memoryRef.current, [sessionId]: '' } : memoryRef.current
+        toast.success('This conversation is now forgotten.')
+    }
+
+    const sendFeedback = async () => {
+        try {
+            setFeedbackData(prev => ({ ...prev, loading: true }))
+            const response = await fetch(`${apiURl}/api/save_feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(feedbackData)
+            })
+
+            const responseData = await response.json()
+
+            if (response.ok && responseData.message) {
+                toast.success('Thank you! Your feedback has been sent.')
+                setFeedbackData(null)
+            } else toast.error('Error sending feedback. Please try again')
+
+            setFeedbackData(prev => ({ ...prev, loading: false }))
+        } catch (error) {
+            setFeedbackData(prev => ({ ...prev, loading: false }))
+            toast.error('Error sending feedback. Please try again')
+        }
+    }
+
+    const getFeedback = async () => {
+        try {
+            const response = await fetch(`${apiURl}/api/get_feedback`, {
+                method: 'GET',
+                headers: { "Authorization": process.env.API_TOKEN || '' }
+            })
+
+            const feedback = await response.json()
+            console.log('feedback', feedback)
+
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const closeFeedbackModal = () => {
+        setFeedbackData(null)
+    }
+
     const renderAdminPanel = () => {
         return (
             <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
                     <form className="chat__panel-form">
                         <Dropdown
                             label='Mode'
@@ -869,7 +974,7 @@ export function Chat() {
     const renderFullAppPanel = () => {
         return (
             <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
                     <div className="chat__panel-form">
                         {getSession().messages.length && noNewChats() ? <Button onClick={createSession} label='New chat session' className={`button__outline${theme}`} /> : ''}
                         {isMobile ?
@@ -878,10 +983,7 @@ export function Chat() {
                                 options={[...sessions].reverse().filter(s => s.name)}
                                 objKey='name'
                                 selected={getSession()}
-                                setSelected={(s) => {
-                                    setSessionId(s.id)
-                                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
-                                }}
+                                setSelected={selectSession}
                                 value={getSession()}
                             />
                             : <div className="chat__panel-sessions">
@@ -890,10 +992,7 @@ export function Chat() {
                                         <div
                                             key={s.id}
                                             className={`chat__panel-session${theme}`}
-                                            onClick={() => {
-                                                setSessionId(s.id)
-                                                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
-                                            }}
+                                            onClick={() => selectSession(s)}
                                             style={{
                                                 background: s.id === getSession().id ? theme ? '#2d2d2d' : '#d6d6d6' : '',
                                                 border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
@@ -939,7 +1038,7 @@ export function Chat() {
     const renderEmbeddedPanel = () => {
         return (
             <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed' }}>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
                     <div className="chat__panel-hp">
                         {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
                         <p className='chat__panel-hp-title'>HP Assistant</p>
@@ -952,45 +1051,6 @@ export function Chat() {
                 <div className="chat__panel-ghost" />
             </>
         )
-    }
-
-    const uploadDocuments = () => {
-        const input = document.createElement('input') as HTMLInputElement
-        input.type = 'file'
-        input.onchange = async (e) => {
-            const file = (e.target as HTMLInputElement)?.files?.[0]
-            if (!file) return
-
-            const formData = new FormData()
-            formData.append("document", file)
-
-            try {
-                const response = await fetch('/api/save_document', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (response.ok) toast.success('File(s) uploaded successfully')
-                else toast.error('Error uploading file(s)')
-            } catch (error) {
-                toast.error('Error uploading file(s)')
-                console.error("Error uploading file:", error)
-            }
-        }
-        input.click()
-        input.remove()
-    }
-
-    const resetMemory = () => {
-        if (isLoading || !memoryRef.current[sessionId || '']) return
-        if (resetMemoryRef.current) {
-            resetMemoryRef.current.style.animation = 'transform-reload 1s ease-in'
-            setTimeout(() => {
-                if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
-            }, 1050)
-        }
-        memoryRef.current = sessionId ? { ...memoryRef.current, [sessionId]: '' } : memoryRef.current
-        toast.success('This conversation is now forgotten.')
     }
 
     return minimized ?
@@ -1008,7 +1068,42 @@ export function Chat() {
                     margin: !getSession().messages.length ? 'auto' : ''
                 }}>
                 <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
-                <div className="chat__output">
+                {feedbackData?.messages ?
+                    <Modal
+                        title='What did I do wrong?'
+                        subtitle='Your feedback helps me get better 🙂'
+                        onClose={closeFeedbackModal}>
+                        <div className="chat__feedback-modal">
+                            <div className="chat__feedback-content">
+                                {feedbackData.messages.map((feedback: sessionType) => (
+                                    <p key={feedback.id} className={`chat__feedback-content-${feedback.role}${theme}`}>{feedback.content}</p>
+                                ))}
+                            </div>
+                            <InputField
+                                label='Your comments'
+                                name='comments'
+                                placeholder='Type your comments or a correct response'
+                                updateData={updateFeedbackData}
+                                type='textarea'
+                                rows={5}
+                            />
+                            <div className="chat__feedback-buttons">
+                                <Button
+                                    label='Not now'
+                                    onClick={closeFeedbackModal}
+                                    style={{ fontSize: '1rem' }}
+                                />
+                                <Button
+                                    label='Send feedback'
+                                    disabled={!feedbackData.comments}
+                                    onClick={sendFeedback}
+                                    className={`button__outline${theme}`}
+                                    style={{ fontSize: '1rem' }}
+                                />
+                            </div>
+                        </div>
+                    </Modal> : ''}
+                <div className="chat__output" style={{ filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
                     <div className="chat__box">
                         <div className="chat__box-list">
                             {!getSession().messages.length ?
@@ -1041,11 +1136,13 @@ export function Chat() {
                                                         : <svg onClick={() => copyMessageToClipboard(index)} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path></svg>
                                                     }
                                                     {goodScore === index ?
-                                                        <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
+                                                        <Tooltip tooltip='Thanks!' inline show={true}><svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
+                                                        </Tooltip>
                                                         : <svg onClick={() => scoreMessage(index, true)} style={{ stroke: message.score ? 'blue' : '' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M12.1318 2.50389C12.3321 2.15338 12.7235 1.95768 13.124 2.00775L13.5778 2.06447C16.0449 2.37286 17.636 4.83353 16.9048 7.20993L16.354 8.99999H17.0722C19.7097 8.99999 21.6253 11.5079 20.9313 14.0525L19.5677 19.0525C19.0931 20.7927 17.5124 22 15.7086 22H6C4.34315 22 3 20.6568 3 19V12C3 10.3431 4.34315 8.99999 6 8.99999H8C8.25952 8.99999 8.49914 8.86094 8.6279 8.63561L12.1318 2.50389ZM10 20H15.7086C16.6105 20 17.4008 19.3964 17.6381 18.5262L19.0018 13.5262C19.3488 12.2539 18.391 11 17.0722 11H15C14.6827 11 14.3841 10.8494 14.1956 10.5941C14.0071 10.3388 13.9509 10.0092 14.0442 9.70591L14.9932 6.62175C15.3384 5.49984 14.6484 4.34036 13.5319 4.08468L10.3644 9.62789C10.0522 10.1742 9.56691 10.5859 9 10.8098V19C9 19.5523 9.44772 20 10 20ZM7 11V19C7 19.3506 7.06015 19.6872 7.17071 20H6C5.44772 20 5 19.5523 5 19V12C5 11.4477 5.44772 11 6 11H7Z" fill="currentColor"></path></svg>
                                                     }
                                                     {badScore === index ?
-                                                        <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
+                                                        <Tooltip tooltip='Thanks!' inline show={true}><svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
+                                                        </Tooltip>
                                                         : <svg onClick={() => scoreMessage(index, false)} style={{ stroke: message.score === false ? 'blue' : '' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M11.8727 21.4961C11.6725 21.8466 11.2811 22.0423 10.8805 21.9922L10.4267 21.9355C7.95958 21.6271 6.36855 19.1665 7.09975 16.7901L7.65054 15H6.93226C4.29476 15 2.37923 12.4921 3.0732 9.94753L4.43684 4.94753C4.91145 3.20728 6.49209 2 8.29589 2H18.0045C19.6614 2 21.0045 3.34315 21.0045 5V12C21.0045 13.6569 19.6614 15 18.0045 15H16.0045C15.745 15 15.5054 15.1391 15.3766 15.3644L11.8727 21.4961ZM14.0045 4H8.29589C7.39399 4 6.60367 4.60364 6.36637 5.47376L5.00273 10.4738C4.65574 11.746 5.61351 13 6.93226 13H9.00451C9.32185 13 9.62036 13.1506 9.8089 13.4059C9.99743 13.6612 10.0536 13.9908 9.96028 14.2941L9.01131 17.3782C8.6661 18.5002 9.35608 19.6596 10.4726 19.9153L13.6401 14.3721C13.9523 13.8258 14.4376 13.4141 15.0045 13.1902V5C15.0045 4.44772 14.5568 4 14.0045 4ZM17.0045 13V5C17.0045 4.64937 16.9444 4.31278 16.8338 4H18.0045C18.5568 4 19.0045 4.44772 19.0045 5V12C19.0045 12.5523 18.5568 13 18.0045 13H17.0045Z" fill="currentColor"></path></svg>
                                                     }
                                                     {message.time && renderAdmin ? <span> ({message.time / 1000}s)</span> : ''}
