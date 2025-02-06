@@ -2,6 +2,8 @@
 @use '../components/switch.scss';
 @use '../components/dropdown.scss';
 @use '../components/tooltip.scss';
+@use '../components/modal.scss';
+@use '../components/inputfield.scss';
 @use '../pages/chat.scss';
 @use './animations.scss';
 
@@ -108,7 +110,7 @@ pre[class*="language-"] {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #42424257;
+    background: #7272724f;
     // border-radius: .2rem;
 }
 
