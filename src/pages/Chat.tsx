@@ -610,7 +610,7 @@ export function Chat() {
         });
     }
 
-    const scoreMessage = (index: number, score: boolean) => {
+    const scoreMessage = async (index: number, score: boolean) => {
         const scoredMessages = [...getSession().messages]
         scoredMessages[index].score = score
         setSessions(prev => {
@@ -625,13 +625,17 @@ export function Chat() {
             })
         })
 
-        if (!score) {
-            setFeedbackData(prev => ({
-                ...prev,
-                ...getSession(),
-                messages: [scoredMessages[index - 1] || {}, scoredMessages[index]]
-            }))
+        const newFeedbackData = {
+            ...feedbackData,
+            ...getSession(),
+            messages: [scoredMessages[index - 1] || {}, scoredMessages[index]],
+            appVersion: APP_VERSION,
+            session_id: getSession().id,
+            score
         }
+
+        setFeedbackData(newFeedbackData)
+        if (score) await silentlySaveFeedback(newFeedbackData)
 
         setTimeout(() => score ? setGoodScore(index) : setBadScore(index), 100)
         setTimeout(() => score ? setGoodScore(-1) : setBadScore(-1), 1500)
@@ -770,7 +774,7 @@ export function Chat() {
         localStorage.setItem('currentSession', JSON.stringify(session.id))
     }
 
-    const updateFeedbackData = (key: string, e: onChangeEventType) => {
+    const updateFeedbackData = (key: string, e: any) => {
         const value = e.target.value
         setFeedbackData({ ...feedbackData, [key]: value })
     }
@@ -852,14 +856,24 @@ export function Chat() {
         }
     }
 
-    const closeFeedbackModal = () => {
-        setFeedbackData(null)
+    const silentlySaveFeedback = async (data: dataObj) => {
+        try {
+            const response = await fetch(`${apiURl}/api/save_feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            console.log(await response.json())
+            setTimeout(() => setFeedbackData(null), 200)
+        } catch (error) {
+            setFeedbackData(null)
+        }
     }
 
     const renderAdminPanel = () => {
         return (
             <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
                     <form className="chat__panel-form">
                         <Dropdown
                             label='Mode'
@@ -974,7 +988,7 @@ export function Chat() {
     const renderFullAppPanel = () => {
         return (
             <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
                     <div className="chat__panel-form">
                         {getSession().messages.length && noNewChats() ? <Button onClick={createSession} label='New chat session' className={`button__outline${theme}`} /> : ''}
                         {isMobile ?
@@ -1038,7 +1052,7 @@ export function Chat() {
     const renderEmbeddedPanel = () => {
         return (
             <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
+                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
                     <div className="chat__panel-hp">
                         {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
                         <p className='chat__panel-hp-title'>HP Assistant</p>
@@ -1068,16 +1082,35 @@ export function Chat() {
                     margin: !getSession().messages.length ? 'auto' : ''
                 }}>
                 <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
-                {feedbackData?.messages ?
+                {feedbackData?.score === false ?
                     <Modal
                         title='What did I do wrong?'
                         subtitle='Your feedback helps me get better 🙂'
-                        onClose={closeFeedbackModal}>
+                        onClose={() => silentlySaveFeedback(feedbackData)}>
                         <div className="chat__feedback-modal">
                             <div className="chat__feedback-content">
                                 {feedbackData.messages.map((feedback: sessionType) => (
                                     <p key={feedback.id} className={`chat__feedback-content-${feedback.role}${theme}`}>{feedback.content}</p>
                                 ))}
+                            </div>
+                            <div className="chat__feedback-buttons" style={{ marginBottom: '1rem', alignItems: 'flex-end' }}>
+                                <InputField
+                                    label='Your full name or CDSID'
+                                    name='username'
+                                    updateData={updateFeedbackData}
+                                    style={{ width: '50%' }} />
+                                <Dropdown
+                                    label='Category type'
+                                    options={[
+                                        'Out of context / Hallucination',
+                                        'In context but wrong answer',
+                                        'Too long answer',
+                                        'Other (explain)'
+                                    ]}
+                                    value={feedbackData.type}
+                                    selected={feedbackData.type}
+                                    setSelected={value => updateFeedbackData('type', { target: { value } })}
+                                    style={{ width: '50%' }} />
                             </div>
                             <InputField
                                 label='Your comments'
@@ -1090,12 +1123,13 @@ export function Chat() {
                             <div className="chat__feedback-buttons">
                                 <Button
                                     label='Not now'
-                                    onClick={closeFeedbackModal}
+                                    onClick={() => silentlySaveFeedback(feedbackData)}
                                     style={{ fontSize: '1rem' }}
+                                    disabled={feedbackData.loading}
                                 />
                                 <Button
                                     label='Send feedback'
-                                    disabled={!feedbackData.comments}
+                                    disabled={!feedbackData.comments || feedbackData.loading}
                                     onClick={sendFeedback}
                                     className={`button__outline${theme}`}
                                     style={{ fontSize: '1rem' }}
@@ -1103,7 +1137,7 @@ export function Chat() {
                             </div>
                         </div>
                     </Modal> : ''}
-                <div className="chat__output" style={{ filter: feedbackData?.messages ? 'blur(5px)' : '' }}>
+                <div className="chat__output" style={{ filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
                     <div className="chat__box">
                         <div className="chat__box-list">
                             {!getSession().messages.length ?

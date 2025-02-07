@@ -14,7 +14,7 @@ export const Button = ({ label, onClick, className, style, disabled }: Props) =>
   return (
     <button
       onClick={onClick}
-      style={{ ...style, cursor: disabled ? 'not-allowed' : '' }}
+      style={{ ...style, cursor: disabled ? 'not-allowed' : '', opacity: disabled ? '0.5' : '' }}
       className={`button__default${theme} ${className || ''}`}
       disabled={disabled}
     >
