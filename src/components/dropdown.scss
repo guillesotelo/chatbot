@@ -29,7 +29,7 @@
 
         &--dark {
             text-align: left;
-            color: lightgray;
+            color: #adadad;
             background-color: transparent;
             margin: 0 0 0.5vh 0;
             font-size: 0.8rem;
@@ -79,7 +79,7 @@
         user-select: none;
 
         &--dark {
-            border: 1px solid lightgray;
+            border: 1px solid #adadad;
             // background-color: #353535;
             border-radius: 0.5rem;
             font-size: .9rem;
@@ -160,7 +160,7 @@
         }
 
         &--dark {
-            color: lightgray;
+            color: #adadad;
             display: flex;
             gap: .5rem;
             font-weight: normal;
