@@ -627,16 +627,17 @@
         display: flex;
         flex-direction: row;
         align-items: center;
-        background: #ededed;
-        border-radius: 2rem;
+        border-radius: 1.5rem;
         height: fit-content;
+        border: 1px solid #e3e3e3;
+        box-shadow: 0 3px 7px #d3d3d37d;
 
         &--dark {
             display: flex;
             flex-direction: row;
             align-items: center;
             background: #2F2F2F;
-            border-radius: 2rem;
+            border-radius: 1.5rem;
             height: fit-content;
 
         }
@@ -813,6 +814,68 @@
             justify-content: space-between;
             gap: 1rem;
             margin: 1rem 0 0;
+        }
+    }
+
+    &__admin {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin: 1rem 1rem 10rem;
+
+        &-row {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        &-session {
+            width: 45%;
+            box-shadow: 0 3px 10px #d3d3d3af;
+            padding: 1rem;
+            border-radius: .5rem;
+        }
+
+        &-comment {
+            padding: 1rem;
+            // background-color: #72727228;
+            color: rgb(185, 121, 2);
+            border-radius: .5rem;
+            width: fit-content;
+            margin: 0;
+        }
+
+        &-review {
+            &-buttons {
+                display: flex;
+                flex-direction: row;
+                align-items: flex-end;
+                justify-content: flex-end;
+                gap: 1rem;
+                margin: 2rem 0 0;
+                width: 100%;
+            }
+        }
+
+        &-delete {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 30%;
+            padding: 1rem;
+            margin: auto;
+            box-shadow: 0 3px 10px #d3d3d3af;
+            border-radius: .5rem;
+
+            &-buttons {
+                display: flex;
+                flex-direction: row;
+                align-items: flex-end;
+                justify-content: space-evenly;
+                margin: 1rem 0 0;
+                width: 100%;
+            }
         }
     }
 }

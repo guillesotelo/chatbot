@@ -1,12 +1,17 @@
 import { Chat } from "./pages/Chat";
-import { AppProvider } from './AppContext';
+import { Routes, Route, BrowserRouter } from "react-router-dom";
 import './sass/app.scss'
+import Admin from "./pages/Admin";
 
 function App() {
   return (
-    <AppProvider>
-      <Chat />
-    </AppProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Chat />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/admin" element={<Admin />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

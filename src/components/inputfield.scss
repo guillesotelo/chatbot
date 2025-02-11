@@ -47,7 +47,7 @@
         }
 
         &--dark {
-            border: 1px solid #424244;
+            border: 1px solid transparent;
             font-family: 'Open Sans', sans-serif;
             width: -webkit-fill-available;
             margin: 0;
@@ -57,7 +57,7 @@
             width: -webkit-fill-available;
             font-weight: normal;
             padding: 0.5rem;
-            background-color: #353535;
+            background-color: #252525;
             color: lightgray;
 
             &:focus {
