@@ -68,6 +68,44 @@
             }
         }
     }
+
+    &__delete {
+        border: none;
+        outline: none;
+        transition: .1s;
+        cursor: pointer;
+        background: transparent;
+        color: darkred;
+        border-radius: .5rem;
+        padding: .7rem .5rem;
+        border: 1px solid darkred;
+
+        &:hover {
+            background: darkred;
+            color: white;
+            border: 1px solid transparent;
+            text-decoration: none;
+        }
+
+        &--dark {
+            border: none;
+            outline: none;
+            transition: .1s;
+            cursor: pointer;
+            background: transparent;
+            color: lightgray;
+            border-radius: .5rem;
+            padding: .7rem .5rem;
+            border: 1px solid lightgray;
+
+            &:hover {
+                background: lightgray;
+                color: darkred;
+                border: 1px solid transparent;
+                text-decoration: none;
+            }
+        }
+    }
 }
 
 @media only screen and (max-width: 768px) {

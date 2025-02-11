@@ -6,7 +6,7 @@
         background-color: transparent;
         // width: 100%;
         // min-width: fit-content;
-        transition: .3s;
+        transition: .2s;
 
         &--dark {
             display: flex;
@@ -14,13 +14,13 @@
             background-color: transparent;
             // width: 100%;
             // min-width: fit-content;
-            transition: .3s;
+            transition: .2s;
         }
     }
 
     &__label {
         text-align: left;
-        color: black;
+        color: #696869;
         background-color: transparent;
         margin: 0 0 0.5vh 0;
         font-size: 0.8rem;
@@ -43,19 +43,19 @@
         flex-direction: column;
         width: 100%;
         position: relative;
-        transition: .3s;
+        transition: .2s;
 
         &--dark {
             display: flex;
             flex-direction: column;
             width: 100%;
             position: relative;
-            transition: .3s;
+            transition: .2s;
         }
     }
 
     &__select {
-        border: 1px solid black;
+        border: 1px solid lightgray;
         // background-color: #fff;
         border-radius: 0.5rem;
         font-size: .9rem;
@@ -64,7 +64,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         outline: none;
-        transition: .3s;
+        transition: .2s;
         position: relative;
         display: flex;
         flex-direction: row;
@@ -73,13 +73,13 @@
         // gap: 1rem;
         cursor: pointer;
         position: relative;
-        transition: .3s;
+        transition: .2s;
         -webkit-user-select: none;
         -ms-user-select: none;
         user-select: none;
 
         &--dark {
-            border: 1px solid #adadad;
+            border: 1px solid #616161;
             // background-color: #353535;
             border-radius: 0.5rem;
             font-size: .9rem;
@@ -88,7 +88,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             outline: none;
-            transition: .3s;
+            transition: .2s;
             position: relative;
             display: flex;
             flex-direction: row;
@@ -97,7 +97,7 @@
             // gap: 1rem;
             cursor: pointer;
             position: relative;
-            transition: .3s;
+            transition: .2s;
             -webkit-user-select: none;
             -ms-user-select: none;
             user-select: none;
@@ -116,7 +116,7 @@
         line-height: 1.3rem;
         font-weight: normal;
         padding: 0.5rem;
-        transition: .3s;
+        transition: .2s;
 
         &-multi {
             &-item {
@@ -147,7 +147,7 @@
 
             &-remove {
                 margin: 0;
-                transition: .3s;
+                transition: .2s;
                 color: rgb(57, 57, 57);
                 padding: .2rem .2rem .2rem 0;
                 cursor: pointer;
@@ -171,7 +171,7 @@
             line-height: 1.3rem;
             font-weight: normal;
             padding: 0.5rem;
-            transition: .3s;
+            transition: .2s;
         }
     }
 
@@ -190,7 +190,7 @@
         z-index: 5;
         max-height: 20rem;
         overflow-y: auto;
-        transition: .3s;
+        transition: .2s;
 
         &--dark {
             position: absolute;
@@ -206,7 +206,7 @@
             z-index: 5;
             max-height: 20rem;
             overflow-y: auto;
-            transition: .3s;
+            transition: .2s;
         }
     }
 
@@ -219,14 +219,14 @@
         cursor: pointer;
         padding: .4rem .7rem;
         // border-top: 1px solid #e7e7e7;
-        // transition: .3s;
+        // transition: .2s;
         white-space: nowrap;
         text-overflow: ellipsis;
         font-weight: normal;
 
         &:hover {
             // color: #7089AC;
-            background-color: #96a7c0;
+            background-color: #96a7c06b;
         }
 
         &--dark {
@@ -238,7 +238,7 @@
             cursor: pointer;
             padding: .4rem .7rem;
             // border-top: 1px solid #e7e7e7;
-            // transition: .3s;
+            // transition: .2s;
             white-space: nowrap;
             text-overflow: ellipsis;
             font-weight: normal;
@@ -260,7 +260,7 @@
             background-color: transparent;
             width: 100%;
             min-width: fit-content;
-            transition: .3s;
+            transition: .2s;
 
             &--dark {
                 display: flex;
@@ -269,7 +269,7 @@
                 background-color: transparent;
                 width: 100%;
                 min-width: fit-content;
-                transition: .3s;
+                transition: .2s;
             }
         }
 
@@ -299,7 +299,7 @@
             flex-direction: column;
             width: 100%;
             position: relative;
-            transition: .3s;
+            transition: .2s;
         }
 
         &__select {
@@ -313,7 +313,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             outline: none;
-            transition: .3s;
+            transition: .2s;
             position: relative;
             display: flex;
             flex-direction: row;
@@ -322,7 +322,7 @@
             cursor: pointer;
             width: 100%;
             position: relative;
-            transition: .3s;
+            transition: .2s;
         }
 
         &__selected {
@@ -335,7 +335,7 @@
             line-height: 1.3rem;
             font-weight: normal;
             padding: 0.5rem;
-            transition: .3s;
+            transition: .2s;
         }
 
         &__options {
@@ -353,7 +353,7 @@
             z-index: 2;
             max-height: 20rem;
             overflow-y: auto;
-            transition: .3s;
+            transition: .2s;
         }
 
         &__option {
@@ -364,7 +364,7 @@
             line-height: 1.2rem;
             cursor: pointer;
             padding: .5rem .7rem;
-            transition: .3s;
+            transition: .2s;
             white-space: nowrap;
             // overflow: hidden;
             text-overflow: ellipsis;

@@ -4,6 +4,8 @@ export type AppContextType = {
     isMobile: boolean
     theme: string
     setTheme: (value: string) => void
+    isLoggedIn: boolean | null
+    setIsLoggedIn: (value: boolean) => void
 }
 
 export type messageType = {

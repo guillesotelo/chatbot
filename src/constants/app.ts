@@ -1,4 +1,4 @@
-export const APP_VERSION = '0.49'
+export const APP_VERSION = '0.51'
 
 export const TECH_ISSUE_LLM = [
     "I'm really sorry, but I'm experiencing some technical difficulties at the moment. Please try again later, and I'll do my best to assist you. Thank you for your patience!",
@@ -20,3 +20,54 @@ export const TECH_ISSUE_LLM = [
 export const API_URL = ''
 
 export const LOCAL_API_URL = 'http://127.0.0.1:5000'
+
+export const feedbackHeaders = [
+    {
+        name: 'CREATED',
+        value: 'createdAt',
+    },
+    {
+        name: 'SESSION',
+        value: 'session_id',
+    },
+    {
+        name: 'USERNAME',
+        value: 'username',
+    },
+    {
+        name: 'TYPE',
+        value: 'type',
+    },
+    {
+        name: 'COMMENTS',
+        value: 'comments',
+    },
+    {
+        name: 'SCORE',
+        value: 'score',
+    },
+]
+
+export const questionStarters = [
+    // Common question words
+    "who", "what", "when", "where", "why", "how", "which", "whose", "whom",
+
+    // Common contractions
+    "who's", "what's", "when's", "where's", "why's", "how's", "which's", "who've", "who'd",
+
+    // Modal verbs & auxiliary verbs
+    "can", "could", "would", "should", "shall", "may", "might", "must",
+    "do", "does", "did", "is", "are", "was", "were", "will", "won't",
+    "have", "has", "had", "haven't", "hasn't", "hadn't", "am", "aren't", "isn't",
+    "doesn't", "didn't", "wouldn't", "couldn't", "shouldn't", "can't", "mightn't",
+
+    // Prepositions (sometimes used in questions)
+    "in", "on", "at", "for", "with", "without", "by", "about", "because", "from",
+    "through", "under", "over", "between", "against", "into", "onto", "since", "during",
+
+    // Conjunctions (occasionally used in questions)
+    "and", "or", "but", "so", "if", "nor", "yet", "although", "though", "unless", "whether",
+
+    // Shortened spoken forms
+    "wanna", "gonna", "gotta", "lemme", "could've", "should've", "would've"
+]

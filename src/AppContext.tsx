@@ -7,6 +7,8 @@ export const AppContext = createContext<AppContextType>({
     isMobile: false,
     theme: '',
     setTheme: () => { },
+    isLoggedIn: null,
+    setIsLoggedIn: () => { }
 })
 
 type Props = {
@@ -15,6 +17,7 @@ type Props = {
 
 export const AppProvider = ({ children }: Props) => {
     const [isMobile, setIsMobile] = useState<boolean>(false)
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
     const [theme, setTheme] = useState('')
     const [windowLoading, setWindowLoading] = useState(true)
 
@@ -27,6 +30,7 @@ export const AppProvider = ({ children }: Props) => {
         setIsMobile(isMobileDevice())
 
         getPreferredScheme()
+        checkCredentials()
 
         const checkWidth = () => {
             setIsMobile(window.innerWidth <= 768)
@@ -81,14 +85,23 @@ export const AppProvider = ({ children }: Props) => {
         setTheme(savedMode ? mode : window?.matchMedia?.('(prefers-color-scheme:dark)')?.matches ? '--dark' : '')
     }
 
+    const checkCredentials = () => {
+        const token = localStorage.getItem('app_token') || ''
+        setIsLoggedIn(token === process.env.REACT_APP_TOKEN)
+    }
+
     const contextValue = React.useMemo(() => ({
         isMobile,
         theme,
         setTheme,
+        isLoggedIn,
+        setIsLoggedIn
     }), [
         isMobile,
         theme,
         setTheme,
+        isLoggedIn,
+        setIsLoggedIn
     ])
 
 
