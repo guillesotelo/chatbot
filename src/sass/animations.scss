@@ -59,6 +59,19 @@
     }
 }
 
+@keyframes fade-in-memory {
+    0% {
+        opacity: 0;
+        transform: translateY(-30%);
+    }
+
+    100% {
+        opacity: .4;
+        transform: translateY(0%);
+    }
+}
+
+
 @keyframes close-animation {
     0% {
         opacity: 1;

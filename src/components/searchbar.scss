@@ -1,0 +1,109 @@
+.searchbar {
+    &__container {
+        /* width: 20%; */
+        align-self: center;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0;
+        padding: .6rem .7rem;
+        background-color: transparent !important;
+        border: 1px solid transparent;
+        border-radius: .5rem;
+
+        &:focus-within {
+            // border: 1px solid #7089AC;
+        }
+
+        &--dark {
+            /* width: 20%; */
+            align-self: center;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0;
+            padding: .5rem .7rem;
+            border: 1px solid transparent;
+            border-radius: .5rem;
+            background-color: #3c3c3c;
+
+            &:focus-within {
+                // border: 1px solid #7089AC;
+            }
+        }
+    }
+
+    &__input {
+        border: none;
+        font-size: .9rem;
+        text-decoration: none;
+        width: 90%;
+        background-color: #F9FAFB;
+        margin: 0 .6rem;
+
+        &:focus {
+            outline: none;
+        }
+
+        &::placeholder {
+            color: gray;
+            font-size: .9rem;
+        }
+
+        &--dark {
+            border: none;
+            font-size: .9rem;
+            text-decoration: none;
+            width: 90%;
+            background-color: #3c3c3c;
+            margin: 0 .6rem;
+            color: lightgray;
+
+            &:focus {
+                outline: none;
+            }
+
+            &::placeholder {
+                color: gray;
+                font-size: .9rem;
+            }
+        }
+    }
+
+    &__icon {
+        height: 1.3rem;
+        width: auto;
+        // cursor: pointer;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+
+        // &:hover {
+        //     opacity: .6;
+        // }
+
+        &--dark {
+            height: 18px;
+            width: auto;
+            // cursor: pointer;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+
+            // &:hover {
+            //     opacity: .7;
+            // }
+        }
+    }
+
+}
+
+@media only screen and (max-width: 640px) {
+    .searchbar {
+        &__container {
+            width: 10rem;
+        }
+    }
+}

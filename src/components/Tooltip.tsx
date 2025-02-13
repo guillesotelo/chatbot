@@ -7,9 +7,10 @@ type Props = {
     show?: boolean | null
     style?: React.CSSProperties
     boxStyle?: React.CSSProperties
+    position?: 'up' | 'down'
 }
 
-export default function Tooltip({ tooltip, children, inline, style, boxStyle, show }: Props) {
+export default function Tooltip({ tooltip, children, inline, style, boxStyle, show, position }: Props) {
     const [showTooltip, setShowTooltip] = useState(show)
     const containerRef = useRef<HTMLDivElement>(null)
     const [childrenWidth, setChildrenWidth] = useState(0)
@@ -44,11 +45,11 @@ export default function Tooltip({ tooltip, children, inline, style, boxStyle, sh
             <div className={inline ? 'tooltip__box-inline' : 'tooltip__box'} style={{
                 display: showTooltip ? 'block' : 'none',
                 marginLeft: inline ? childrenWidth * 1.2 : '',
-                top: !inline ? childrenHeight * -2.5 : '',
+                top: !inline ? position === 'up' ?  childrenHeight * -1.4:  childrenHeight * 1.4 : '',
                 marginTop: inline ? childrenHeight / 10 : '',
                 ...boxStyle
             }}>
-                <p className={inline ? 'tooltip__text-inline' : 'tooltip__text'} >
+                <p className={position === 'up' ? 'tooltip__text-up' : inline ? 'tooltip__text-inline' : 'tooltip__text'} >
                     {tooltip}
                 </p>
             </div>

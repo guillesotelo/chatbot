@@ -67,6 +67,8 @@ import Modal from '../components/Modal';
 import InputField from '../components/InputField';
 import DataTable from '../components/DataTable';
 import { useNavigate } from "react-router-dom";
+import SearchBar from '../components/SearchBar';
+import NewChat from '../assets/icons/new-chat.svg'
 
 const MODES = [
     {
@@ -103,6 +105,7 @@ export function Chat() {
     const [timePassed, setTimePassed] = useState(0)
     const [useMemory, setUseMemory] = useState(false)
     const [sessions, setSessions] = useState<sessionType[]>([])
+    const [filteredSessions, setFilteredSessions] = useState<sessionType[]>([])
     const [sessionId, setSessionId] = useState<null | number | undefined>(null)
     const [showOptions, setShowOptions] = useState<null | number | undefined>(null)
     const [sessionNames, setSessionNames] = useState<dataObj>({})
@@ -113,7 +116,6 @@ export function Chat() {
     const [loginMessage, setLoginMessage] = useState('')
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const messageRef = useRef<HTMLTextAreaElement>(null)
-    const greetingsItervalId = useRef<NodeJS.Timeout | null>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
     const timePassedRef = useRef(timePassed)
     const stopGenerationRef = useRef(false)
@@ -164,7 +166,6 @@ export function Chat() {
         return () => {
             window.removeEventListener('scroll', handleScroll)
             document.removeEventListener('click', hideSessionOptions)
-            if (greetingsItervalId.current) clearInterval(greetingsItervalId.current)
         }
     }, [])
 
@@ -199,6 +200,8 @@ export function Chat() {
         Prism.highlightAll()
         renderCodeBlockHeaders()
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
+
+        setFilteredSessions(sessions)
     }, [sessions])
 
     useEffect(() => {
@@ -492,22 +495,22 @@ export function Chat() {
     }
 
     const generateGreetings = () => {
-        if (greetingsItervalId.current) clearInterval(greetingsItervalId.current)
-        setGreetings('')
-
-        const string = '  Hi, what can I help you with today?'
+        const message = "Hi, what can I help you with today?"
+        const promptSymbol = "⬤"
         let index = 0
 
-        greetingsItervalId.current = setInterval(() => {
-            if (index === string.length - 1) {
-                setTimeout(() => setGreetings(string), 1000)
-                clearInterval(greetingsItervalId.current!)
-                greetingsItervalId.current = null
-                return
-            }
+        setGreetings(promptSymbol)
 
-            setGreetings(prev => prev.replace(' ⬤', '') + string[index] + ' ⬤')
-            index++
+        const interval = setInterval(() => {
+            if (index < message.length) {
+                setGreetings(message.slice(0, index + 1) + promptSymbol)
+                index++
+            } else {
+                clearInterval(interval)
+                setTimeout(() => {
+                    setGreetings(message)
+                }, 1000)
+            }
         }, 50)
     }
 
@@ -893,6 +896,12 @@ export function Chat() {
         } else setLoginMessage('Login failed')
     }
 
+    const handleChangeSearch = (e: any) => {
+        const { value } = e.target
+        if (value.trim()) setFilteredSessions([...sessions.filter(s => JSON.stringify(s).includes(value))])
+        else setFilteredSessions(sessions)
+    }
+
     const renderAdminSidebar = () => {
         return (
             <>
@@ -1011,43 +1020,59 @@ export function Chat() {
     const renderFullAppSidebar = () => {
         return (
             <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
+                <div className="chat__panel" style={{ background: theme ? '' : '#F9F9F9', filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
                     <div className="chat__panel-form">
-                        {getSession().messages.length && noNewChats() ? <Button onClick={createSession} label='New chat session' className={`button__outline${theme}`} /> : ''}
+                        <div className="chat__panel-form-controls">
+                            {!isMobile && sessions.length > 1 ?
+                                <SearchBar
+                                    handleChange={handleChangeSearch}
+                                    placeholder='Search chats...'
+                                    triggerSearch={() => { }}
+                                /> : ''}
+                            {getSession().messages.length && noNewChats() ?
+                                <Tooltip tooltip='Start new chat'>
+                                    <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__panel-form-newchat${theme}`} />
+                                </Tooltip>
+                                : ''}
+                        </div>
                         {isMobile ?
                             <Dropdown
                                 label=''
-                                options={[...sessions].reverse().filter(s => s.name)}
+                                options={[...filteredSessions].reverse().filter(s => s.name)}
                                 objKey='name'
                                 selected={getSession()}
                                 setSelected={selectSession}
                                 value={getSession()}
                             />
-                            : <div className="chat__panel-sessions">
-                                {[...sessions].reverse().map(s =>
-                                    s.name ?
-                                        <div
-                                            key={s.id}
-                                            className={`chat__panel-session${theme}`}
-                                            onClick={() => selectSession(s)}
-                                            style={{
-                                                background: s.id === getSession().id ? theme ? '#2d2d2d' : '#d6d6d6' : '',
-                                                border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
-                                            }}>
-                                            <div className="chat__panel-session-item">
-                                                {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
-                                                    <input
-                                                        className='chat__panel-session-rename'
-                                                        value={sessionNames[s.id || '']}
-                                                        onChange={e => setSessionNames({ [s.id || '']: e.target.value })}
-                                                        onKeyDown={(e) => updateSessionName(e, s.id)} />
-                                                    : <p className='chat__panel-session-name'>{s.name}</p>}
-                                                {/* <p className='chat__panel-session-name'>{s.name}</p> */}
-                                                {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
+                            :
+                            <div className="chat__panel-sessions">
+                                {!filteredSessions.length && sessions.length ?
+                                    <p style={{ fontSize: '.9rem' }}>No chats found.</p>
+                                    :
+                                    [...filteredSessions].reverse().map(s =>
+                                        s.name ?
+                                            <div
+                                                key={s.id}
+                                                className={`chat__panel-session${theme}`}
+                                                onClick={() => selectSession(s)}
+                                                style={{
+                                                    background: s.id === getSession().id ? theme ? '#2d2d2d' : '#e0e0e0' : '',
+                                                    border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
+                                                }}>
+                                                <div className="chat__panel-session-item">
+                                                    {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
+                                                        <input
+                                                            className='chat__panel-session-rename'
+                                                            value={sessionNames[s.id || '']}
+                                                            onChange={e => setSessionNames({ [s.id || '']: e.target.value })}
+                                                            onKeyDown={(e) => updateSessionName(e, s.id)} />
+                                                        : <p className='chat__panel-session-name'>{s.name}</p>}
+                                                    {/* <p className='chat__panel-session-name'>{s.name}</p> */}
+                                                    {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
+                                                </div>
                                             </div>
-                                        </div>
-                                        : ''
-                                )}
+                                            : ''
+                                    )}
                             </div>}
                         {showOptions ?
                             <div className={`chat__panel-session-options${theme}`} style={sessionOptionStyles[showOptions] || {}}>
@@ -1099,7 +1124,12 @@ export function Chat() {
                 <div className="chat__feedback-modal">
                     <div className="chat__feedback-content">
                         {feedbackData.messages.map((feedback: sessionType) => (
-                            <p key={feedback.id} className={`chat__feedback-content-${feedback.role}${theme}`}>{feedback.content}</p>
+                            <div
+                                key={feedback.id}
+                                className={`chat__feedback-content-${feedback.role}${theme}`}
+                                dangerouslySetInnerHTML={{
+                                    __html: marked.parse(feedback.content || '') as string,
+                                }} />
                         ))}
                     </div>
                     <div className="chat__feedback-buttons" style={{ marginBottom: '1rem', alignItems: 'flex-end' }}>
@@ -1107,9 +1137,10 @@ export function Chat() {
                             label='Your full name or CDSID'
                             name='username'
                             updateData={updateFeedbackData}
+                            value={feedbackData.username || ''}
                             style={{ width: '50%' }} />
                         <Dropdown
-                            label='Category type'
+                            label='Fault type'
                             options={[
                                 'Out of context / Hallucination',
                                 'In context but wrong answer',
@@ -1128,6 +1159,7 @@ export function Chat() {
                         placeholder='Type your comments or a correct response'
                         updateData={updateFeedbackData}
                         type='textarea'
+                        value={feedbackData.comments || ''}
                         rows={5}
                     />
                     <div className="chat__feedback-buttons">
@@ -1157,46 +1189,53 @@ export function Chat() {
                 {!getSession().messages.length ?
                     <p className='chat__box-hi'>{greetings}</p>
                     : getSession().messages.map((message: dataObj, index: number) => (
-                        <div key={index} className={`chat__message chat__message-${message.role || ''}`}>
-                            {message.role === 'assistant' ? <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} /> : ''}
-                            <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}>
-                                <div
-                                    className={`chat__message-content${theme} chat__message-content-${message.role || ''}`}
-                                    dangerouslySetInnerHTML={{
-                                        __html: marked.parse(message.content || '') as string,
-                                    }} />
-                                {message.sources && message.sources?.length > 0 && (
-                                    <div className='chat__message-sources'>
-                                        <p className="chat__message-sources-title">Sources:</p>
-                                        {message.sources.map((source: dataObj) => (
-                                            <p key={source.document.docId}>
-                                                <strong>
-                                                    {source.document.docMetadata?.file_name as string}
-                                                </strong>
-                                            </p>
-                                        ))}
-                                    </div>
-                                )}
-                                {message.role === 'assistant' ?
-                                    <div className="chat__message-controls">
-                                        {copyMessage === index ?
-                                            <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
-                                            : <svg onClick={() => copyMessageToClipboard(index)} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path></svg>
-                                        }
-                                        {goodScore === index ?
-                                            <Tooltip tooltip='Thanks!' inline show={true}><svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
-                                            </Tooltip>
-                                            : <svg onClick={() => scoreMessage(index, true)} style={{ stroke: message.score ? 'blue' : '' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M12.1318 2.50389C12.3321 2.15338 12.7235 1.95768 13.124 2.00775L13.5778 2.06447C16.0449 2.37286 17.636 4.83353 16.9048 7.20993L16.354 8.99999H17.0722C19.7097 8.99999 21.6253 11.5079 20.9313 14.0525L19.5677 19.0525C19.0931 20.7927 17.5124 22 15.7086 22H6C4.34315 22 3 20.6568 3 19V12C3 10.3431 4.34315 8.99999 6 8.99999H8C8.25952 8.99999 8.49914 8.86094 8.6279 8.63561L12.1318 2.50389ZM10 20H15.7086C16.6105 20 17.4008 19.3964 17.6381 18.5262L19.0018 13.5262C19.3488 12.2539 18.391 11 17.0722 11H15C14.6827 11 14.3841 10.8494 14.1956 10.5941C14.0071 10.3388 13.9509 10.0092 14.0442 9.70591L14.9932 6.62175C15.3384 5.49984 14.6484 4.34036 13.5319 4.08468L10.3644 9.62789C10.0522 10.1742 9.56691 10.5859 9 10.8098V19C9 19.5523 9.44772 20 10 20ZM7 11V19C7 19.3506 7.06015 19.6872 7.17071 20H6C5.44772 20 5 19.5523 5 19V12C5 11.4477 5.44772 11 6 11H7Z" fill="currentColor"></path></svg>
-                                        }
-                                        {badScore === index ?
-                                            <Tooltip tooltip='Thanks!' inline show={true}><svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
-                                            </Tooltip>
-                                            : <svg onClick={() => scoreMessage(index, false)} style={{ stroke: message.score === false ? 'blue' : '' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M11.8727 21.4961C11.6725 21.8466 11.2811 22.0423 10.8805 21.9922L10.4267 21.9355C7.95958 21.6271 6.36855 19.1665 7.09975 16.7901L7.65054 15H6.93226C4.29476 15 2.37923 12.4921 3.0732 9.94753L4.43684 4.94753C4.91145 3.20728 6.49209 2 8.29589 2H18.0045C19.6614 2 21.0045 3.34315 21.0045 5V12C21.0045 13.6569 19.6614 15 18.0045 15H16.0045C15.745 15 15.5054 15.1391 15.3766 15.3644L11.8727 21.4961ZM14.0045 4H8.29589C7.39399 4 6.60367 4.60364 6.36637 5.47376L5.00273 10.4738C4.65574 11.746 5.61351 13 6.93226 13H9.00451C9.32185 13 9.62036 13.1506 9.8089 13.4059C9.99743 13.6612 10.0536 13.9908 9.96028 14.2941L9.01131 17.3782C8.6661 18.5002 9.35608 19.6596 10.4726 19.9153L13.6401 14.3721C13.9523 13.8258 14.4376 13.4141 15.0045 13.1902V5C15.0045 4.44772 14.5568 4 14.0045 4ZM17.0045 13V5C17.0045 4.64937 16.9444 4.31278 16.8338 4H18.0045C18.5568 4 19.0045 4.44772 19.0045 5V12C19.0045 12.5523 18.5568 13 18.0045 13H17.0045Z" fill="currentColor"></path></svg>
-                                        }
-                                        {message.time && renderAdmin ? <span> ({message.time / 1000}s)</span> : ''}
-                                    </div> : ''}
+                        <>
+                            {index === getSession().messages.slice(getSession().messages.length - 3).length - 1
+                                && memoryRef.current[sessionId || ''] ?
+                                <p key={-1} className='chat__message-memory'>Conversation memory starts here</p>
+                                : ''}
+                            <div key={index} className={`chat__message chat__message-${message.role || ''}`}>
+                                {message.role === 'assistant' ? <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} /> : ''}
+                                <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}>
+                                    <div
+                                        className={`chat__message-content${theme} chat__message-content-${message.role || ''}`}
+                                        dangerouslySetInnerHTML={{
+                                            __html: marked.parse(message.content || '') as string,
+                                        }} />
+                                    {message.sources && message.sources?.length > 0 && (
+                                        <div className='chat__message-sources'>
+                                            <p className="chat__message-sources-title">Sources:</p>
+                                            {message.sources.map((source: dataObj) => (
+                                                <p key={source.document.docId}>
+                                                    <strong>
+                                                        {source.document.docMetadata?.file_name as string}
+                                                    </strong>
+                                                </p>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {message.role === 'assistant' ?
+                                        <div className="chat__message-controls">
+                                            {copyMessage === index ?
+                                                <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
+                                                : <Tooltip tooltip='Copy'><svg onClick={() => copyMessageToClipboard(index)} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path></svg>
+                                                </Tooltip>
+                                            }
+                                            {goodScore === index ?
+                                                <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
+                                                : <Tooltip tooltip='Good response'><svg onClick={() => scoreMessage(index, true)} style={{ stroke: message.score ? 'blue' : '' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M12.1318 2.50389C12.3321 2.15338 12.7235 1.95768 13.124 2.00775L13.5778 2.06447C16.0449 2.37286 17.636 4.83353 16.9048 7.20993L16.354 8.99999H17.0722C19.7097 8.99999 21.6253 11.5079 20.9313 14.0525L19.5677 19.0525C19.0931 20.7927 17.5124 22 15.7086 22H6C4.34315 22 3 20.6568 3 19V12C3 10.3431 4.34315 8.99999 6 8.99999H8C8.25952 8.99999 8.49914 8.86094 8.6279 8.63561L12.1318 2.50389ZM10 20H15.7086C16.6105 20 17.4008 19.3964 17.6381 18.5262L19.0018 13.5262C19.3488 12.2539 18.391 11 17.0722 11H15C14.6827 11 14.3841 10.8494 14.1956 10.5941C14.0071 10.3388 13.9509 10.0092 14.0442 9.70591L14.9932 6.62175C15.3384 5.49984 14.6484 4.34036 13.5319 4.08468L10.3644 9.62789C10.0522 10.1742 9.56691 10.5859 9 10.8098V19C9 19.5523 9.44772 20 10 20ZM7 11V19C7 19.3506 7.06015 19.6872 7.17071 20H6C5.44772 20 5 19.5523 5 19V12C5 11.4477 5.44772 11 6 11H7Z" fill="currentColor"></path></svg>
+                                                </Tooltip>
+                                            }
+                                            {badScore === index ?
+                                                <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
+                                                : <Tooltip tooltip='Bad response'><svg onClick={() => scoreMessage(index, false)} style={{ stroke: message.score === false ? 'blue' : '' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M11.8727 21.4961C11.6725 21.8466 11.2811 22.0423 10.8805 21.9922L10.4267 21.9355C7.95958 21.6271 6.36855 19.1665 7.09975 16.7901L7.65054 15H6.93226C4.29476 15 2.37923 12.4921 3.0732 9.94753L4.43684 4.94753C4.91145 3.20728 6.49209 2 8.29589 2H18.0045C19.6614 2 21.0045 3.34315 21.0045 5V12C21.0045 13.6569 19.6614 15 18.0045 15H16.0045C15.745 15 15.5054 15.1391 15.3766 15.3644L11.8727 21.4961ZM14.0045 4H8.29589C7.39399 4 6.60367 4.60364 6.36637 5.47376L5.00273 10.4738C4.65574 11.746 5.61351 13 6.93226 13H9.00451C9.32185 13 9.62036 13.1506 9.8089 13.4059C9.99743 13.6612 10.0536 13.9908 9.96028 14.2941L9.01131 17.3782C8.6661 18.5002 9.35608 19.6596 10.4726 19.9153L13.6401 14.3721C13.9523 13.8258 14.4376 13.4141 15.0045 13.1902V5C15.0045 4.44772 14.5568 4 14.0045 4ZM17.0045 13V5C17.0045 4.64937 16.9444 4.31278 16.8338 4H18.0045C18.5568 4 19.0045 4.44772 19.0045 5V12C19.0045 12.5523 18.5568 13 18.0045 13H17.0045Z" fill="currentColor"></path></svg>
+                                                </Tooltip>
+                                            }
+                                            {message.time && renderAdmin ? <span> ({message.time / 1000}s)</span> : ''}
+                                        </div> : ''}
+                                </div>
                             </div>
-                        </div>
+                        </>
                     ))}
                 {getSession().completion ? (
                     <div className='chat__message chat__message-assistant chat__message-completion'>
@@ -1260,6 +1299,9 @@ export function Chat() {
                 position: getSession().messages.length ? 'fixed' : 'unset',
                 background: renderFullApp && theme ? '#14181E' : ''
             }}>
+            {getSession().messages.length && !memoryRef.current[sessionId || ''] ?
+                <p className='chat__message-memory-empty'>Conversation memory is empty</p>
+                : ''}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
                 {!prod ? <div className="chat__form-attachment">
@@ -1287,7 +1329,7 @@ export function Chat() {
                         marginLeft: prod ? '1.5rem' : ''
                     }}
                 />
-                <Tooltip tooltip={!memoryRef.current[sessionId || ''] ? 'Memory is empty' : 'Forget conversation'} inline>
+                <Tooltip tooltip={!memoryRef.current[sessionId || ''] ? 'Memory is empty' : 'Forget conversation'} position='up'>
                     <div
                         className='chat__form-send'
                         onClick={resetMemory}
@@ -1309,7 +1351,7 @@ export function Chat() {
                     </div>
                 </Tooltip>
                 {isLoading ? (
-                    <Tooltip tooltip='Stop generation' inline>
+                    <Tooltip tooltip='Stop generation' position='up'>
                         <div
                             className='chat__form-send'
                             onClick={stopGenerating}
@@ -1320,7 +1362,7 @@ export function Chat() {
                         </div>
                     </Tooltip>
                 ) : (
-                    <Tooltip tooltip={input ? 'Send message' : 'Write a message to send'} inline show={Boolean(input)}>
+                    <Tooltip tooltip={input ? 'Send message' : 'Write a message to send'} position='up' show={Boolean(input)}>
                         <div
                             className='chat__form-send'
                             style={{
