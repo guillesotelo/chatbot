@@ -219,7 +219,16 @@ export function Chat() {
         if (!sessionId) return
         let chatContext = 'Taking this text in account: "'
         let count = 0
-        getSession().messages.slice(getSession().messages.length - 3).map((m: messageType) => {
+        let messagesAccIndex = 0
+        let messagesAcc = ''
+        
+        getSession().messages.reverse().forEach((m: dataObj, i: number) => {
+            if (messagesAcc.length < 6000) {
+                messagesAcc += m
+                messagesAccIndex = i
+            }
+        })
+        getSession().messages.slice(getSession().messages.length - messagesAccIndex).map((m: messageType) => {
             if (m.role === 'assistant' && m.content && !TECH_ISSUE_LLM.includes(m.content)
                 && !m.content.toLowerCase().includes('sorry')) {
                 chatContext += `${m.content?.replaceAll(' [STOPPED]', '')}\n`
@@ -1183,16 +1192,16 @@ export function Chat() {
             </Modal> : ''
     }
 
+    // console.log(memoryRef.current[sessionId || ''])
     const renderChatBox = () => {
         return (<div className="chat__box">
             <div className="chat__box-list">
                 {!getSession().messages.length ?
                     <p className='chat__box-hi'>{greetings}</p>
-                    : getSession().messages.map((message: dataObj, index: number) => (
+                    : getSession().messages.map((message: dataObj, index: number, msgs: dataObj[]) => (
                         <>
-                            {index === getSession().messages.slice(getSession().messages.length - 3).length - 1
-                                && memoryRef.current[sessionId || ''] ?
-                                <p key={-1} className='chat__message-memory'>Conversation memory starts here</p>
+                            {msgs[index + 1] && memoryRef.current[sessionId || ''] && memoryRef.current[sessionId || ''].replace('Taking this text in account: "', '').startsWith(msgs[index + 1].content) ?
+                                <p key={-1} className='chat__message-memory'>New conversation</p>
                                 : ''}
                             <div key={index} className={`chat__message chat__message-${message.role || ''}`}>
                                 {message.role === 'assistant' ? <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} /> : ''}
@@ -1300,7 +1309,7 @@ export function Chat() {
                 background: renderFullApp && theme ? '#14181E' : ''
             }}>
             {getSession().messages.length && !memoryRef.current[sessionId || ''] ?
-                <p className='chat__message-memory-empty'>Conversation memory is empty</p>
+                <p className='chat__message-memory-empty'>New conversation</p>
                 : ''}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
@@ -1329,7 +1338,7 @@ export function Chat() {
                         marginLeft: prod ? '1.5rem' : ''
                     }}
                 />
-                <Tooltip tooltip={!memoryRef.current[sessionId || ''] ? 'Memory is empty' : 'Forget conversation'} position='up'>
+                <Tooltip tooltip={!memoryRef.current[sessionId || ''] ? 'Conversation forgotten' : 'Forget conversation'} position='up'>
                     <div
                         className='chat__form-send'
                         onClick={resetMemory}
