@@ -1,4 +1,4 @@
-export const APP_VERSION = '0.53'
+export const APP_VERSION = '0.54'
 
 export const TECH_ISSUE_LLM = [
     "I'm really sorry, but I'm experiencing some technical difficulties at the moment. Please try again later, and I'll do my best to assist you. Thank you for your patience!",

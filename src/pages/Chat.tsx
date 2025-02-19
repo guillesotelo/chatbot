@@ -58,7 +58,7 @@ import Switch from '../components/Switch';
 import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, questionStarters, TECH_ISSUE_LLM } from '../constants/app';
-import { autoScroll, sleep } from '../helpers';
+import { autoScroll, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
@@ -195,20 +195,21 @@ export function Chat() {
                 clearInterval(stopwatchIntervalId.current)
                 stopwatchIntervalId.current = null
             }
-            updateMemory()
         }
         Prism.highlightAll()
         renderCodeBlockHeaders()
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
 
-        setFilteredSessions(sessions)
+        setFilteredSessions(sortArray(sessions, 'updated', true))
     }, [sessions])
 
     useEffect(() => {
-        if (sessionId) updateMemory()
         Prism.highlightAll()
         renderCodeBlockHeaders()
         if (messageRef.current) messageRef.current.focus()
+
+        console.log('memoryRef', memoryRef.current[sessionId || ''])
+        console.log('SESSION', sessionId)
     }, [sessionId, feedbackData])
 
     useEffect(() => {
@@ -217,37 +218,44 @@ export function Chat() {
 
     const updateMemory = () => {
         if (!sessionId) return
-        let chatContext = 'Taking this text in account: "'
+        let chatContext = 'Based on the following conversation history: "'
         let count = 0
         let messagesAccIndex = 0
         let messagesAcc = ''
-        
-        getSession().messages.reverse().forEach((m: dataObj, i: number) => {
+        const sessionMessages = [...getSession().messages]
+
+        sessionMessages.reverse().forEach((m: dataObj, i: number) => {
             if (messagesAcc.length < 6000) {
                 messagesAcc += m
                 messagesAccIndex = i
             }
         })
         getSession().messages.slice(getSession().messages.length - messagesAccIndex).map((m: messageType) => {
-            if (m.role === 'assistant' && m.content && !TECH_ISSUE_LLM.includes(m.content)
+            if (
+                // m.role === 'assistant' && 
+                m.content && !TECH_ISSUE_LLM.includes(m.content)
                 && !m.content.toLowerCase().includes('sorry')) {
                 chatContext += `${m.content?.replaceAll(' [STOPPED]', '')}\n`
                 count++
             }
         })
-        chatContext += '" respond to the following: '
-        memoryRef.current = { ...memoryRef.current, [sessionId]: count ? chatContext : '' }
+        chatContext += '", respond to this: '
+        const newMemory = { ...memoryRef.current, [sessionId]: count ? chatContext : '' }
+        memoryRef.current = newMemory
+        localStorage.setItem('memory', JSON.stringify(newMemory))
     }
 
     const getLocalSessions = () => {
         const localSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
+        const localMemory = JSON.parse(localStorage.getItem('memory') || 'null')
         if (localSessions.length) {
-            setSessions(localSessions)
+            setSessions(localSessions.map((s: sessionType) => ({ ...s, updated: s.updated || s.id })))
             setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
+            if (localMemory) memoryRef.current = localMemory
         } else {
             const newId = new Date().getTime()
-            const newSessionBook = [{ id: newId, messages: [], name: 'New chat' }]
+            const newSessionBook = [{ id: newId, messages: [], name: 'New chat', updated: newId }]
             setSessions(newSessionBook)
             setSessionId(newId)
             generateGreetings()
@@ -354,7 +362,8 @@ export function Chat() {
                                 ...s,
                                 completion: null,
                                 messages: [...s.messages, newMessage],
-                                isLoading: false
+                                isLoading: false,
+                                updated: new Date().getTime()
                             }
                         }
                         return s
@@ -364,6 +373,7 @@ export function Chat() {
                 setTimeout(() => setTimePassed(0), 100)
                 streamIdRef.current = null
                 stopGenerationRef.current = false
+                setTimeout(updateMemory, 50)
             } else {
                 renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
@@ -387,7 +397,8 @@ export function Chat() {
                         return {
                             ...s,
                             completion: s.completion + '\n\n',
-                            isLoading: false
+                            isLoading: false,
+                            updated: new Date().getTime()
                         }
                     }
                     return s
@@ -431,7 +442,8 @@ export function Chat() {
                     return {
                         ...s,
                         messages: [...s.messages, newMessage],
-                        completion: null
+                        completion: null,
+                        updated: new Date().getTime()
                     }
                 }
                 return s
@@ -445,7 +457,8 @@ export function Chat() {
         const newSession = {
             id: newId,
             messages: [],
-            name: 'New chat'
+            name: 'New chat',
+            updated: newId
         }
         const updated = sessions.map(s => {
             if (s.name === 'New chat') return {
@@ -567,13 +580,15 @@ export function Chat() {
                         ...s,
                         messages: [...s.messages, newMessage],
                         completion: null,
-                        name: s.name !== 'New chat' ? s.name : newMessage.content
+                        name: s.name !== 'New chat' ? s.name : newMessage.content,
+                        updated: new Date().getTime()
                     }
                 }
                 return s
             })
         })
         setInput('')
+        setTimeout(updateMemory, 50)
         setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 5)
 
         getModelResponse(curatePrompt(content))
@@ -742,18 +757,18 @@ export function Chat() {
     }
 
     const deleteSession = (id: number | null | undefined, e: any) => {
-        setSessionId(null)
         setShowOptions(null)
-        const remainingSessions = sessions.filter(s => s.id !== id)
+        const remainingSessions = sortArray(sessions.filter(s => s.id !== id), 'updated', true)
+        setSessionId(remainingSessions[0].id)
         if (remainingSessions.length && remainingSessions[0].messages.length) {
-            setSessions(prev => ([...prev.filter(s => s.id !== id)]))
-            setTimeout(() => setSessionId(remainingSessions[0].id), 100)
+            setSessions(remainingSessions)
         } else {
             const newId = new Date().getTime()
             const newSession = {
                 id: newId,
                 messages: [],
-                name: 'New chat'
+                name: 'New chat',
+                updated: newId
             }
             setSessions([newSession])
             setTimeout(() => {
@@ -793,7 +808,7 @@ export function Chat() {
         const positionY = window.innerHeight - event.clientY < 250 ? event.clientY - 155 : event.clientY - 15
         setSessionOptionStyles(prev => ({
             ...prev, [id || Math.random()]: {
-                transform: `translateY(${positionY}px)`
+                transform: `translateY(${positionY}px) translateX(-10px)`
             }
         }))
         setShowOptions(id)
@@ -850,7 +865,9 @@ export function Chat() {
                 if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
             }, 1050)
         }
-        memoryRef.current = sessionId ? { ...memoryRef.current, [sessionId]: '' } : memoryRef.current
+        const newMemory = sessionId ? { ...memoryRef.current, [sessionId]: '' } : memoryRef.current
+        memoryRef.current = newMemory
+        localStorage.setItem('memory', JSON.stringify(newMemory))
         toast.success('This conversation is now forgotten.')
     }
 
@@ -1026,6 +1043,42 @@ export function Chat() {
         )
     }
 
+    const renderSessionAge = (index: number) => {
+        const sessions = [...filteredSessions]
+        const currentSessionTime = new Date(sessions[index].updated || '').getTime()
+        const currentSessionDay = new Date(sessions[index].updated || '').toLocaleDateString()
+        const today = new Date().toLocaleDateString()
+        const yesterday = new Date(new Date().getTime() - 86400000).toLocaleDateString() // minus 1 day in miliseconds
+        const lastWeek = new Date().getTime() - 604800000
+        const lastMonth = new Date().getTime() - 2419200000
+        const lastYear = new Date().getTime() - 29030400000
+        const prevSessionDay = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').toLocaleDateString() : null
+        const prevSessionTime = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').getTime() : null
+
+        if (currentSessionDay === prevSessionDay) return '' // Avoid repeat the age header
+        if (currentSessionDay === today) return <p className='chat__panel-session-age'>Today</p>
+        if (currentSessionDay === yesterday) return <p className='chat__panel-session-age'>Yesterday</p>
+        if (currentSessionTime >= lastWeek
+            && (!prevSessionDay || (prevSessionDay === today || prevSessionDay === yesterday))) {
+            return <p className='chat__panel-session-age'>Last 7 Days</p>
+        }
+        if (currentSessionTime >= lastMonth
+            && (!prevSessionTime || prevSessionTime < lastWeek)) {
+            return <p className='chat__panel-session-age'>Previous Month</p>
+        }
+
+        if (currentSessionTime < lastMonth
+            && (!prevSessionTime || prevSessionTime >= lastMonth)) {
+            return <p className='chat__panel-session-age'>Last 12 Months</p>
+        }
+
+        if (currentSessionTime < lastYear
+            && (!prevSessionTime || prevSessionTime >= lastYear)) {
+            return <p className='chat__panel-session-age'>Older than a Year</p>
+        }
+        return ''
+    }
+
     const renderFullAppSidebar = () => {
         return (
             <>
@@ -1039,7 +1092,7 @@ export function Chat() {
                                     triggerSearch={() => { }}
                                 /> : ''}
                             {getSession().messages.length && noNewChats() ?
-                                <Tooltip tooltip='Start new chat'>
+                                <Tooltip tooltip='Start new chat' inline={sessions.length <= 1}>
                                     <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__panel-form-newchat${theme}`} />
                                 </Tooltip>
                                 : ''}
@@ -1058,26 +1111,28 @@ export function Chat() {
                                 {!filteredSessions.length && sessions.length ?
                                     <p style={{ fontSize: '.9rem' }}>No chats found.</p>
                                     :
-                                    [...filteredSessions].reverse().map(s =>
+                                    [...filteredSessions].map((s, i) =>
                                         s.name ?
-                                            <div
-                                                key={s.id}
-                                                className={`chat__panel-session${theme}`}
-                                                onClick={() => selectSession(s)}
-                                                style={{
-                                                    background: s.id === getSession().id ? theme ? '#2d2d2d' : '#e0e0e0' : '',
-                                                    border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
-                                                }}>
-                                                <div className="chat__panel-session-item">
-                                                    {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
-                                                        <input
-                                                            className='chat__panel-session-rename'
-                                                            value={sessionNames[s.id || '']}
-                                                            onChange={e => setSessionNames({ [s.id || '']: e.target.value })}
-                                                            onKeyDown={(e) => updateSessionName(e, s.id)} />
-                                                        : <p className='chat__panel-session-name'>{s.name}</p>}
-                                                    {/* <p className='chat__panel-session-name'>{s.name}</p> */}
-                                                    {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
+                                            <div key={s.id}>
+                                                {renderSessionAge(i)}
+                                                <div
+                                                    className={`chat__panel-session${theme}`}
+                                                    onClick={() => selectSession(s)}
+                                                    style={{
+                                                        background: s.id === getSession().id ? theme ? '#2d2d2d' : '#e0e0e0' : '',
+                                                        border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
+                                                    }}>
+                                                    <div className="chat__panel-session-item">
+                                                        {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
+                                                            <input
+                                                                className='chat__panel-session-rename'
+                                                                value={sessionNames[s.id || '']}
+                                                                onChange={e => setSessionNames({ [s.id || '']: e.target.value })}
+                                                                onKeyDown={(e) => updateSessionName(e, s.id)} />
+                                                            : <p className='chat__panel-session-name'>{s.name}</p>}
+                                                        {/* <p className='chat__panel-session-name'>{s.name}</p> */}
+                                                        {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
+                                                    </div>
                                                 </div>
                                             </div>
                                             : ''
@@ -1192,17 +1247,24 @@ export function Chat() {
             </Modal> : ''
     }
 
-    // console.log(memoryRef.current[sessionId || ''])
+    const conversationContextMessage = (index: number) => {
+        const msgs = getSession().messages
+        return msgs[index] && memoryRef.current[sessionId || '']
+            && memoryRef.current[sessionId || ''].replace('Based on the following conversation history: "', '').startsWith(msgs[index].content)
+            && index !== 1
+            && (!msgs[index - 2] || (msgs[index - 2].content !== msgs[index].content) && !TECH_ISSUE_LLM.includes(msgs[index - 2].content)) ?
+            <p key={memoryRef.current[sessionId || '']} className={`chat__message-memory${theme}`}>Conversation context</p>
+            : ''
+    }
+
     const renderChatBox = () => {
         return (<div className="chat__box">
             <div className="chat__box-list">
                 {!getSession().messages.length ?
                     <p className='chat__box-hi'>{greetings}</p>
-                    : getSession().messages.map((message: dataObj, index: number, msgs: dataObj[]) => (
+                    : getSession().messages.map((message: dataObj, index: number) => (
                         <>
-                            {msgs[index + 1] && memoryRef.current[sessionId || ''] && memoryRef.current[sessionId || ''].replace('Taking this text in account: "', '').startsWith(msgs[index + 1].content) ?
-                                <p key={-1} className='chat__message-memory'>New conversation</p>
-                                : ''}
+                            {conversationContextMessage(index)}
                             <div key={index} className={`chat__message chat__message-${message.role || ''}`}>
                                 {message.role === 'assistant' ? <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} /> : ''}
                                 <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}>
@@ -1281,6 +1343,7 @@ export function Chat() {
                     label='CDSID'
                     name='cdsid'
                     updateData={updateLoginData}
+                    value={loginData?.cdsid}
                 />
                 <InputField
                     label='Password'
@@ -1288,6 +1351,7 @@ export function Chat() {
                     type='password'
                     updateData={updateLoginData}
                     style={{ marginTop: '1rem' }}
+                    value={loginData?.password}
                 />
                 {loginMessage ? <h3 style={{ color: loginMessage.includes('failed') ? 'brown' : 'darkgreen', marginBottom: 0 }}>{loginMessage}</h3> : ''}
                 <Button
@@ -1308,7 +1372,7 @@ export function Chat() {
                 position: getSession().messages.length ? 'fixed' : 'unset',
                 background: renderFullApp && theme ? '#14181E' : ''
             }}>
-            {getSession().messages.length && !memoryRef.current[sessionId || ''] ?
+            {getSession().messages.length && sessionId && memoryRef.current[sessionId] === '' ?
                 <p className='chat__message-memory-empty'>New conversation</p>
                 : ''}
 
@@ -1338,13 +1402,13 @@ export function Chat() {
                         marginLeft: prod ? '1.5rem' : ''
                     }}
                 />
-                <Tooltip tooltip={!memoryRef.current[sessionId || ''] ? 'Conversation forgotten' : 'Forget conversation'} position='up'>
+                <Tooltip tooltip={sessionId ? memoryRef.current[sessionId] === '' ? 'Conversation forgotten' : 'Nothing to forget' : 'Forget conversation'} position='up'>
                     <div
                         className='chat__form-send'
                         onClick={resetMemory}
                         style={{
                             background: 'transparent',
-                            cursor: isLoading || !memoryRef.current[sessionId || ''] ? 'not-allowed' : '',
+                            cursor: isLoading || !sessionId || !memoryRef.current[sessionId] ? 'not-allowed' : '',
                             marginRight: 0
                         }}>
                         <img
