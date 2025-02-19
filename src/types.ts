@@ -23,6 +23,7 @@ export type sessionType = dataObj & {
     name?: string,
     messages: messageType[],
     id?: number | null,
+    updated?: Date | string | number
 }
 
 export type onChangeEventType = React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>

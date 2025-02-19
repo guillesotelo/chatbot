@@ -265,6 +265,12 @@
                 text-overflow: ellipsis;
                 overflow: hidden;
             }
+
+            &-age {
+                font-size: .75rem;
+                font-weight: bold;
+                margin: 2rem 0 .5rem .5rem;
+            }
         }
 
         &-hp {
@@ -597,6 +603,18 @@
             opacity: .4;
             animation: fade-in-memory .5s ease-in forwards;
             user-select: none;
+
+            &--dark {
+                width: 100%;
+                border-bottom: 1px solid rgb(147 147 147 / 57%);
+                opacity: .8;
+                padding: .2rem;
+                text-align: center;
+                font-size: .9rem;
+                opacity: .4;
+                animation: fade-in-memory .5s ease-in forwards;
+                user-select: none;
+            }
 
             &-empty {
                 width: 100%;
