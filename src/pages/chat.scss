@@ -720,7 +720,8 @@
             bottom: 0;
             padding-bottom: 2rem;
             width: 800px;
-            max-width: 60vw;
+            max-width: -webkit-fill-available;
+            margin: 0 1rem;
             border-top-left-radius: 2rem;
             border-top-right-radius: 2rem;
             background: white;
@@ -732,7 +733,8 @@
                 bottom: 0;
                 padding-bottom: 2rem;
                 width: 800px;
-                max-width: 90vw;
+                max-width: -webkit-fill-available;
+                margin: 0 1rem;
                 border-top-left-radius: 2rem;
                 border-top-right-radius: 2rem;
                 z-index: 1;

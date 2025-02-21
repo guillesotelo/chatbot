@@ -122,4 +122,8 @@ pre[class*="language-"] {
 
 a {
     color: #0a7d91 !important;
+
+    &:hover {
+        color: #9c5ffd !important;
+    }
 }
