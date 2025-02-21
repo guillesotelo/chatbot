@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { memo, useContext, useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { marked } from 'marked';
 import { useLocalStorage } from 'usehooks-ts';
@@ -201,6 +201,8 @@ export function Chat() {
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
 
         setFilteredSessions(sortArray(sessions, 'updated', true))
+
+        updateMemory()
     }, [sessions])
 
     useEffect(() => {
@@ -208,8 +210,9 @@ export function Chat() {
         renderCodeBlockHeaders()
         if (messageRef.current) messageRef.current.focus()
 
-        console.log('memoryRef', memoryRef.current[sessionId || ''])
-        console.log('SESSION', sessionId)
+        console.log('session', sessionId)
+        // console.log('memory', memoryRef.current[sessionId || ''])
+        console.log('date', new Date(sessionId || '').toLocaleDateString('es-ES'))
     }, [sessionId, feedbackData])
 
     useEffect(() => {
@@ -218,29 +221,39 @@ export function Chat() {
 
     const updateMemory = () => {
         if (!sessionId) return
+        const messages = getSession().messages
         let chatContext = 'Based on the following conversation history: "'
         let count = 0
-        let messagesAccIndex = 0
-        let messagesAcc = ''
-        const sessionMessages = [...getSession().messages]
+        let accIndex = 0
+        let accMessages = ''
+        const sessionMessages = [...messages] // we are mutating this with reverse()
 
-        sessionMessages.reverse().forEach((m: dataObj, i: number) => {
-            if (messagesAcc.length < 6000) {
-                messagesAcc += m
-                messagesAccIndex = i
-            }
-        })
-        getSession().messages.slice(getSession().messages.length - messagesAccIndex).map((m: messageType) => {
-            if (
-                // m.role === 'assistant' && 
-                m.content && !TECH_ISSUE_LLM.includes(m.content)
-                && !m.content.toLowerCase().includes('sorry')) {
-                chatContext += `${m.content?.replaceAll(' [STOPPED]', '')}\n`
+        if (memoryRef.current[sessionId] && memoryRef.current[sessionId].index) {
+            accIndex = (messages.length - 1) - memoryRef.current[sessionId].index
+        } else {
+            sessionMessages.reverse().forEach((m: dataObj, i: number) => {
+                if (accMessages.length < 6000) {
+                    accMessages += m.content
+                    accIndex = i
+                }
+            })
+        }
+        messages.slice(messages.length - accIndex).map((m: messageType) => {
+            if (m.content && !TECH_ISSUE_LLM.includes(m.content) && !m.content.includes('[STOPPED]')) {
+                chatContext += `\n${m.content.split('<br/>')[0]}\n`
                 count++
             }
         })
+
         chatContext += '", respond to this: '
-        const newMemory = { ...memoryRef.current, [sessionId]: count ? chatContext : '' }
+
+        const newMemory = {
+            ...memoryRef.current,
+            [sessionId]: {
+                memory: count ? chatContext : '',
+                index: (messages.length - 1) - accIndex
+            }
+        }
         memoryRef.current = newMemory
         localStorage.setItem('memory', JSON.stringify(newMemory))
     }
@@ -373,7 +386,6 @@ export function Chat() {
                 setTimeout(() => setTimePassed(0), 100)
                 streamIdRef.current = null
                 stopGenerationRef.current = false
-                setTimeout(updateMemory, 50)
             } else {
                 renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
@@ -588,7 +600,6 @@ export function Chat() {
             })
         })
         setInput('')
-        setTimeout(updateMemory, 50)
         setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 5)
 
         getModelResponse(curatePrompt(content))
@@ -599,8 +610,7 @@ export function Chat() {
         const lastChar = prompt.split('')[prompt.length - 1]
         const firstWord = userPrompt.split(' ')[0].toLowerCase()
         if (lastChar !== '?' && lastChar !== '.' && questionStarters.includes(firstWord)) prompt += '?'
-        const chatContext = sessionId ? memoryRef.current[sessionId] || '' : ''
-        const systemPrompt = `If you can't find the answer within the context, don't answer the question, just state you don't know the answer.`
+        const chatContext = sessionId && memoryRef.current[sessionId] ? (memoryRef.current[sessionId].memory || '') : ''
         return chatContext + prompt
     }
 
@@ -858,14 +868,22 @@ export function Chat() {
     }
 
     const resetMemory = () => {
-        if (isLoading || !memoryRef.current[sessionId || '']) return
+        if (isLoading || !sessionId || !memoryRef.current[sessionId] || !memoryRef.current[sessionId].memory) return
         if (resetMemoryRef.current) {
             resetMemoryRef.current.style.animation = 'transform-reload 1s ease-in'
             setTimeout(() => {
                 if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
             }, 1050)
         }
-        const newMemory = sessionId ? { ...memoryRef.current, [sessionId]: '' } : memoryRef.current
+        const newMemory = sessionId ? {
+            ...memoryRef.current,
+            [sessionId]: {
+                ...memoryRef.current[sessionId],
+                memory: '',
+                index: getSession().messages.length
+            }
+        } : memoryRef.current
+
         memoryRef.current = newMemory
         localStorage.setItem('memory', JSON.stringify(newMemory))
         toast.success('This conversation is now forgotten.')
@@ -926,6 +944,16 @@ export function Chat() {
         const { value } = e.target
         if (value.trim()) setFilteredSessions([...sessions.filter(s => JSON.stringify(s).includes(value))])
         else setFilteredSessions(sessions)
+    }
+
+    const getResetMemoryTooltip = () => {
+        return sessionId ?
+            memoryRef.current[sessionId] ?
+                memoryRef.current[sessionId].memory ?
+                    'Forget conversation' :
+                    'Conversation forgotten' :
+                'Nothing to forget yet' :
+            ''
     }
 
     const renderAdminSidebar = () => {
@@ -1050,20 +1078,21 @@ export function Chat() {
         const today = new Date().toLocaleDateString()
         const yesterday = new Date(new Date().getTime() - 86400000).toLocaleDateString() // minus 1 day in miliseconds
         const lastWeek = new Date().getTime() - 604800000
-        const lastMonth = new Date().getTime() - 2419200000
-        const lastYear = new Date().getTime() - 29030400000
+        const lastMonth = new Date().getTime() - 2505600000
+        const lastYear = new Date().getTime() - 31449600000
         const prevSessionDay = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').toLocaleDateString() : null
         const prevSessionTime = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').getTime() : null
 
         if (currentSessionDay === prevSessionDay) return '' // Avoid repeat the age header
         if (currentSessionDay === today) return <p className='chat__panel-session-age'>Today</p>
         if (currentSessionDay === yesterday) return <p className='chat__panel-session-age'>Yesterday</p>
+
         if (currentSessionTime >= lastWeek
             && (!prevSessionDay || (prevSessionDay === today || prevSessionDay === yesterday))) {
             return <p className='chat__panel-session-age'>Last 7 Days</p>
         }
-        if (currentSessionTime >= lastMonth
-            && (!prevSessionTime || prevSessionTime < lastWeek)) {
+        if (currentSessionTime < lastWeek
+            && (!prevSessionTime || prevSessionTime >= lastWeek)) {
             return <p className='chat__panel-session-age'>Previous Month</p>
         }
 
@@ -1248,13 +1277,10 @@ export function Chat() {
     }
 
     const conversationContextMessage = (index: number) => {
-        const msgs = getSession().messages
-        return msgs[index] && memoryRef.current[sessionId || '']
-            && memoryRef.current[sessionId || ''].replace('Based on the following conversation history: "', '').startsWith(msgs[index].content)
-            && index !== 1
-            && (!msgs[index - 2] || (msgs[index - 2].content !== msgs[index].content) && !TECH_ISSUE_LLM.includes(msgs[index - 2].content)) ?
-            <p key={memoryRef.current[sessionId || '']} className={`chat__message-memory${theme}`}>Conversation context</p>
-            : ''
+        if (sessionId && memoryRef.current && memoryRef.current[sessionId]
+            && memoryRef.current[sessionId].memory
+            && memoryRef.current[sessionId].index === index) return <p key={memoryRef.current[sessionId].memory} className={`chat__message-memory${theme}`}>Conversation context</p>
+        return ''
     }
 
     const renderChatBox = () => {
@@ -1372,7 +1398,7 @@ export function Chat() {
                 position: getSession().messages.length ? 'fixed' : 'unset',
                 background: renderFullApp && theme ? '#14181E' : ''
             }}>
-            {getSession().messages.length && sessionId && memoryRef.current[sessionId] === '' ?
+            {getSession().messages.length && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
                 <p className='chat__message-memory-empty'>New conversation</p>
                 : ''}
 
@@ -1402,13 +1428,13 @@ export function Chat() {
                         marginLeft: prod ? '1.5rem' : ''
                     }}
                 />
-                <Tooltip tooltip={sessionId ? memoryRef.current[sessionId] === '' ? 'Conversation forgotten' : 'Nothing to forget' : 'Forget conversation'} position='up'>
+                <Tooltip tooltip={getResetMemoryTooltip()} position='up'>
                     <div
                         className='chat__form-send'
                         onClick={resetMemory}
                         style={{
                             background: 'transparent',
-                            cursor: isLoading || !sessionId || !memoryRef.current[sessionId] ? 'not-allowed' : '',
+                            cursor: isLoading || !sessionId || !memoryRef.current[sessionId] || !memoryRef.current[sessionId].memory ? 'not-allowed' : '',
                             marginRight: 0
                         }}>
                         <img
@@ -1416,7 +1442,7 @@ export function Chat() {
                             ref={resetMemoryRef}
                             className={`chat__form-send-svg-reload${theme}`}
                             style={{
-                                filter: memoryRef.current[sessionId || ''] ? theme ?
+                                filter: !isLoading && sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory ? theme ?
                                     'invert(96%) sepia(9%) saturate(0%) hue-rotate(172deg) brightness(91%) contrast(85%)'
                                     : 'none' : ''
                             }}

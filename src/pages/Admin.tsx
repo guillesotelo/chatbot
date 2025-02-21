@@ -98,7 +98,6 @@ export default function Admin({ }: Props) {
 
             const feedback = await response.json()
             if (feedback && Array.isArray(feedback)) setUserFeedback(sortArray(sortArray(feedback, 'session_id', true), 'createdAt', true))
-            console.log('feedback', feedback)
 
         } catch (error) {
             console.error(error)
