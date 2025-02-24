@@ -262,10 +262,16 @@ export function Chat() {
         const localSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
         const localMemory = JSON.parse(localStorage.getItem('memory') || 'null')
         if (localSessions.length) {
-            setSessions(localSessions.map((s: sessionType) => ({ ...s, updated: s.updated || s.id })))
+            setSessions(localSessions.map((s: sessionType) => (
+                {
+                    ...s,
+                    updated: s.updated || s.id
+                }
+            )))
             setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
             setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
             if (localMemory) memoryRef.current = localMemory
+
         } else {
             const newId = new Date().getTime()
             const newSessionBook = [{ id: newId, messages: [], name: 'New chat', updated: newId }]
@@ -287,7 +293,7 @@ export function Chat() {
     }
 
     const removeUnwantedChars = (str: string) => {
-        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:', 'User: ']
+        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:', 'User: ', 'Response:']
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
         return str.replace(regex, '')
     }
