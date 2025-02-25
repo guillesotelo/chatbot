@@ -150,7 +150,9 @@ export function Chat() {
 
         const hideSessionOptions = (e: any) => {
             if (e.target && e.target.className && typeof e.target.className === 'string' &&
-                !e.target.className.includes('chat__panel-session-option')) {
+                !e.target.className.includes('chat__panel-session-option')
+                && !e.target.className.includes('chat__panel-session-item')
+                && !e.target.className.includes('chat__panel-session-rename')) {
                 setShowOptions(null)
                 setSessionNames({})
             }
@@ -775,8 +777,8 @@ export function Chat() {
     const deleteSession = (id: number | null | undefined, e: any) => {
         setShowOptions(null)
         const remainingSessions = sortArray(sessions.filter(s => s.id !== id), 'updated', true)
-        setSessionId(remainingSessions[0].id)
         if (remainingSessions.length && remainingSessions[0].messages.length) {
+            setSessionId(remainingSessions[0].id)
             setSessions(remainingSessions)
         } else {
             const newId = new Date().getTime()
@@ -953,13 +955,11 @@ export function Chat() {
     }
 
     const getResetMemoryTooltip = () => {
-        return sessionId ?
+        return sessionId &&
             memoryRef.current[sessionId] ?
-                memoryRef.current[sessionId].memory ?
-                    'Forget conversation' :
-                    'Conversation forgotten' :
-                'Nothing to forget yet' :
-            ''
+            memoryRef.current[sessionId].memory ?
+                'Clear chat context' :
+                'Chat context cleared' : ''
     }
 
     const renderAdminSidebar = () => {
@@ -1089,27 +1089,29 @@ export function Chat() {
         const prevSessionDay = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').toLocaleDateString() : null
         const prevSessionTime = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').getTime() : null
 
+        const sessionAgeStyle = { marginTop: getSession().messages.length || sessions.length > 1 ? '' : 0 }
+
         if (currentSessionDay === prevSessionDay) return '' // Avoid repeat the age header
-        if (currentSessionDay === today) return <p className='chat__panel-session-age'>Today</p>
-        if (currentSessionDay === yesterday) return <p className='chat__panel-session-age'>Yesterday</p>
+        if (currentSessionDay === today) return <p className='chat__panel-session-age' style={sessionAgeStyle}>Today</p>
+        if (currentSessionDay === yesterday) return <p className='chat__panel-session-age' style={sessionAgeStyle}>Yesterday</p>
 
         if (currentSessionTime >= lastWeek
             && (!prevSessionDay || (prevSessionDay === today || prevSessionDay === yesterday))) {
-            return <p className='chat__panel-session-age'>Last 7 Days</p>
+            return <p className='chat__panel-session-age' style={sessionAgeStyle}>Last 7 Days</p>
         }
         if (currentSessionTime < lastWeek
             && (!prevSessionTime || prevSessionTime >= lastWeek)) {
-            return <p className='chat__panel-session-age'>Previous Month</p>
+            return <p className='chat__panel-session-age' style={sessionAgeStyle}>Previous Month</p>
         }
 
         if (currentSessionTime < lastMonth
             && (!prevSessionTime || prevSessionTime >= lastMonth)) {
-            return <p className='chat__panel-session-age'>Last 12 Months</p>
+            return <p className='chat__panel-session-age' style={sessionAgeStyle}>Last 12 Months</p>
         }
 
         if (currentSessionTime < lastYear
             && (!prevSessionTime || prevSessionTime >= lastYear)) {
-            return <p className='chat__panel-session-age'>Older than a Year</p>
+            return <p className='chat__panel-session-age' style={sessionAgeStyle}>Older than a Year</p>
         }
         return ''
     }
@@ -1285,7 +1287,7 @@ export function Chat() {
     const conversationContextMessage = (index: number) => {
         if (sessionId && memoryRef.current && memoryRef.current[sessionId]
             && memoryRef.current[sessionId].memory
-            && memoryRef.current[sessionId].index === index) return <p key={memoryRef.current[sessionId].memory} className={`chat__message-memory${theme}`}>Conversation context</p>
+            && memoryRef.current[sessionId].index === index) return <p key={memoryRef.current[sessionId].memory} className={`chat__message-memory${theme}`}>Chat context</p>
         return ''
     }
 
@@ -1405,7 +1407,7 @@ export function Chat() {
                 background: renderFullApp && theme ? '#14181E' : ''
             }}>
             {getSession().messages.length && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
-                <p className='chat__message-memory-empty'>New conversation</p>
+                <p className='chat__message-memory-empty'>New chat context</p>
                 : ''}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
@@ -1434,27 +1436,28 @@ export function Chat() {
                         marginLeft: prod ? '1.5rem' : ''
                     }}
                 />
-                <Tooltip tooltip={getResetMemoryTooltip()} position='up'>
-                    <div
-                        className='chat__form-send'
-                        onClick={resetMemory}
-                        style={{
-                            background: 'transparent',
-                            cursor: isLoading || !sessionId || !memoryRef.current[sessionId] || !memoryRef.current[sessionId].memory ? 'not-allowed' : '',
-                            marginRight: 0
-                        }}>
-                        <img
-                            src={Reload}
-                            ref={resetMemoryRef}
-                            className={`chat__form-send-svg-reload${theme}`}
+                {sessionId && !memoryRef.current[sessionId] ? ''
+                    : <Tooltip tooltip={getResetMemoryTooltip()} position='up'>
+                        <div
+                            className='chat__form-send'
+                            onClick={resetMemory}
                             style={{
-                                filter: !isLoading && sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory ? theme ?
-                                    'invert(96%) sepia(9%) saturate(0%) hue-rotate(172deg) brightness(91%) contrast(85%)'
-                                    : 'none' : ''
-                            }}
-                        />
-                    </div>
-                </Tooltip>
+                                background: 'transparent',
+                                cursor: isLoading || !sessionId || !memoryRef.current[sessionId] || !memoryRef.current[sessionId].memory ? 'not-allowed' : '',
+                                marginRight: 0
+                            }}>
+                            <img
+                                src={Reload}
+                                ref={resetMemoryRef}
+                                className={`chat__form-send-svg-reload${theme}`}
+                                style={{
+                                    filter: !isLoading && sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory ? theme ?
+                                        'invert(96%) sepia(9%) saturate(0%) hue-rotate(172deg) brightness(91%) contrast(85%)'
+                                        : 'none' : ''
+                                }}
+                            />
+                        </div>
+                    </Tooltip>}
                 {isLoading ? (
                     <Tooltip tooltip='Stop generation' position='up'>
                         <div
