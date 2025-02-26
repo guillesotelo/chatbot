@@ -51,6 +51,7 @@ import 'prismjs/components/prism-gradle';
 import 'prismjs/components/prism-cmake';
 import 'prismjs/themes/prism.css';
 import { marked } from 'marked';
+import Tooltip from '../components/Tooltip'
 
 type Props = {}
 const apiURl = process.env.REACT_APP_SERVER_URL
@@ -60,6 +61,9 @@ export default function Admin({ }: Props) {
     const [data, setData] = useState<dataObj | null>(null)
     const [selectedFeedback, setSelectedFeedback] = useState(-1)
     const [deleteFeedback, setDeleteFeedback] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
+    const [searchResults, setSearchResults] = useState<dataObj>({})
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
 
@@ -205,11 +209,98 @@ export default function Admin({ }: Props) {
         })
     }
 
+
+    const handleSubmit = async (event: any) => {
+        try {
+            setIsLoading(true)
+            event.preventDefault()
+            const content = searchQuery.trim()
+            if (!content || isLoading) return
+            setSearchQuery('');
+
+            const response = await fetch(`${apiURl}/api/vectorstore_search?query=${encodeURIComponent(content)}`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            })
+
+            if (response && response.ok) {
+                const data = await response.json()
+                setSearchResults(data)
+            }
+            setIsLoading(false)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+
     return !isLoggedIn ? null :
         <div>
             <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
             <div className="chat__admin">
                 <h1>Admin panel</h1>
+                <div className="chat__admin-row">
+                    <div 
+                    className={`chat__form-container${theme}`} 
+                    style={{ 
+                        position: 'relative', 
+                        border: searchResults.query ? '1px solid lightgray' : '', 
+                        borderRadius: '1rem',
+                        margin: searchResults.query ? '2rem 0' : '2rem 0 0 0'
+                        }}>
+                        <div className="chat__admin-search">
+                            {isLoading ? <p style={{ margin: '1rem 2rem' }}>Embedding query and searching in vector store...</p>
+                                : searchResults.query ?
+                                    <div style={{ margin: '1rem 2rem' }}>
+                                        <Button
+                                            label='Clear result'
+                                            className={`button__delete${theme}`}
+                                            onClick={() => setSearchResults({})}
+                                        />
+                                        <p><strong>Exact match:</strong><br /> {searchResults.exact || 'No exact match'}</p>
+                                        <p><strong>Matches:</strong><br /> {searchResults.matches ? searchResults.matches.map((m: string) => <><span>{m}</span><br /><br /></>) : 'No matching docs'}</p>
+                                    </div>
+                                    : ''}
+                            <div
+                                className={`chat__form-container${theme}`}
+                                style={{
+                                    position: 'relative',
+                                    background: theme ? '#14181E' : ''
+                                }}>
+                                <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
+                                    <textarea
+                                        id="message"
+                                        placeholder="Search a word or phrase in the vector store"
+                                        className={`chat__form-input${theme}`}
+                                        value={searchQuery}
+                                        name="content"
+                                        rows={1}
+                                        onKeyDown={(event) => {
+                                            if (!isLoading && event.key === 'Enter' && !event.shiftKey) {
+                                                handleSubmit(event)
+                                            }
+                                        }}
+                                        autoFocus
+                                        onChange={(event) => setSearchQuery(event.target.value)}
+                                        style={{ marginLeft: '1.5rem' }}
+                                    />
+                                    <Tooltip tooltip={searchQuery ? 'Send message' : 'Write a message to send'} position='up' show={Boolean(searchQuery)}>
+                                        <div
+                                            className='chat__form-send'
+                                            style={{
+                                                background: searchQuery ? theme ? 'lightgray' : 'black' : theme ? 'gray' : '#d2d2d2',
+                                                cursor: isLoading || !searchQuery ? 'not-allowed' : ''
+                                            }}
+                                            onClick={handleSubmit} >
+                                            <svg className='chat__form-send-svg' width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill={theme ? '#2F2F2F' : '#fff'} fillRule="evenodd" clipRule="evenodd" d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z"></path>
+                                            </svg>
+                                        </div>
+                                    </Tooltip>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div className="chat__admin-row">
                     <DataTable
                         title='Feedback'
@@ -289,5 +380,5 @@ export default function Admin({ }: Props) {
                             : ''}
                 </div>
             </div>
-        </div>
+        </div >
 }
