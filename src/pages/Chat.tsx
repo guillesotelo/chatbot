@@ -224,7 +224,7 @@ export function Chat() {
     const updateMemory = () => {
         if (!sessionId) return
         const messages = getSession().messages
-        let chatContext = 'Based on the following conversation history: "'
+        let chatContext = 'Based on the following conversation history, which may or may not provide relevant context: "'
         let count = 0
         let accIndex = 0
         let accMessages = ''
