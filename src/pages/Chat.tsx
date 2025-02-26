@@ -212,9 +212,9 @@ export function Chat() {
         renderCodeBlockHeaders()
         if (messageRef.current) messageRef.current.focus()
 
-        console.log('session', sessionId)
+        // console.log('session', sessionId)
         // console.log('memory', memoryRef.current[sessionId || ''])
-        console.log('date', new Date(sessionId || '').toLocaleDateString('es-ES'))
+        // console.log('date', new Date(sessionId || '').toLocaleDateString('es-ES'))
     }, [sessionId, feedbackData])
 
     useEffect(() => {
@@ -295,7 +295,7 @@ export function Chat() {
     }
 
     const removeUnwantedChars = (str: string) => {
-        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:', 'User: ', 'Response:']
+        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:', 'User: ', 'Response:', 'Veronica:']
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
         return str.replace(regex, '')
     }
