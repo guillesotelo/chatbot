@@ -57,7 +57,7 @@ import Reload from '../assets/icons/reload3.png'
 import Switch from '../components/Switch';
 import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
-import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, questionStarters, TECH_ISSUE_LLM } from '../constants/app';
+import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, questionStarters, RELEASE_NOTES, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
@@ -695,7 +695,8 @@ export function Chat() {
             appVersion: APP_VERSION,
             session_id: getSession().id,
             score,
-            createdAt: new Date().getTime()
+            createdAt: new Date().getTime(),
+            releaseNotes: RELEASE_NOTES
         }
 
         setFeedbackData(newFeedbackData)

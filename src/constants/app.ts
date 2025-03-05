@@ -1,4 +1,14 @@
-export const APP_VERSION = '0.58'
+export const APP_VERSION = '0.59'
+
+export const RELEASE_NOTES = `
+- Admin vector search and table updated
+- Embeddings: Alibaba-NLP/gte-large-en-v1.5
+- Splitting: ["nnn","nn", "n", ". "]
+- chunk_size: 2048
+- chunk_overlap: 512
+- Retrieve K: 4
+- Collection Meta: cosine
+`
 
 export const TECH_ISSUE_LLM = [
     "I'm really sorry, but I'm experiencing some technical difficulties at the moment. Please try again later, and I'll do my best to assist you. Thank you for your patience!",
@@ -27,8 +37,8 @@ export const feedbackHeaders = [
         value: 'createdAt',
     },
     {
-        name: 'SESSION',
-        value: 'session_id',
+        name: 'APP VERSION',
+        value: 'appVersion',
     },
     {
         name: 'USERNAME',

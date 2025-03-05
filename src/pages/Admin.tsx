@@ -62,6 +62,7 @@ export default function Admin({ }: Props) {
     const [selectedFeedback, setSelectedFeedback] = useState(-1)
     const [deleteFeedback, setDeleteFeedback] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+    const [latestQuery, setLatestQuery] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [searchResults, setSearchResults] = useState<dataObj>({})
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
@@ -101,7 +102,13 @@ export default function Admin({ }: Props) {
             })
 
             const feedback = await response.json()
-            if (feedback && Array.isArray(feedback)) setUserFeedback(sortArray(sortArray(feedback, 'session_id', true), 'createdAt', true))
+            if (feedback && Array.isArray(feedback)) {
+                setUserFeedback(
+                    sortArray(
+                        sortArray(feedback, 'session_id', true), 'createdAt', true
+                    ).map(item => ({ ...item, score: item.score === 'True' ? true : false }))
+                )
+            }
 
         } catch (error) {
             console.error(error)
@@ -216,6 +223,7 @@ export default function Admin({ }: Props) {
             event.preventDefault()
             const content = searchQuery.trim()
             if (!content || isLoading) return
+            setLatestQuery(content)
             setSearchQuery('');
 
             const response = await fetch(`${apiURl}/api/vectorstore_search?query=${encodeURIComponent(content)}`, {
@@ -252,11 +260,18 @@ export default function Admin({ }: Props) {
                             {isLoading ? <p style={{ margin: '1rem 2rem' }}>Embedding query and searching in vector store...</p>
                                 : searchResults.query ?
                                     <div style={{ margin: '1rem 2rem' }}>
-                                        <Button
-                                            label='Clear result'
-                                            className={`button__delete${theme}`}
-                                            onClick={() => setSearchResults({})}
-                                        />
+                                        <div className="chat__admin-row">
+                                            <p><strong>Query: </strong>{latestQuery}</p>
+                                            <Button
+                                                label='Clear result'
+                                                className={`button__delete${theme}`}
+                                                onClick={() => {
+                                                    setSearchResults({})
+                                                    setSearchQuery('')
+                                                    setLatestQuery('')
+                                                }}
+                                            />
+                                        </div>
                                         <p><strong>Exact match:</strong> {searchResults.exact ? 'Yes' : 'No'}</p>
                                         <p><strong>Matches:</strong>
                                             <br /> {searchResults.matches ?
