@@ -959,6 +959,15 @@
                 width: 100%;
             }
         }
+
+        &-search {
+            &-textresult {
+                border: 1px solid rgb(91, 140, 255);
+                border-radius: .5rem;
+                padding: .5rem;
+                margin: 1rem 0;
+            }
+        }
     }
 }
 

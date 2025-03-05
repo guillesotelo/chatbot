@@ -240,13 +240,13 @@ export default function Admin({ }: Props) {
             <div className="chat__admin">
                 <h1>Admin panel</h1>
                 <div className="chat__admin-row">
-                    <div 
-                    className={`chat__form-container${theme}`} 
-                    style={{ 
-                        position: 'relative', 
-                        border: searchResults.query ? '1px solid lightgray' : '', 
-                        borderRadius: '1rem',
-                        margin: searchResults.query ? '2rem 0' : '2rem 0 0 0'
+                    <div
+                        className={`chat__form-container${theme}`}
+                        style={{
+                            position: 'relative',
+                            border: searchResults.query ? '1px solid lightgray' : '',
+                            borderRadius: '1rem',
+                            margin: searchResults.query ? '2rem 0' : '2rem 0 0 0'
                         }}>
                         <div className="chat__admin-search">
                             {isLoading ? <p style={{ margin: '1rem 2rem' }}>Embedding query and searching in vector store...</p>
@@ -257,8 +257,13 @@ export default function Admin({ }: Props) {
                                             className={`button__delete${theme}`}
                                             onClick={() => setSearchResults({})}
                                         />
-                                        <p><strong>Exact match:</strong><br /> {searchResults.exact || 'No exact match'}</p>
-                                        <p><strong>Matches:</strong><br /> {searchResults.matches ? searchResults.matches.map((m: string) => <><span>{m}</span><br /><br /></>) : 'No matching docs'}</p>
+                                        <p><strong>Exact match:</strong> {searchResults.exact ? 'Yes' : 'No'}</p>
+                                        <p><strong>Matches:</strong>
+                                            <br /> {searchResults.matches ?
+                                                searchResults.matches.map((m: string) => <div className='chat__admin-search-textresult'>
+                                                    <span>{m}</span><br /><br />
+                                                </div>)
+                                                : 'No matching docs'}</p>
                                     </div>
                                     : ''}
                             <div
