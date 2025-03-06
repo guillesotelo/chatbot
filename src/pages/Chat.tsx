@@ -719,7 +719,7 @@ export function Chat() {
     const openInNewTab = () => {
         window.parent.postMessage({ height: 70, width: 70 }, '*')
         const anchor = document.createElement('a')
-        anchor.href = `https://hpdevp.volvocars.net/More/Chat.html`
+        anchor.href = `${apiURl}/More/Chat.html`
         anchor.target = '_blank'
         anchor.click()
     }
