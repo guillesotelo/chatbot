@@ -57,7 +57,7 @@ import Reload from '../assets/icons/reload3.png'
 import Switch from '../components/Switch';
 import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
-import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, questionStarters, RELEASE_NOTES, TECH_ISSUE_LLM } from '../constants/app';
+import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, questionStarters, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
@@ -114,6 +114,7 @@ export function Chat() {
     const [showLogin, setShowLogin] = useState(false)
     const [loginData, setLoginData] = useState<null | dataObj>(null)
     const [loginMessage, setLoginMessage] = useState('')
+    const [modelSettings, setModelSettings] = useState<null | dataObj>(null)
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const messageRef = useRef<HTMLTextAreaElement>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
@@ -159,6 +160,7 @@ export function Chat() {
         }
 
         getLocalSessions()
+        getModelSettings()
 
         window.addEventListener('scroll', handleScroll)
         document.addEventListener('click', hideSessionOptions)
@@ -394,6 +396,7 @@ export function Chat() {
                 setTimeout(() => setTimePassed(0), 100)
                 streamIdRef.current = null
                 stopGenerationRef.current = false
+
             } else {
                 renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
@@ -403,6 +406,16 @@ export function Chat() {
             console.error(error)
         }
     };
+
+    const getModelSettings = async () => {
+        try {
+            const response = await fetch(`${apiURl}/api/get_model_settings`, { method: 'GET' })
+            const model_settings = await response.json()
+            setModelSettings(model_settings)
+        } catch (error) {
+            console.error(error)
+        }
+    }
 
     const renderErrorResponse = async () => {
         stopGenerationRef.current = false
@@ -696,7 +709,7 @@ export function Chat() {
             session_id: getSession().id,
             score,
             createdAt: new Date().getTime(),
-            releaseNotes: RELEASE_NOTES
+            modelSettings
         }
 
         setFeedbackData(newFeedbackData)
