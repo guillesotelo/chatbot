@@ -1,4 +1,4 @@
-export const APP_VERSION = '0.59'
+export const APP_VERSION = '0.61'
 
 export const TECH_ISSUE_LLM = [
     "I'm really sorry, but I'm experiencing some technical difficulties at the moment. Please try again later, and I'll do my best to assist you. Thank you for your patience!",
@@ -71,3 +71,8 @@ export const questionStarters = [
     // Shortened spoken forms
     "wanna", "gonna", "gotta", "lemme", "could've", "should've", "would've"
 ]
+
+export const POPUP_WIDTH = 150
+export const POPUP_HEIGHT = 55
+export const POPUP_WINDOW_WIDTH = 650
+export const POPUP_WINDOW_HEIGHT = 750

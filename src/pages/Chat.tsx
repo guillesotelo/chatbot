@@ -55,9 +55,10 @@ import Export from '../assets/icons/export.svg'
 import ExportDark from '../assets/icons/export-dark.svg'
 import Reload from '../assets/icons/reload3.png'
 import Switch from '../components/Switch';
+import ChatIcon from '../assets/icons/chat.svg';
 import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
-import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, questionStarters, TECH_ISSUE_LLM } from '../constants/app';
+import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
@@ -114,7 +115,6 @@ export function Chat() {
     const [showLogin, setShowLogin] = useState(false)
     const [loginData, setLoginData] = useState<null | dataObj>(null)
     const [loginMessage, setLoginMessage] = useState('')
-    const [modelSettings, setModelSettings] = useState<null | dataObj>(null)
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const messageRef = useRef<HTMLTextAreaElement>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
@@ -126,14 +126,16 @@ export function Chat() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        const fullScreen = new URLSearchParams(window.location.search).get('fullScreen')
+        const popup = new URLSearchParams(window.location.search).get('popup')
         const token = new URLSearchParams(window.location.search).get('token')
         const _theme = new URLSearchParams(window.location.search).get('theme')
         const login = new URLSearchParams(window.location.search).get('login')
 
-        if (fullScreen) {
-            setRenderFullApp(true)
-            setMinimized(false)
+        if (popup) {
+            setRenderFullApp(false)
+            setMinimized(true)
+            const body = document.querySelector('body')
+            if (body) body.style.overflow = 'hidden'
         }
 
         if (token === process.env.REACT_APP_ADMIN_TOKEN) setRenderAdmin(true)
@@ -160,7 +162,6 @@ export function Chat() {
         }
 
         getLocalSessions()
-        getModelSettings()
 
         window.addEventListener('scroll', handleScroll)
         document.addEventListener('click', hideSessionOptions)
@@ -235,6 +236,22 @@ export function Chat() {
         if (memoryRef.current[sessionId] && memoryRef.current[sessionId].index) {
             accIndex = (messages.length - 1) - memoryRef.current[sessionId].index
         } else {
+            sessionMessages.reverse().forEach((m: dataObj, i: number) => {
+                if (accMessages.length < 6000) {
+                    accMessages += m.content
+                    accIndex = i
+                }
+            })
+        }
+        messages.slice(messages.length - accIndex).map((m: messageType) => {
+            if (m.content && !TECH_ISSUE_LLM.includes(m.content) && !m.content.includes('[STOPPED]')) {
+                chatContext += `\n${m.content.split('<br/>')[0]}\n`
+                count++
+            }
+        })
+
+        // If an clearing context index exist, we check that the accumulation of text is not more than we want
+        if (chatContext.length > 6000) {
             sessionMessages.reverse().forEach((m: dataObj, i: number) => {
                 if (accMessages.length < 6000) {
                     accMessages += m.content
@@ -364,7 +381,7 @@ export function Chat() {
                                 return s
                             })
                         })
-                        autoScroll()
+                        autoScroll(!renderFullApp ? '.chat__main' : 'body')
                     }
                 }
 
@@ -407,11 +424,13 @@ export function Chat() {
         }
     };
 
+
     const getModelSettings = async () => {
         try {
             const response = await fetch(`${apiURl}/api/get_model_settings`, { method: 'GET' })
-            const model_settings = await response.json()
-            setModelSettings(model_settings)
+            const settings = await response.json() || null
+
+            return JSON.stringify(settings)
         } catch (error) {
             console.error(error)
         }
@@ -445,7 +464,7 @@ export function Chat() {
         let chunk = getSession().completion || ''
 
         while (index < issueResponse.length - 1) {
-            autoScroll()
+            autoScroll(!renderFullApp ? '.chat__main' : 'body')
             chunk += issueResponse[index]
             setSessions(prev => {
                 return prev.map(s => {
@@ -512,7 +531,7 @@ export function Chat() {
         const width = w || document.body.scrollWidth;
         window.parent.postMessage({ type: 'iframe_dim', height, width }, '*')
         const html = document.querySelector('html')
-        if (html && h === 70 && w === 70) html.style.overflow = 'hidden'
+        if (html && h === POPUP_HEIGHT && w === POPUP_WIDTH) html.style.overflow = 'hidden'
         else if (html) html.style.overflow = 'unset'
     }
 
@@ -542,7 +561,7 @@ export function Chat() {
         })
 
         // Making links on responses add new tab
-        Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
+        Array.from(document.querySelectorAll('.chat__message-bubble')).forEach(message => {
             Array.from(message.querySelectorAll('a')).forEach(anchor => {
                 anchor.target = '_blank'
             })
@@ -621,7 +640,7 @@ export function Chat() {
             })
         })
         setInput('')
-        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 5)
+        setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
 
         getModelResponse(curatePrompt(content))
     }
@@ -701,6 +720,9 @@ export function Chat() {
             })
         })
 
+        const modelSettings = await getModelSettings()
+        console.log('modelSettings', modelSettings)
+
         const newFeedbackData = {
             ...feedbackData,
             ...getSession(),
@@ -730,9 +752,9 @@ export function Chat() {
     // }
 
     const openInNewTab = () => {
-        window.parent.postMessage({ height: 70, width: 70 }, '*')
+        window.parent.postMessage({ height: POPUP_HEIGHT, width: POPUP_WIDTH }, '*')
         const anchor = document.createElement('a')
-        anchor.href = `${apiURl}/More/Chat.html`
+        anchor.href = `${apiURl}`
         anchor.target = '_blank'
         anchor.click()
     }
@@ -740,16 +762,22 @@ export function Chat() {
     const maximize = (e: any) => {
         if (e.isTrusted) {
             setMinimized(false)
-            window.parent.postMessage({ height: 700, width: 650 }, '*')
-            resizeIframe(700, 650)
+            window.parent.postMessage({ height: POPUP_WINDOW_HEIGHT, width: POPUP_WINDOW_WIDTH }, '*')
+            resizeIframe(POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH)
+            const body = document.querySelector('body')
+            if (body) body.style.background = 'unset'
+            setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
+            setTimeout(() =>renderCodeBlockHeaders(), 100)
         }
     }
 
     const minimize = (e: any) => {
         if (e.isTrusted) {
-            window.parent.postMessage({ height: 70, width: 70 }, '*')
-            setMinimized(true)
-            resizeIframe(70, 70)
+            window.parent.postMessage({ height: POPUP_HEIGHT, width: POPUP_WIDTH }, '*')
+            setTimeout(() => setMinimized(true), 100)
+            resizeIframe(POPUP_HEIGHT, POPUP_WIDTH)
+            const body = document.querySelector('body')
+            if (body) body.style.background = '#000'
         }
     }
 
@@ -1212,21 +1240,16 @@ export function Chat() {
         )
     }
 
-    const renderEmbeddedSidebar = () => {
+    const renderPopupHeader = () => {
         return (
-            <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
-                    <div className="chat__panel-hp">
-                        {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
-                        <p className='chat__panel-hp-title'>HP Assistant</p>
-                        <div className="chat__panel-hp-controls">
-                            <img src={NewTab} alt="Open in new tab" onClick={openInNewTab} className={`chat__panel-hp-svg${theme}`} />
-                            <img src={Close} alt="Close" onClick={minimize} className={`chat__panel-hp-svg${theme}`} />
-                        </div>
-                    </div>
+            <div className="chat__popup-window-header" style={{ background: theme ? '' : '#ededed' }}>
+                {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
+                <p className='chat__popup-window-header-title'>Veronica</p>
+                <div className="chat__popup-window-header-controls">
+                    <img src={NewTab} alt="Open in new tab" onClick={openInNewTab} className={`chat__popup-window-header-svg${theme}`} />
+                    <img src={Close} alt="Close" onClick={minimize} className={`chat__popup-window-header-svg${theme}`} />
                 </div>
-                <div className="chat__panel-ghost" />
-            </>
+            </div>
         )
     }
 
@@ -1502,19 +1525,29 @@ export function Chat() {
     }
 
     return minimized ?
-        <div className="chat__minimized" onClick={maximize}>
-            <p className='chat__minimized-label'>HP AI</p>
+        <div className="chat__popup-minimized" onClick={maximize}>
+            <div className="chat__popup-logo">
+                <img src={ChatIcon} alt='Ask Veronica' className='chat__popup-icon' draggable={false} />
+                <p className='chat__popup-minimized-label'>Veronica</p>
+            </div>
         </div>
         :
         showLogin ? renderLoginModal() :
-            <div className={`chat__container${theme}`} style={{ background: renderFullApp && theme ? '#14181E' : '' }}>
+            <div
+                className={`chat__container${theme}`}
+                style={{
+                    background: renderFullApp && theme ? '#14181E' : '',
+                    height: renderFullApp ? '' : POPUP_WINDOW_HEIGHT
+                }}>
                 {/* <p className='chat__banner-message'>🚧 Currently on maintenance 🚧</p> */}
-                {renderFullApp ? renderFullAppSidebar() : renderEmbeddedSidebar()}
+                {renderFullApp ? renderFullAppSidebar() : renderPopupHeader()}
                 <main
                     className="chat__main"
                     style={{
                         justifyContent: getSession().messages.length ? 'flex-start' : 'center',
-                        margin: !getSession().messages.length ? 'auto' : ''
+                        margin: !getSession().messages.length ? 'auto' : renderFullApp ? '' : '6vh auto 10vh',
+                        paddingTop: renderFullApp ? '' : '0vh',
+                        overflowY: renderFullApp ? 'unset' : 'scroll'
                     }}>
                     <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
                     {feedbackData?.score === false ? renderFeedbackModal() : ''}

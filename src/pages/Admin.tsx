@@ -58,6 +58,7 @@ const apiURl = process.env.REACT_APP_SERVER_URL
 
 export default function Admin({ }: Props) {
     const [userFeedback, setUserFeedback] = useState<dataObj[]>([])
+    const [filteredUserFeedback, setFilteredUserFeedback] = useState<dataObj[]>([])
     const [data, setData] = useState<dataObj | null>(null)
     const [selectedFeedback, setSelectedFeedback] = useState(-1)
     const [deleteFeedback, setDeleteFeedback] = useState(false)
@@ -65,19 +66,24 @@ export default function Admin({ }: Props) {
     const [latestQuery, setLatestQuery] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [searchResults, setSearchResults] = useState<dataObj>({})
+    const [selectedVersion, setSelectedVersion] = useState('Beta v0.x')
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
 
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
         else getFeedback()
-        setTheme('')
+        // setTheme('')
         Prism.highlightAll()
     }, [])
 
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
     }, [isLoggedIn])
+
+    useEffect(() => {
+        filterFeedbackByVersion()
+    }, [selectedVersion, userFeedback])
 
     useEffect(() => {
         setData({
@@ -88,6 +94,17 @@ export default function Admin({ }: Props) {
         Prism.highlightAll()
         renderCodeBlockHeaders()
     }, [selectedFeedback])
+
+    const filterFeedbackByVersion = () => {
+        setFilteredUserFeedback(userFeedback
+            .filter(feedback => {
+                const v = parseFloat(feedback.appVersion)
+                if (selectedVersion.includes('Production') && v >= 1
+                    || (selectedVersion.includes('Beta') && v < 1)) {
+                    return feedback
+                }
+            }))
+    }
 
     const updateData = (key: string, e: any) => {
         const value = e.target.value
@@ -122,6 +139,7 @@ export default function Admin({ }: Props) {
 
     const saveReview = async () => {
         try {
+            setIsLoading(true)
             const reviewDta: dataObj = {
                 ...data,
                 id: userFeedback[selectedFeedback].id,
@@ -138,7 +156,9 @@ export default function Admin({ }: Props) {
                 await getFeedback()
             }
             else toast.error('Error saving review. Please try again')
+            setIsLoading(false)
         } catch (error) {
+            setIsLoading(false)
             toast.error('Error saving review. Please try again')
             console.error(error)
         }
@@ -146,6 +166,7 @@ export default function Admin({ }: Props) {
 
     const deleteReview = async () => {
         try {
+            setIsLoading(true)
             const response = await fetch(`${apiURl}/api/delete_feedback`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
@@ -157,7 +178,9 @@ export default function Admin({ }: Props) {
                 await getFeedback()
             }
             else toast.error('Error deleting review. Please try again')
+            setIsLoading(false)
         } catch (error) {
+            setIsLoading(false)
             toast.error('Error deleting review. Please try again')
             console.error(error)
         }
@@ -322,17 +345,28 @@ export default function Admin({ }: Props) {
                     </div>
                 </div>
                 <div className="chat__admin-row">
-                    <DataTable
-                        title='Feedback'
-                        tableHeaders={feedbackHeaders}
-                        tableData={userFeedback}
-                        setTableData={setUserFeedback}
-                        selected={selectedFeedback}
-                        setSelected={setSelectedFeedback}
-                        style={{ width: '50%' }}
-                        highlight='notes'
-                        max={20}
-                    />
+                    <div className="chat__admin-col" style={{ width: '50%' }}>
+                        <h2 style={{ marginTop: '0' }}>Feedback</h2>
+                        <Dropdown
+                            label='Version'
+                            value={selectedVersion}
+                            selected={selectedVersion}
+                            setSelected={setSelectedVersion}
+                            options={['Production v1.x', 'Beta v0.x']}
+                            style={{ width: '10rem' }}
+                        />
+                        <DataTable
+                            title=''
+                            name='user feedback'
+                            tableHeaders={feedbackHeaders}
+                            tableData={filteredUserFeedback}
+                            setTableData={setFilteredUserFeedback}
+                            selected={selectedFeedback}
+                            setSelected={setSelectedFeedback}
+                            highlight='notes'
+                            max={20}
+                        />
+                    </div>
                     {deleteFeedback ?
                         <div className='chat__admin-delete'>
                             <p>Are you sure you want to permanently delete {userFeedback[selectedFeedback].username || 'user'}'s feedback?</p>
@@ -341,11 +375,13 @@ export default function Admin({ }: Props) {
                                     label='Maybe not'
                                     className={`button__outline${theme}`}
                                     onClick={() => setDeleteFeedback(false)}
+                                    disabled={isLoading}
                                 />
                                 <Button
                                     label='Confirm deletion'
                                     className={`button__delete${theme}`}
                                     onClick={deleteReview}
+                                    disabled={isLoading}
                                 />
                             </div>
                         </div>
@@ -356,15 +392,30 @@ export default function Admin({ }: Props) {
                                         <div
                                             key={feedback.id}
                                             className={`chat__feedback-content-${feedback.role}${theme}`}
+                                            style={{ borderColor: feedback.score ? 'green' : '' }}
                                             dangerouslySetInnerHTML={{
                                                 __html: marked.parse(feedback.content || '') as string,
                                             }} />))}
                                 </div>
                                 <span>Comment from {userFeedback[selectedFeedback].username || 'user'}: <p className='chat__admin-comment'>{userFeedback[selectedFeedback].comments || 'Not registered.'}</p></span>
+                                <div style={{ margin: '2rem 0' }}>
+                                    {userFeedback[selectedFeedback].modelSettings ?
+                                        <>
+                                            <p>Model Settings</p>
+                                            {Object.keys(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}'))
+                                                .map(key => key ?
+                                                    <p style={{ fontSize: '.9rem', margin: 0 }}>
+                                                        <strong>{String(key)}: </strong>
+                                                        {JSON.stringify(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}')[key])}
+                                                    </p> : '')}
+                                        </>
+                                        : ''}
+                                </div>
                                 <InputField
                                     label='Review notes'
                                     name='notes'
                                     type='textarea'
+                                    rows={5}
                                     updateData={updateData}
                                     value={data?.notes || ''}
                                     style={{ marginTop: '1rem' }}
@@ -382,17 +433,20 @@ export default function Admin({ }: Props) {
                                         <Button
                                             label='Discard review'
                                             onClick={discardChanges}
+                                            disabled={isLoading}
                                         />
                                         <Button
                                             label='Save review'
                                             className={`button__outline${theme}`}
                                             onClick={saveReview}
+                                            disabled={isLoading}
                                         />
                                         <Button
                                             label='Delete feedback'
                                             className={`button__delete${theme}`}
                                             onClick={() => setDeleteFeedback(true)}
                                             style={{ justifySelf: 'flex-end' }}
+                                            disabled={isLoading}
                                         />
                                     </div>
                                 </div>
