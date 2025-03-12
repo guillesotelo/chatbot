@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { BeatLoader } from 'react-spinners'
 import { AppContext } from '../AppContext'
 import { dataObj } from '../types'
+import Chevron from '../assets/icons/chevron-down.svg'
 
 type Props = {
     label: string
@@ -70,7 +71,7 @@ export default function Dropdown(props: Props) {
             const bounding = dropRef.current.getBoundingClientRect()
             if (bounding) {
                 optionsRef.current.style.marginTop = (bounding.height - 2).toFixed(0) + 'px'
-                optionsRef.current.style.width = (bounding.width + (isMobile ? 0 : -2)).toFixed(0) + 'px'
+                optionsRef.current.style.width = (bounding.width -2).toFixed(0) + 'px'
             }
         }
     }, [openDrop])
@@ -106,10 +107,10 @@ export default function Dropdown(props: Props) {
             }}
             ref={selectRef}
             onClick={() => setOpenDrop(!openDrop)}>
-            <h4 className={`dropdown__selected${theme}`} style={{ color: color || '', backgroundColor: bgColor || '' }}>
+            <p className={`dropdown__selected${theme}`} style={{ color: color || '', backgroundColor: bgColor || '' }}>
                 {getSelectValue()}
-            </h4>
-            < h4 className={`dropdown__selected${theme}`} style={{ color: color || '', backgroundColor: bgColor || '' }}>▾</h4>
+            </p>
+            <img src={Chevron} alt='Chevron' draggable={false} style={{ transform: openDrop ? 'rotate(180deg)' : '' }} className={`dropdown__chevron${theme}`} />
         </div>
     }
 
@@ -130,7 +131,7 @@ export default function Dropdown(props: Props) {
             }}
             ref={selectRef}
             onClick={() => setOpenDrop(!openDrop)}>
-            <h4
+            <p
                 className={`dropdown__selected${theme}`}
                 style={{
                     height: multiselect ? 'fit-content' : '',
@@ -141,9 +142,9 @@ export default function Dropdown(props: Props) {
                         <p className='dropdown__selected-multi-label'>{val}</p>
                         <p className='dropdown__selected-multi-remove' onClick={() => removeItem(i)}>X</p>
                     </span>
-                ) : <h4 style={{ padding: 0 }} className={`dropdown__selected${theme}`}>Select</h4>}
-            </h4>
-            < h4 className={`dropdown__selected${theme}`}>▾</h4>
+                ) : <p style={{ padding: 0 }} className={`dropdown__selected${theme}`}>Select</p>}
+            </p>
+            <img src={Chevron} alt='Chevron' draggable={false} style={{ transform: openDrop ? 'rotate(180deg)' : '' }} className={`dropdown__chevron${theme}`} />
         </div>
     }
 
@@ -180,15 +181,15 @@ export default function Dropdown(props: Props) {
     const renderLoading = () => {
         return (
             <div className={`dropdown__select${theme}`}>
-                <h4
+                <p
                     className={`dropdown__selected${theme}`}
                     style={{
                         height: multiselect ? 'fit-content' : '',
                         flexWrap: multiselect ? 'wrap' : 'unset',
                     }}>
                     <BeatLoader color='lightgray' size='1rem' />
-                </h4>
-            </div >
+                </p>
+            </div>
         )
     }
 
@@ -200,7 +201,7 @@ export default function Dropdown(props: Props) {
                     {loading ? renderLoading() : renderSelectedItems()}
                     {openDrop ? renderDropDownOptions() : ''}
                 </div>
-            </div >
+            </div>
         )
     }
 
@@ -212,7 +213,7 @@ export default function Dropdown(props: Props) {
                     {loading ? renderLoading() : renderSelectedItem()}
                     {openDrop ? renderDropDownOptions() : ''}
                 </div>
-            </div >
+            </div>
         )
     }
 

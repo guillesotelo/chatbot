@@ -56,6 +56,7 @@ import ExportDark from '../assets/icons/export-dark.svg'
 import Reload from '../assets/icons/reload3.png'
 import Switch from '../components/Switch';
 import ChatIcon from '../assets/icons/chat.svg';
+import HP from '../assets/images/veronica.png';
 import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, TECH_ISSUE_LLM } from '../constants/app';
@@ -115,6 +116,7 @@ export function Chat() {
     const [showLogin, setShowLogin] = useState(false)
     const [loginData, setLoginData] = useState<null | dataObj>(null)
     const [loginMessage, setLoginMessage] = useState('')
+    const [popupHeight, setPopupHeight] = useState('60px')
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const messageRef = useRef<HTMLTextAreaElement>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
@@ -123,6 +125,7 @@ export function Chat() {
     const streamIdRef = useRef<string | null>(null)
     const resetMemoryRef = useRef<null | HTMLImageElement>(null)
     const memoryRef = useRef<dataObj>({})
+    const greetingsInterval = useRef<any>(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -140,7 +143,7 @@ export function Chat() {
 
         if (token === process.env.REACT_APP_ADMIN_TOKEN) setRenderAdmin(true)
 
-        if (_theme) setTheme('--dark')
+        if (_theme) setTheme(_theme !== 'false' ? '--dark' : '')
 
         setShowLogin(Boolean(login))
 
@@ -314,7 +317,16 @@ export function Chat() {
     }
 
     const removeUnwantedChars = (str: string) => {
-        const unwantedPatterns = [' ', 'Assistant:', 'AI:', 'Human:', 'User: ', 'Response:', 'Veronica:']
+        const unwantedPatterns = [
+            ' ',
+            'Assistant:',
+            'AI:',
+            'Human:',
+            'User: ',
+            'Response:',
+            'Veronica:',
+            '", respond to this:'
+        ]
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
         return str.replace(regex, '')
     }
@@ -505,6 +517,17 @@ export function Chat() {
     }
 
     const createSession = () => {
+        let newChatId = null
+        sessions.forEach(s => {
+            if (s.name === 'New chat' && !s.messages.length)
+                newChatId = s.id
+        })
+        if (newChatId) {
+            setSessionId(newChatId)
+            return generateGreetings()
+        }
+
+
         const newId = new Date().getTime()
         const newSession = {
             id: newId,
@@ -573,14 +596,15 @@ export function Chat() {
         const promptSymbol = "⬤"
         let index = 0
 
+        if (greetingsInterval.current) clearInterval(greetingsInterval.current)
         setGreetings(promptSymbol)
 
-        const interval = setInterval(() => {
+        greetingsInterval.current = setInterval(() => {
             if (index < message.length) {
                 setGreetings(message.slice(0, index + 1) + promptSymbol)
                 index++
             } else {
-                clearInterval(interval)
+                clearInterval(greetingsInterval.current)
                 setTimeout(() => {
                     setGreetings(message)
                 }, 1000)
@@ -591,32 +615,30 @@ export function Chat() {
     const stopGenerating = async () => {
         stopGenerationRef.current = true
 
-        // It's weird to use the same route to stop a streaming (right now the API waits for a call to accept another)
-        // if (!streamIdRef.current) {
-        //     console.error("No stream ID found. Cannot stop stream.");
-        //     return;
-        // }
+        if (!streamIdRef.current) {
+            console.error("No stream ID found. Cannot stop stream.");
+            return;
+        }
 
-        // try {
-        //     const apiURl = process.env.NODE_ENV === 'production' ? API_URL : LOCAL_API_URL
-        //     const response = await fetch(`${apiURl}/api/prompt_route`, {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/x-www-form-urlencoded',
-        //             'Cache-Control': 'no-cache',
-        //         },
-        //         body: new URLSearchParams({
-        //             stream_id: String(streamIdRef.current),
-        //             stop: 'true'
-        //         }),
-        //     })
+        try {
+            const response = await fetch(`${apiURl}/api/prompt_route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Cache-Control': 'no-cache',
+                },
+                body: new URLSearchParams({
+                    stream_id: String(streamIdRef.current),
+                    stop: 'true'
+                }),
+            })
 
-        //     const data = await response.json()
-        //     if (data.error) return console.error('An error occurred trying to stop chat response')
+            const data = await response.json()
+            if (data.error) return console.error('An error occurred trying to stop chat response')
 
-        // } catch (error) {
-        //     console.error(error)
-        // }
+        } catch (error) {
+            console.error(error)
+        }
     }
 
     const handleSubmit = (event: any) => {
@@ -721,7 +743,6 @@ export function Chat() {
         })
 
         const modelSettings = await getModelSettings()
-        console.log('modelSettings', modelSettings)
 
         const newFeedbackData = {
             ...feedbackData,
@@ -741,33 +762,25 @@ export function Chat() {
         setTimeout(() => score ? setGoodScore(-1) : setBadScore(-1), 1500)
     }
 
-    // const selectFile = (file: { fileName: string, docs: dataObj[] } | undefined) => {
-    //     if (file) {
-    //         const isSelected = selectedFiles.includes(file.fileName)
-    //         setSelectedFiles(isSelected ?
-    //             selectedFiles.filter(f => f !== file.fileName)
-    //             : [...selectedFiles, file.fileName]
-    //         )
-    //     }
-    // }
-
     const openInNewTab = () => {
         window.parent.postMessage({ height: POPUP_HEIGHT, width: POPUP_WIDTH }, '*')
         const anchor = document.createElement('a')
-        anchor.href = `${apiURl}`
+        anchor.href = `${apiURl}?theme=${theme || 'false'}`
         anchor.target = '_blank'
         anchor.click()
     }
 
     const maximize = (e: any) => {
         if (e.isTrusted) {
-            setMinimized(false)
+            setTimeout(() => setMinimized(false), 100)
             window.parent.postMessage({ height: POPUP_WINDOW_HEIGHT, width: POPUP_WINDOW_WIDTH }, '*')
             resizeIframe(POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH)
-            const body = document.querySelector('body')
-            if (body) body.style.background = 'unset'
-            setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
-            setTimeout(() =>renderCodeBlockHeaders(), 100)
+            setTimeout(() => {
+                Prism.highlightAll()
+                renderCodeBlockHeaders()
+            }, 100)
+            setPopupHeight('750px')
+            setTimeout(() => autoScroll('.chat__main', 'smooth'), 200)
         }
     }
 
@@ -775,19 +788,9 @@ export function Chat() {
         if (e.isTrusted) {
             window.parent.postMessage({ height: POPUP_HEIGHT, width: POPUP_WIDTH }, '*')
             setTimeout(() => setMinimized(true), 100)
+            setTimeout(() => setPopupHeight('60px'), 250)
             resizeIframe(POPUP_HEIGHT, POPUP_WIDTH)
-            const body = document.querySelector('body')
-            if (body) body.style.background = '#000'
         }
-    }
-
-    const noNewChats = () => {
-        let hasNewChat = false
-        sessions.forEach(s => {
-            if (s.name === 'New chat' && !s.messages.length)
-                hasNewChat = true
-        })
-        return !hasNewChat
     }
 
     const renameSession = (id: number | null | undefined) => {
@@ -876,7 +879,8 @@ export function Chat() {
 
     const selectSession = (session: sessionType) => {
         setSessionId(session.id)
-        setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
+        setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
+
         localStorage.setItem('currentSession', JSON.stringify(session.id))
     }
 
@@ -964,12 +968,11 @@ export function Chat() {
 
     const silentlySaveFeedback = async (data: dataObj) => {
         try {
-            const response = await fetch(`${apiURl}/api/save_feedback`, {
+            await fetch(`${apiURl}/api/save_feedback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
-            // console.log(await response.json())
             setTimeout(() => setFeedbackData(null), 100)
         } catch (error) {
             setFeedbackData(null)
@@ -1004,119 +1007,11 @@ export function Chat() {
                 'Chat context cleared' : ''
     }
 
-    const renderAdminSidebar = () => {
-        return (
-            <>
-                <div className="chat__panel" style={{ background: theme ? '' : '#ededed', filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
-                    <form className="chat__panel-form">
-                        <Dropdown
-                            label='Mode'
-                            options={MODES}
-                            objKey='title'
-                            value={MODES.find(m => m.value === mode)}
-                            selected={MODES.find(m => m.value === mode)}
-                            setSelected={m => {
-                                setMode(m.value)
-                                setUseDocumentContext(m.value === 'query')
-                            }}
-                        />
-                        {/* {['query', 'search'].includes(mode) && (
-                        <>
-                            <div className='chat__file-list-ingested'>
-                            <p className="chat__file-title">Files</p>
-                            {isFetchingFiles ? (
-                                <p>Fetching files...</p>
-                            ) : (
-                                <div className='chat__file-list' style={{ background: theme ? '#2F2F2F' : '#f3f3f3' }}>
-                                {files && files.length > 0 ? (
-                                    files.map((file, index) => (
-                                    <div key={index} className='chat__file-list-item'>
-                                        <p className='chat__file-list-item-filename'>{file.fileName}</p>
-                                        <Button
-                                        onClick={(e: any) => {
-                                            e.preventDefault();
-                                            deleteFile(file.fileName);
-                                            setSelectedFiles(
-                                            selectedFiles.filter(
-                                                (f) => f !== file.fileName,
-                                            ),
-                                            );
-                                        }}
-                                        style={{ borderRadius: '.5rem', lineHeight: '.2rem', height: '1.5rem', width: '1.5rem', padding: '0 0 .1rem .1rem', fontSize: '1rem' }}
-                                        label='x'
-                                        className={`button__outline${theme}`} />
-                                    </div>
-                                    ))
-                                ) : (
-                                    <p>No files ingested</p>
-                                )}
-                                {isUploadingFile && <p>Uploading file...</p>}
-                                </div>
-                            )}
-                            </div>
-                            {mode === 'query' && files && files.length > 1 ? isFetchingFiles ?
-                            <p>Fetching files...</p>
-                            : (
-                                <div className='chat__file-list-checked'>
-                                <p className="chat__file-title">Select where to look into</p>
-                                <div className='chat__file-list'>
-                                    {files && files.length > 0 ? (
-                                    files.map((file, index) => (
-                                        <div key={index} className='chat__file-list-item'>
-                                        <p className='chat__file-list-item-filename'>{file.fileName}</p>
-                                        <input
-                                            type='checkbox'
-                                            checked={selectedFiles.includes(file.fileName)}
-                                            onChange={() => selectFile(file)}
-                                            style={{ cursor: 'pointer' }}
-                                        />
-                                        </div>
-                                    ))
-                                    ) : (
-                                    <p>No files ingested</p>
-                                    )}
-                                    {isUploadingFile && <p>Uploading file...</p>}
-                                </div>
-                                </div>
-                            ) : ''}
-                        </>
-                        )} */}
-
-                        <div className="chat__panel-prompt">
-                            <p className='chat__panel-prompt-title'>System prompt</p>
-                            <textarea
-                                id="content"
-                                value={systemPrompt}
-                                onChange={(e) => setSystemPrompt(e.target.value)}
-                                placeholder="You are a..."
-                                className={`chat__panel-prompt-input${theme}`}
-                                rows={window.innerWidth > 1150 ? 5 : 1}
-                            />
-                        </div>
-                        {getSession().messages.length && noNewChats() ? <Button onClick={createSession} label='New chat' className={`button__outline${theme}`} /> : ''}
-                        <div className="chat__panel-switches">
-                            <Switch
-                                label='Dark Mode'
-                                value={theme === '--dark'}
-                                setValue={v => setTheme(v ? '--dark' : '')}
-                            />
-                            <Switch
-                                label='Production'
-                                value={prod}
-                                setValue={setProd}
-                            />
-                            <Switch
-                                label='Use history'
-                                value={useMemory}
-                                setValue={setUseMemory}
-                            />
-                        </div>
-                    </form>
-                    {timePassed ? <p style={{ margin: '1rem' }}>Time passed: {timePassed / 1000}s</p> : ''}
-                </div>
-                <div className="chat__panel-ghost" />
-            </>
-        )
+    const goToAboutVeronica = () => {
+        const a = document.createElement('a')
+        a.href = `${process.env.REACT_APP_ABOUT_PAGE}`
+        a.target = `_blank`
+        a.click()
     }
 
     const renderSessionAge = (index: number) => {
@@ -1170,21 +1065,29 @@ export function Chat() {
                                     placeholder='Search chats...'
                                     triggerSearch={() => { }}
                                 /> : ''}
-                            {getSession().messages.length && noNewChats() ?
+                            {!isMobile && getSession().messages.length ?
                                 <Tooltip tooltip='Start new chat' inline={sessions.length <= 1}>
                                     <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__panel-form-newchat${theme}`} />
                                 </Tooltip>
                                 : ''}
                         </div>
                         {isMobile ?
-                            <Dropdown
-                                label=''
-                                options={[...filteredSessions].reverse().filter(s => s.name)}
-                                objKey='name'
-                                selected={getSession()}
-                                setSelected={selectSession}
-                                value={getSession()}
-                            />
+                            <div className="chat__popup-window-header-options" style={{ justifyContent: 'center' }}>
+                                {getSession().messages.length ?
+                                    <Tooltip tooltip='Start new chat' inline={sessions.length <= 1}>
+                                        <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__panel-form-newchat${theme}`} />
+                                    </Tooltip>
+                                    : ''}
+                                <Dropdown
+                                    label=''
+                                    options={[...filteredSessions].filter(s => s.name)}
+                                    objKey='name'
+                                    selected={getSession()}
+                                    setSelected={selectSession}
+                                    value={getSession()}
+                                    style={{ width: '60vw' }}
+                                />
+                            </div>
                             :
                             <div className="chat__panel-sessions">
                                 {!filteredSessions.length && sessions.length ?
@@ -1242,12 +1145,43 @@ export function Chat() {
 
     const renderPopupHeader = () => {
         return (
-            <div className="chat__popup-window-header" style={{ background: theme ? '' : '#ededed' }}>
+            <div
+                className="chat__popup-window-header"
+                style={{
+                    background: theme ? '' : '#f7f7f7',
+                    borderBottom: theme ? '' : '1px solid #d3d3d399'
+                }}>
                 {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
-                <p className='chat__popup-window-header-title'>Veronica</p>
+                <Tooltip tooltip='Learn about Veronica'>
+                    <div className="chat__popup-window-header-info" onClick={goToAboutVeronica}>
+                        <img src={HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image${theme}`} />
+                        <div className="chat__popup-window-header-info-text">
+                            <p className='chat__popup-window-header-title'>Veronica</p>
+                            <p className="chat__popup-window-header-subtitle">HPx Assistant</p>
+                        </div>
+                    </div>
+                </Tooltip>
                 <div className="chat__popup-window-header-controls">
-                    <img src={NewTab} alt="Open in new tab" onClick={openInNewTab} className={`chat__popup-window-header-svg${theme}`} />
-                    <img src={Close} alt="Close" onClick={minimize} className={`chat__popup-window-header-svg${theme}`} />
+                    <div className="chat__popup-window-header-options">
+                        <Dropdown
+                            label=''
+                            options={[...filteredSessions].filter(s => s.name)}
+                            objKey='name'
+                            selected={getSession()}
+                            setSelected={selectSession}
+                            value={getSession()}
+                            style={{ width: '35vw' }}
+                        />
+                        <Tooltip tooltip='Start new chat'>
+                            <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__popup-window-header-newchat${theme}`} />
+                        </Tooltip>
+                    </div>
+                    <Tooltip tooltip='Full screen'>
+                        <img src={NewTab} alt="Open in new tab" onClick={openInNewTab} style={{ height: '1.3rem', padding: '.5rem' }} className={`chat__popup-window-header-svg${theme}`} />
+                    </Tooltip>
+                    <Tooltip tooltip='Close'>
+                        <img src={Close} alt="Close" onClick={minimize} className={`chat__popup-window-header-svg${theme}`} />
+                    </Tooltip>
                 </div>
             </div>
         )
@@ -1307,7 +1241,7 @@ export function Chat() {
                             style={{ fontSize: '1rem' }}
                             disabled={feedbackData.loading}
                         />
-                        <Tooltip tooltip='Write some comments first' inline show={!feedbackData.comments}>
+                        <Tooltip tooltip='Write some comments first' inline>
                             <Button
                                 label='Send feedback'
                                 disabled={!feedbackData.comments || feedbackData.loading}
@@ -1334,9 +1268,9 @@ export function Chat() {
                 {!getSession().messages.length ?
                     <p className='chat__box-hi'>{greetings}</p>
                     : getSession().messages.map((message: dataObj, index: number) => (
-                        <>
+                        <div key={index}>
                             {conversationContextMessage(index)}
-                            <div key={index} className={`chat__message chat__message-${message.role || ''}`}>
+                            <div className={`chat__message chat__message-${message.role || ''}`}>
                                 {message.role === 'assistant' ? <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} /> : ''}
                                 <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}>
                                     <div
@@ -1377,7 +1311,7 @@ export function Chat() {
                                         </div> : ''}
                                 </div>
                             </div>
-                        </>
+                        </div>
                     ))}
                 {getSession().completion ? (
                     <div className='chat__message chat__message-assistant chat__message-completion'>
@@ -1441,7 +1375,9 @@ export function Chat() {
             className={`chat__form-container${theme}`}
             style={{
                 position: getSession().messages.length ? 'fixed' : 'unset',
-                background: renderFullApp && theme ? '#14181E' : ''
+                background: renderFullApp && theme ? '#14181E' : '',
+                animation: getSession().messages.length ? 'none' : '',
+                opacity: getSession().messages.length ? '1' : '',
             }}>
             {getSession().messages.length && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
                 <p className='chat__message-memory-empty'>New chat context</p>
@@ -1507,7 +1443,7 @@ export function Chat() {
                         </div>
                     </Tooltip>
                 ) : (
-                    <Tooltip tooltip={input ? 'Send message' : 'Write a message to send'} position='up' show={Boolean(input)}>
+                    <Tooltip tooltip={input ? 'Send message' : !renderFullApp ? '' : 'Write a message to send'} position='up'>
                         <div
                             className='chat__form-send'
                             style={{
@@ -1525,10 +1461,10 @@ export function Chat() {
     }
 
     return minimized ?
-        <div className="chat__popup-minimized" onClick={maximize}>
+        <div className={`chat__popup-minimized${theme}`} onClick={maximize} style={{ height: popupHeight }}>
             <div className="chat__popup-logo">
-                <img src={ChatIcon} alt='Ask Veronica' className='chat__popup-icon' draggable={false} />
-                <p className='chat__popup-minimized-label'>Veronica</p>
+                <img src={HP} alt='Ask Veronica' className={`chat__popup-icon${theme}`} draggable={false} />
+                <p className={`chat__popup-minimized-label${theme}`}>Ask<br />Veronica</p>
             </div>
         </div>
         :
@@ -1541,17 +1477,26 @@ export function Chat() {
                 }}>
                 {/* <p className='chat__banner-message'>🚧 Currently on maintenance 🚧</p> */}
                 {renderFullApp ? renderFullAppSidebar() : renderPopupHeader()}
+                {!renderFullApp && getSession().messages.length ? <div style={{ height: '16vh' }} /> : ''}
                 <main
                     className="chat__main"
                     style={{
                         justifyContent: getSession().messages.length ? 'flex-start' : 'center',
-                        margin: !getSession().messages.length ? 'auto' : renderFullApp ? '' : '6vh auto 10vh',
+                        margin: !getSession().messages.length ? 'auto' : renderFullApp ? '' : '0 auto 10vh',
                         paddingTop: renderFullApp ? '' : '0vh',
-                        overflowY: renderFullApp ? 'unset' : 'scroll'
+                        overflowY: renderFullApp || !getSession().messages.length ? 'unset' : 'scroll',
+                        overflowX: renderFullApp || !getSession().messages.length ? 'unset' : 'hidden',
+                        height: !getSession().messages.length ? 'auto' : ''
                     }}>
                     <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
                     {feedbackData?.score === false ? renderFeedbackModal() : ''}
-                    <div className="chat__output" style={{ filter: feedbackData?.score === false ? 'blur(5px)' : '' }}>
+                    <div
+                        className="chat__output"
+                        style={{
+                            filter: feedbackData?.score === false ? 'blur(5px)' : '',
+                            margin: !getSession().messages.length ? 'auto' : !renderFullApp ? '0 auto' : '',
+                            minHeight: renderFullApp ? '' : 'unset'
+                        }}>
                         {renderChatBox()}
                         {feedbackData?.score === false ? '' : renderChatForm()}
                     </div>

@@ -52,6 +52,7 @@ import 'prismjs/components/prism-cmake';
 import 'prismjs/themes/prism.css';
 import { marked } from 'marked';
 import Tooltip from '../components/Tooltip'
+import Modal from '../components/Modal'
 
 type Props = {}
 const apiURl = process.env.REACT_APP_SERVER_URL
@@ -65,6 +66,7 @@ export default function Admin({ }: Props) {
     const [searchQuery, setSearchQuery] = useState('')
     const [latestQuery, setLatestQuery] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [vectorSearchModal, setVectorSearchModal] = useState(false)
     const [searchResults, setSearchResults] = useState<dataObj>({})
     const [selectedVersion, setSelectedVersion] = useState('Beta v0.x')
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
@@ -266,25 +268,34 @@ export default function Admin({ }: Props) {
 
 
     return !isLoggedIn ? null :
-        <div>
+        <div style={{ margin: '1rem' }}>
             <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
-            <div className="chat__admin">
+            <div className="">
                 <h1>Admin panel</h1>
-                <div className="chat__admin-row">
-                    <div
-                        className={`chat__form-container${theme}`}
-                        style={{
-                            position: 'relative',
-                            border: searchResults.query ? '1px solid lightgray' : '',
-                            borderRadius: '1rem',
-                            margin: searchResults.query ? '2rem 0' : '2rem 0 0 0'
-                        }}>
-                        <div className="chat__admin-search">
-                            {isLoading ? <p style={{ margin: '1rem 2rem' }}>Embedding query and searching in vector store...</p>
-                                : searchResults.query ?
-                                    <div style={{ margin: '1rem 2rem' }}>
-                                        <div className="chat__admin-row">
-                                            <p><strong>Query: </strong>{latestQuery}</p>
+                <Button
+                    label='Search Vector Store'
+                    className={`button__outline${theme}`}
+                    onClick={() => setVectorSearchModal(true)}
+                    style={{ marginBottom: '2rem' }}
+                />
+                {vectorSearchModal ?
+                    <Modal title='Vector Store Search' onClose={() => setVectorSearchModal(false)}>
+                        <div className="chat__admin-col">
+                            <div
+                                className={`chat__admin-container${theme}`}
+                                style={{
+                                    position: 'relative',
+                                    border: searchResults.query ? '1px solid lightgray' : '',
+                                    borderRadius: '1rem',
+                                    margin: searchResults.query ? '2rem 0' : '2rem 0 0 0'
+                                }}>
+                                {searchResults.query ?
+                                    <>
+                                        <div className="chat__admin-row" style={{ margin: '1rem' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <p style={{ margin: 0 }}><strong>Query: </strong>{latestQuery}</p>
+                                                <p style={{ margin: '.5rem 0' }}><strong>Exact match:</strong> {searchResults.exact ? 'Yes' : 'No'}</p>
+                                            </div>
                                             <Button
                                                 label='Clear result'
                                                 className={`button__delete${theme}`}
@@ -295,20 +306,28 @@ export default function Admin({ }: Props) {
                                                 }}
                                             />
                                         </div>
-                                        <p><strong>Exact match:</strong> {searchResults.exact ? 'Yes' : 'No'}</p>
-                                        <p><strong>Matches:</strong>
-                                            <br /> {searchResults.matches ?
-                                                searchResults.matches.map((m: string) => <div className='chat__admin-search-textresult'>
-                                                    <span>{m}</span><br /><br />
-                                                </div>)
-                                                : 'No matching docs'}</p>
-                                    </div>
+                                    </>
                                     : ''}
+                                <div className="chat__admin-search">
+                                    {isLoading ? <p style={{ margin: '1rem' }}>Embedding query and searching in vector store...</p>
+                                        : searchResults.query ?
+                                            <div style={{ margin: '1rem' }}>
+                                                <p><strong>Matches:</strong>
+                                                    <br /> {searchResults.matches ?
+                                                        searchResults.matches.map((m: string) => <div className='chat__admin-search-textresult'>
+                                                            <span>{m}</span><br /><br />
+                                                        </div>)
+                                                        : 'No matching docs'}</p>
+                                            </div>
+                                            : ''}
+                                </div>
+                            </div>
                             <div
                                 className={`chat__form-container${theme}`}
                                 style={{
                                     position: 'relative',
-                                    background: theme ? '#14181E' : ''
+                                    background: theme ? '#14181E' : '',
+                                    padding: 0
                                 }}>
                                 <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
                                     <textarea
@@ -327,7 +346,7 @@ export default function Admin({ }: Props) {
                                         onChange={(event) => setSearchQuery(event.target.value)}
                                         style={{ marginLeft: '1.5rem' }}
                                     />
-                                    <Tooltip tooltip={searchQuery ? 'Send message' : 'Write a message to send'} position='up' show={Boolean(searchQuery)}>
+                                    <Tooltip tooltip={searchQuery ? 'Send message' : 'Write a message to send'} position='up'>
                                         <div
                                             className='chat__form-send'
                                             style={{
@@ -342,8 +361,8 @@ export default function Admin({ }: Props) {
                                 </form>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </Modal>
+                    : ''}
                 <div className="chat__admin-row">
                     <div className="chat__admin-col" style={{ width: '50%' }}>
                         <h2 style={{ marginTop: '0' }}>Feedback</h2>
@@ -404,7 +423,7 @@ export default function Admin({ }: Props) {
                                             <p>Model Settings</p>
                                             {Object.keys(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}'))
                                                 .map(key => key ?
-                                                    <p style={{ fontSize: '.9rem', margin: 0 }}>
+                                                    <p key={key} style={{ fontSize: '.9rem', margin: 0 }}>
                                                         <strong>{String(key)}: </strong>
                                                         {JSON.stringify(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}')[key])}
                                                     </p> : '')}

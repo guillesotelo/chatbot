@@ -1,6 +1,6 @@
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
-export const autoScroll = (element: string = 'body') => {
+export const autoScroll = (element: string = 'body', behavior: any = 'smooth') => {
     const targetElement = element === 'body' ? document.documentElement : document.querySelector(element);
 
     if (!targetElement) return; // Exit if the element is not found
@@ -10,9 +10,9 @@ export const autoScroll = (element: string = 'body') => {
     if (height - bottom + top <= 0) {
         // Scrollbar is at its bottom, so we automate scroll
         if (element === 'body') {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            window.scrollTo({ top: document.body.scrollHeight, behavior });
         } else {
-            targetElement.scrollTo({ top: targetElement.scrollHeight, behavior: 'smooth' });
+            targetElement.scrollTo({ top: targetElement.scrollHeight, behavior });
         }
     }
 };

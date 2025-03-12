@@ -7,7 +7,7 @@
     &__box {
         display: none;
         position: absolute;
-        z-index: 10;
+        z-index: 999999;
         background: #535353 !important;
         font-size: .9rem;
         color: #fff;
@@ -21,7 +21,7 @@
             display: none;
             position: absolute;
             top: 0;
-            z-index: 10;
+            z-index: 999999;
             background: #535353 !important;
             font-size: .9rem;
             color: #fff;
