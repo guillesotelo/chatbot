@@ -42,17 +42,18 @@ export default function Tooltip({ tooltip, children, inline, style, boxStyle, sh
             onMouseOut={() => setShowTooltip(false)}
             ref={containerRef}>
             {children}
-            <div className={inline ? 'tooltip__box-inline' : 'tooltip__box'} style={{
-                display: showTooltip ? 'block' : 'none',
-                marginLeft: inline ? childrenWidth * 1.2 : '',
-                top: !inline ? position === 'up' ?  childrenHeight * -1.4:  childrenHeight * 1.4 : '',
-                marginTop: inline ? childrenHeight / 10 : '',
-                ...boxStyle
-            }}>
-                <p className={position === 'up' ? 'tooltip__text-up' : inline ? 'tooltip__text-inline' : 'tooltip__text'} >
-                    {tooltip}
-                </p>
-            </div>
+            {tooltip ?
+                <div className={inline ? 'tooltip__box-inline' : 'tooltip__box'} style={{
+                    display: showTooltip ? 'block' : 'none',
+                    marginLeft: inline ? childrenWidth * 1.2 : '',
+                    top: !inline ? position === 'up' ? childrenHeight * -1.4 : childrenHeight * 1.4 : '',
+                    marginTop: inline ? childrenHeight / 10 : '',
+                    ...boxStyle
+                }}>
+                    <p className={position === 'up' ? 'tooltip__text-up' : inline ? 'tooltip__text-inline' : 'tooltip__text'} >
+                        {tooltip}
+                    </p>
+                </div> : ''}
         </div>
     )
 }
