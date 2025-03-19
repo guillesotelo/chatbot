@@ -38,13 +38,15 @@ body {
 
 code {
     white-space: pre-wrap !important;
-    font-family: monospace;
-    border-radius: 1rem;
+    font-family: "Fira Code", "Consolas", "Monaco", "Courier New", monospace !important;
+    line-height: 1.5 !important;
+    border-radius: 1rem !important;
     width: 100% !important;
-    overflow-wrap: anywhere;
-    font-style: italic;
+    overflow-wrap: anywhere !important;
+    // font-style: italic;
     // background: #0c0c0c !important;
-    margin: 1rem 0;
+    margin: 1rem 0 !important;
+    font-size: .9rem !important;
 }
 
 code * {
@@ -58,7 +60,7 @@ pre code {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     -webkit-overflow-scrolling: touch;
-    max-width: 100%;
+    // max-width: 100%;
     min-width: 100px;
     font-style: normal;
 }

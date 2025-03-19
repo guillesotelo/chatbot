@@ -1,4 +1,4 @@
-import { memo, useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { marked } from 'marked';
 import { useLocalStorage } from 'usehooks-ts';
@@ -44,6 +44,7 @@ import 'prismjs/components/prism-coffeescript';
 import 'prismjs/components/prism-xml-doc';
 import 'prismjs/components/prism-gradle';
 import 'prismjs/components/prism-cmake';
+import 'prismjs/components/prism-basic';
 import 'prismjs/themes/prism.css';
 import { AppContext } from '../AppContext';
 import NewTab from '../assets/icons/maximize.svg'
@@ -54,9 +55,8 @@ import Trash from '../assets/icons/trash.svg'
 import Export from '../assets/icons/export.svg'
 import ExportDark from '../assets/icons/export-dark.svg'
 import Reload from '../assets/icons/reload3.png'
-import Switch from '../components/Switch';
-import ChatIcon from '../assets/icons/chat.svg';
 import HP from '../assets/images/veronica.png';
+import NewContext from '../assets/icons/new-context.svg';
 import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { API_URL, APP_VERSION, feedbackHeaders, LOCAL_API_URL, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, TECH_ISSUE_LLM } from '../constants/app';
@@ -67,7 +67,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import Tooltip from '../components/Tooltip';
 import Modal from '../components/Modal';
 import InputField from '../components/InputField';
-import DataTable from '../components/DataTable';
 import { useNavigate } from "react-router-dom";
 import SearchBar from '../components/SearchBar';
 import NewChat from '../assets/icons/new-chat.svg'
@@ -126,6 +125,7 @@ export function Chat() {
     const resetMemoryRef = useRef<null | HTMLImageElement>(null)
     const memoryRef = useRef<dataObj>({})
     const greetingsInterval = useRef<any>(null)
+    const codeHighlighted = useRef<any>(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -204,8 +204,6 @@ export function Chat() {
                 stopwatchIntervalId.current = null
             }
         }
-        Prism.highlightAll()
-        renderCodeBlockHeaders()
         if (sessionId) localStorage.setItem('chatSessions', JSON.stringify(sessions))
 
         setFilteredSessions(sortArray(sessions, 'updated', true))
@@ -214,13 +212,8 @@ export function Chat() {
     }, [sessions])
 
     useEffect(() => {
-        Prism.highlightAll()
         renderCodeBlockHeaders()
         if (messageRef.current) messageRef.current.focus()
-
-        // console.log('session', sessionId)
-        // console.log('memory', memoryRef.current[sessionId || ''])
-        // console.log('date', new Date(sessionId || '').toLocaleDateString('es-ES'))
     }, [sessionId, feedbackData])
 
     useEffect(() => {
@@ -228,58 +221,56 @@ export function Chat() {
     }, [minimized])
 
     const updateMemory = () => {
-        if (!sessionId) return
-        const messages = getSession().messages
-        let chatContext = 'Based on the following conversation history, which may or may not provide relevant context: "'
-        let count = 0
-        let accIndex = 0
-        let accMessages = ''
-        const sessionMessages = [...messages] // we are mutating this with reverse()
+        if (!sessionId || isLoading || !memoryRef.current) return
 
-        if (memoryRef.current[sessionId] && memoryRef.current[sessionId].index) {
-            accIndex = (messages.length - 1) - memoryRef.current[sessionId].index
-        } else {
-            sessionMessages.reverse().forEach((m: dataObj, i: number) => {
-                if (accMessages.length < 6000) {
-                    accMessages += m.content
-                    accIndex = i
+        const instructionStart = 'Based on the context and the following conversation history, which may provide relevance: "'
+        const instructionEnd = '", respond to this: '
+        let chatContext = ['']
+        const maxChars = 3500
+        const rMessages = [...getSession().messages].reverse() // mutation from the original
+        const getPrompt = (ctx: string[]) => instructionStart + ctx.join('') + instructionEnd // instructions + user prompt
+        const currentMemory = memoryRef.current[sessionId] || null
+        let index = currentMemory && currentMemory.index ? currentMemory.index : rMessages.length - 1 // the actual index from the messages array (ordered)
+        let rIndex = rMessages.length - index // reversed index, needed for our memory operation
+
+        console.log('\n\n')
+        console.log('memory', memoryRef.current[sessionId])
+        // console.log('messages', getSession().messages)
+        console.log('messages length', rMessages.length)
+        console.log('rIndex', rIndex)
+
+        if (rIndex > 0) {
+            rMessages.forEach((m: dataObj, i: number) => {
+                const message = `\n${m.role === 'assistant' ? m.content.split('<br/><br/><strong>Source')[0] : m.content}\n`
+                if (m.content
+                    && getPrompt(chatContext.concat(message)).length <= maxChars
+                    && i < rIndex
+                    && !TECH_ISSUE_LLM.includes(m.content)
+                    && !m.content.includes('[STOPPED]')
+                    && !m.content.includes(`Oops! It looks like I'm having a bit of a technical hiccup`)) {
+
+                    chatContext.unshift(message)
+                    index = rMessages.length - 1 - i
+
+                } else if (i === 0) {
+                    // case when the last message only is very long, then we truncate it
+                    chatContext.unshift(message.split('').slice(0, maxChars - (instructionStart + instructionEnd).length).join(''))
+                    index = rMessages.length - 1
                 }
             })
-        }
-        messages.slice(messages.length - accIndex).map((m: messageType) => {
-            if (m.content && !TECH_ISSUE_LLM.includes(m.content) && !m.content.includes('[STOPPED]')) {
-                chatContext += `\n${m.content.split('<br/>')[0]}\n`
-                count++
-            }
-        })
 
-        // If an clearing context index exist, we check that the accumulation of text is not more than we want
-        if (chatContext.length > 6000) {
-            sessionMessages.reverse().forEach((m: dataObj, i: number) => {
-                if (accMessages.length < 6000) {
-                    accMessages += m.content
-                    accIndex = i
+            const newMemory = {
+                ...memoryRef.current,
+                [sessionId]: {
+                    memory: getPrompt(chatContext),
+                    index
                 }
-            })
-        }
-        messages.slice(messages.length - accIndex).map((m: messageType) => {
-            if (m.content && !TECH_ISSUE_LLM.includes(m.content) && !m.content.includes('[STOPPED]')) {
-                chatContext += `\n${m.content.split('<br/>')[0]}\n`
-                count++
             }
-        })
-
-        chatContext += '", respond to this: '
-
-        const newMemory = {
-            ...memoryRef.current,
-            [sessionId]: {
-                memory: count ? chatContext : '',
-                index: (messages.length - 1) - accIndex
-            }
+            console.log('newMemory', newMemory[sessionId])
+            memoryRef.current = newMemory
+            localStorage.setItem('memory', JSON.stringify(newMemory))
         }
-        memoryRef.current = newMemory
-        localStorage.setItem('memory', JSON.stringify(newMemory))
+
     }
 
     const getLocalSessions = () => {
@@ -325,6 +316,7 @@ export function Chat() {
             'User: ',
             'Response:',
             'Veronica:',
+            "Answer:",
             '", respond to this:'
         ]
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
@@ -422,7 +414,10 @@ export function Chat() {
                     })
                 })
 
-                setTimeout(() => setTimePassed(0), 100)
+                setTimeout(() => {
+                    setTimePassed(0)
+                    renderCodeBlockHeaders()
+                }, 100)
                 streamIdRef.current = null
                 stopGenerationRef.current = false
 
@@ -559,10 +554,18 @@ export function Chat() {
     }
 
     const renderCodeBlockHeaders = () => {
-        const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
+        // const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
+        const codeBlocks = document.querySelectorAll('pre')
+
         codeBlocks.forEach((codeBlock, index) => {
-            if (!codeBlock.innerHTML.includes('chat__code-header') || !codeBlock.outerHTML.includes('chat__code-header')) {
-                const language = codeBlock.className.replace('language-', '')
+            if (!codeBlock.hasAttribute("data-highlighted")) {
+                const child = codeBlock.querySelector('code') as HTMLElement
+                Prism.highlightElement(child)
+                codeBlock.setAttribute("data-highlighted", "true")
+            }
+
+            if (!codeBlock.querySelector(".chat__code-header")) {
+                const language = (codeBlock.outerHTML.split('"')[1] || 'code').replace('language-', '')
 
                 const header = document.createElement('div')
                 header.className = 'chat__code-header'
@@ -776,7 +779,6 @@ export function Chat() {
             window.parent.postMessage({ height: POPUP_WINDOW_HEIGHT, width: POPUP_WINDOW_WIDTH }, '*')
             resizeIframe(POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH)
             setTimeout(() => {
-                Prism.highlightAll()
                 renderCodeBlockHeaders()
             }, 100)
             setPopupHeight('750px')
@@ -922,22 +924,21 @@ export function Chat() {
     }
 
     const resetMemory = () => {
-        if (isLoading || !sessionId || !memoryRef.current[sessionId] || !memoryRef.current[sessionId].memory) return
+        if (isLoading || !sessionId || !memoryRef.current[sessionId]) return
         if (resetMemoryRef.current) {
             resetMemoryRef.current.style.animation = 'transform-reload 1s ease-in'
             setTimeout(() => {
                 if (resetMemoryRef.current) resetMemoryRef.current.style.animation = 'none'
             }, 1050)
         }
-        const newMemory = sessionId ? {
+        const newMemory = {
             ...memoryRef.current,
             [sessionId]: {
                 ...memoryRef.current[sessionId],
                 memory: '',
-                index: getSession().messages.length
+                index: getSession().messages.length - 1
             }
-        } : memoryRef.current
-
+        }
         memoryRef.current = newMemory
         localStorage.setItem('memory', JSON.stringify(newMemory))
         toast.success('This conversation is now forgotten.')
@@ -1258,7 +1259,9 @@ export function Chat() {
     const conversationContextMessage = (index: number) => {
         if (sessionId && memoryRef.current && memoryRef.current[sessionId]
             && memoryRef.current[sessionId].memory
-            && memoryRef.current[sessionId].index === index) return <p key={memoryRef.current[sessionId].memory} className={`chat__message-memory${theme}`}>Chat context</p>
+            && memoryRef.current[sessionId].index === index) {
+            return <p key={memoryRef.current[sessionId].memory} className={`chat__message-memory${theme}`}>Chat context</p>
+        }
         return ''
     }
 
@@ -1380,7 +1383,7 @@ export function Chat() {
                 opacity: getSession().messages.length ? '1' : '',
             }}>
             {getSession().messages.length && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
-                <p className='chat__message-memory-empty'>New chat context</p>
+                <div className='chat__message-memory-empty'><img src={NewContext} alt='New Context' draggable={false} className='chat__message-memory-empty-svg' /> {getSession().isLoading ? 'Updating context...' : 'New chat context'}</div>
                 : ''}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
@@ -1423,6 +1426,7 @@ export function Chat() {
                                 src={Reload}
                                 ref={resetMemoryRef}
                                 className={`chat__form-send-svg-reload${theme}`}
+                                draggable={false}
                                 style={{
                                     filter: !isLoading && sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory ? theme ?
                                         'invert(96%) sepia(9%) saturate(0%) hue-rotate(172deg) brightness(91%) contrast(85%)'
