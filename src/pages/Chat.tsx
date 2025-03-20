@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { memo, useContext, useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { marked } from 'marked';
 import { useLocalStorage } from 'usehooks-ts';
@@ -93,8 +93,6 @@ export function Chat() {
     const [copyMessage, setCopyMessage] = useState(-1)
     const [goodScore, setGoodScore] = useState(-1)
     const [badScore, setBadScore] = useState(-1)
-    const [systemPrompt, setSystemPrompt] = useLocalStorage<string>('system-prompt', '')
-    const [selectedFiles, setSelectedFiles] = useLocalStorage<string[]>('selected-files', [])
     const [greetings, setGreetings] = useState(' ⬤')
     const [prod, setProd] = useState(true)
     const [renderFullApp, setRenderFullApp] = useState(true) // Change to window.innerWidth > 1050 when ready to use popup mode
@@ -104,7 +102,6 @@ export function Chat() {
     const [useDocumentContext, setUseDocumentContext] = useState<boolean>(mode === 'query' || true)
     const [scrollLocked, setScrollLocked] = useState(false)
     const [timePassed, setTimePassed] = useState(0)
-    const [useMemory, setUseMemory] = useState(false)
     const [sessions, setSessions] = useState<sessionType[]>([])
     const [filteredSessions, setFilteredSessions] = useState<sessionType[]>([])
     const [sessionId, setSessionId] = useState<null | number | undefined>(null)
@@ -125,7 +122,7 @@ export function Chat() {
     const resetMemoryRef = useRef<null | HTMLImageElement>(null)
     const memoryRef = useRef<dataObj>({})
     const greetingsInterval = useRef<any>(null)
-    const codeHighlighted = useRef<any>(null)
+    const appUpdateRef = useRef<any>(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -165,6 +162,7 @@ export function Chat() {
         }
 
         getLocalSessions()
+        checkForAppUpdates()
 
         window.addEventListener('scroll', handleScroll)
         document.addEventListener('click', hideSessionOptions)
@@ -176,6 +174,10 @@ export function Chat() {
             document.removeEventListener('click', hideSessionOptions)
         }
     }, [])
+
+    // useEffect(() => {
+    //     if (sessionId) console.log('memory', memoryRef.current[sessionId])
+    // }, [memoryRef.current])
 
     useEffect(() => {
         setUseDocumentContext(mode === 'query')
@@ -220,8 +222,34 @@ export function Chat() {
         if (!minimized) generateGreetings()
     }, [minimized])
 
+    const checkForAppUpdates = () => {
+        const checkAppVersion = async () => {
+            try {
+                const response = await fetch(`${apiURl}/api/get_app_version`, { method: 'GET' })
+                if (response && response.ok) {
+                    const { app_version } = await response.json()
+                    if (app_version && app_version !== APP_VERSION) {
+                        const tryUpdate = localStorage.getItem('tryUpdate')
+                        if (!tryUpdate) window.location.reload()
+                        localStorage.setItem('tryUpdate', APP_VERSION)
+                        console.log('Veronica just updated to the latest version: ', app_version)
+                    } else {
+                        console.log('Veronica version is the latest: ', app_version)
+                    }
+                }
+            } catch (error) {
+                console.error('An error occurred while updating Veronica version.')
+            }
+        }
+
+        if (appUpdateRef.current) clearInterval(appUpdateRef.current)
+        checkAppVersion()
+
+        appUpdateRef.current = setInterval(checkAppVersion, 60000)
+    }
+
     const updateMemory = () => {
-        if (!sessionId || isLoading || !memoryRef.current) return
+        if (!sessionId || isLoading || !memoryRef.current || !getSession().messages.length) return
 
         const instructionStart = 'Based on the context and the following conversation history, which may provide relevance: "'
         const instructionEnd = '", respond to this: '
@@ -230,46 +258,44 @@ export function Chat() {
         const rMessages = [...getSession().messages].reverse() // mutation from the original
         const getPrompt = (ctx: string[]) => instructionStart + ctx.join('') + instructionEnd // instructions + user prompt
         const currentMemory = memoryRef.current[sessionId] || null
-        let index = currentMemory && currentMemory.index ? currentMemory.index : rMessages.length - 1 // the actual index from the messages array (ordered)
+        let index = currentMemory && (currentMemory.index || currentMemory.index === 0) ? currentMemory.index : rMessages.length // the actual index from the messages array (ordered)
         let rIndex = rMessages.length - index // reversed index, needed for our memory operation
 
-        console.log('\n\n')
-        console.log('memory', memoryRef.current[sessionId])
+        // console.log('\n\n')
+        // console.log('memory', memoryRef.current[sessionId])
         // console.log('messages', getSession().messages)
-        console.log('messages length', rMessages.length)
-        console.log('rIndex', rIndex)
+        // console.log('messages length', rMessages.length)
+        // console.log('rIndex', rIndex)
 
-        if (rIndex > 0) {
-            rMessages.forEach((m: dataObj, i: number) => {
-                const message = `\n${m.role === 'assistant' ? m.content.split('<br/><br/><strong>Source')[0] : m.content}\n`
-                if (m.content
-                    && getPrompt(chatContext.concat(message)).length <= maxChars
-                    && i < rIndex
-                    && !TECH_ISSUE_LLM.includes(m.content)
-                    && !m.content.includes('[STOPPED]')
-                    && !m.content.includes(`Oops! It looks like I'm having a bit of a technical hiccup`)) {
+        rMessages.forEach((m: dataObj, i: number) => {
+            const message = `\n${m.role === 'assistant' ? m.content.split('<br/><br/><strong>Source')[0] : m.content}\n`
+            if (m.content
+                && getPrompt(chatContext.concat(message)).length <= maxChars
+                && (i < rIndex || !currentMemory)
+                && !TECH_ISSUE_LLM.includes(m.content)
+                && !m.content.includes('[STOPPED]')
+                && !m.content.includes(`Oops! It looks like I'm having a bit of a technical hiccup`)) {
 
-                    chatContext.unshift(message)
-                    index = rMessages.length - 1 - i
+                chatContext.unshift(message)
+                index = rMessages.length - 1 - i
 
-                } else if (i === 0) {
-                    // case when the last message only is very long, then we truncate it
-                    chatContext.unshift(message.split('').slice(0, maxChars - (instructionStart + instructionEnd).length).join(''))
-                    index = rMessages.length - 1
-                }
-            })
-
-            const newMemory = {
-                ...memoryRef.current,
-                [sessionId]: {
-                    memory: getPrompt(chatContext),
-                    index
-                }
+            } else if (i === 0 && getPrompt(chatContext.concat(message)).length >= maxChars) {
+                // case when the last message only is very long, then we truncate it
+                chatContext.unshift(message.split('').slice(0, maxChars - (instructionStart + instructionEnd).length).join(''))
+                index = rMessages.length - 1
             }
-            console.log('newMemory', newMemory[sessionId])
-            memoryRef.current = newMemory
-            localStorage.setItem('memory', JSON.stringify(newMemory))
+        })
+
+        const newMemory = {
+            ...memoryRef.current,
+            [sessionId]: {
+                memory: chatContext.join('').length ? getPrompt(chatContext) : '',
+                index
+            }
         }
+        // console.log('newMemory', newMemory[sessionId])
+        memoryRef.current = newMemory
+        localStorage.setItem('memory', JSON.stringify(newMemory))
 
     }
 
@@ -768,7 +794,8 @@ export function Chat() {
     const openInNewTab = () => {
         window.parent.postMessage({ height: POPUP_HEIGHT, width: POPUP_WIDTH }, '*')
         const anchor = document.createElement('a')
-        anchor.href = `${apiURl}?theme=${theme || 'false'}`
+        // anchor.href = `${apiURl}?theme=${theme || 'false'}`
+        anchor.href = `${process.env.REACT_APP_FULL_APP}`
         anchor.target = '_blank'
         anchor.click()
     }
@@ -804,21 +831,18 @@ export function Chat() {
     }
 
     const updateSessionName = (e: any, id: number | null | undefined) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            setSessions(prev => {
-                return prev.map(s => {
-                    if (s.id === id) {
-                        return {
-                            ...s,
-                            name: sessionNames[id || ''] || `New chat [${new Date(s.id || '').toLocaleString('sv-SE')}]`
-                        }
+        const { value } = e.target
+        setSessions(prev => {
+            return prev.map(s => {
+                if (s.id === id) {
+                    return {
+                        ...s,
+                        name: value || `New chat [${new Date(s.id || '').toLocaleString('sv-SE')}]`
                     }
-                    return s
-                })
+                }
+                return s
             })
-            setTimeout(() => setSessionNames({}), 100)
-        }
+        })
     }
 
     const deleteSession = (id: number | null | undefined, e: any) => {
@@ -936,7 +960,7 @@ export function Chat() {
             [sessionId]: {
                 ...memoryRef.current[sessionId],
                 memory: '',
-                index: getSession().messages.length - 1
+                index: getSession().messages.length
             }
         }
         memoryRef.current = newMemory
@@ -1090,7 +1114,7 @@ export function Chat() {
                                 />
                             </div>
                             :
-                            <div className="chat__panel-sessions">
+                            <div className={`chat__panel-sessions${theme}`}>
                                 {!filteredSessions.length && sessions.length ?
                                     <p style={{ fontSize: '.9rem' }}>No chats found.</p>
                                     :
@@ -1102,16 +1126,18 @@ export function Chat() {
                                                     className={`chat__panel-session${theme}`}
                                                     onClick={() => selectSession(s)}
                                                     style={{
-                                                        background: s.id === getSession().id ? theme ? '#2d2d2d' : '#e0e0e0' : '',
+                                                        background: s.id === getSession().id ? theme ? '#2d2d2d' : '#e3e3e3' : '',
                                                         border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
                                                     }}>
                                                     <div className="chat__panel-session-item">
                                                         {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
                                                             <input
                                                                 className='chat__panel-session-rename'
-                                                                value={sessionNames[s.id || '']}
-                                                                onChange={e => setSessionNames({ [s.id || '']: e.target.value })}
-                                                                onKeyDown={(e) => updateSessionName(e, s.id)} />
+                                                                value={s.name}
+                                                                onChange={e => updateSessionName(e, s.id)} 
+                                                                onKeyDown={e => {
+                                                                    if(e.key === 'Enter') setSessionNames({})
+                                                                }}/>
                                                             : <p className='chat__panel-session-name'>{s.name}</p>}
                                                         {/* <p className='chat__panel-session-name'>{s.name}</p> */}
                                                         {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
@@ -1257,10 +1283,9 @@ export function Chat() {
     }
 
     const conversationContextMessage = (index: number) => {
-        if (sessionId && memoryRef.current && memoryRef.current[sessionId]
-            && memoryRef.current[sessionId].memory
-            && memoryRef.current[sessionId].index === index) {
-            return <p key={memoryRef.current[sessionId].memory} className={`chat__message-memory${theme}`}>Chat context</p>
+        const currentMemory = sessionId && memoryRef.current && memoryRef.current[sessionId] ? memoryRef.current[sessionId] : null
+        if (currentMemory && currentMemory.memory && currentMemory.index === index) {
+            return <p key={currentMemory.memory} className={`chat__message-memory${theme}`}>Chat context</p>
         }
         return ''
     }
@@ -1382,8 +1407,10 @@ export function Chat() {
                 animation: getSession().messages.length ? 'none' : '',
                 opacity: getSession().messages.length ? '1' : '',
             }}>
-            {getSession().messages.length && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
-                <div className='chat__message-memory-empty'><img src={NewContext} alt='New Context' draggable={false} className='chat__message-memory-empty-svg' /> {getSession().isLoading ? 'Updating context...' : 'New chat context'}</div>
+            {getSession().messages.length > 1 && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
+                <div className='chat__message-memory-empty'>{!getSession().isLoading || !getSession().completion ?
+                    <img src={NewContext} alt='New Context' draggable={false} className={`chat__message-memory-empty-svg${theme}`} />
+                    : ''} {getSession().isLoading && getSession().completion ? 'Updating context...' : 'New chat context'}</div>
                 : ''}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
