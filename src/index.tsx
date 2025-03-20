@@ -8,9 +8,10 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <React.StrictMode>
+  // Strict mode renders everythin twice in dev mode. Leave this commented.
+  // <React.StrictMode>
     <AppProvider>
       <App />
     </AppProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 );
