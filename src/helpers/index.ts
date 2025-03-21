@@ -36,3 +36,5 @@ export const sortArray = (arr: any[], key: string | number, order?: boolean) => 
         return order ? aValue < bValue ? 1 : -1 : aValue < bValue ? -1 : 1
     })
 }
+
+export const cleanText = (text: string) => text.replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim()

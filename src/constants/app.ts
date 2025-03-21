@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.0'
+export const APP_VERSION = '1.1'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const TECH_ISSUE_LLM = [
@@ -72,6 +72,46 @@ export const questionStarters = [
     // Shortened spoken forms
     "wanna", "gonna", "gotta", "lemme", "could've", "should've", "would've"
 ]
+
+export const referencePatterns = [
+    // Pronouns and references
+    "it", "this", "that", "those", "them", "they", "he", "she", "him", "her",
+    "these", "one", "ones", "something", "someone", "somebody", "thing",
+
+    // Continuation words
+    "but", "so", "then", "also", "and", "or", "besides", "anyway", "however",
+    "furthermore", "nevertheless", "moreover", "thus", "therefore", "hence",
+    "mean", "refer",
+
+    // Common phrases indicating a follow-up
+    "tell me more", "explain", "what about", "continue", "go on",
+    "expand on that", "elaborate", "give me details", "give me more info",
+    "what else", "how about", "what was that", "can you clarify", "remind me",
+
+    // Questions referring to prior context
+    "what do you mean", "what did you say", "did you mean", "what happened next",
+    "why did you say that", "what was that about", "why?", "why not?",
+
+    // Commands that imply previous discussion
+    "keep going", "finish your thought", "more details", "clarify that", "sum it up",
+    "give me a summary", "summarize", "tell me the key points"
+]
+
+export const greetingPatterns = [
+    "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+    "what's up", "howdy", "greetings", "sup", "morning", "evening",
+    "hola", "bonjour", "ciao", "salut", "hallo", "namaste", 
+    "hej", "god morgon", "hejdå", "tjena", "hallå"
+]
+
+export const gratitudePatterns = [
+    "thanks", "thank you", "thx", "appreciate it", "much appreciated",
+    "gracias", "merci", "danke", "thanks a lot", "thank you so much",
+    "many thanks", "thanks a bunch", "thanks a million", "thanks again", "tack"
+]
+
+export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
+export const instructionEnd = '", respond to this: '
 
 export const POPUP_WIDTH = 140
 export const POPUP_HEIGHT = 60
