@@ -59,7 +59,7 @@ import HP from '../assets/images/veronica.png';
 import NewContext from '../assets/icons/new-context.svg';
 import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
 import { toast } from 'react-toastify';
-import { API_URL, APP_VERSION, feedbackHeaders, gratitudePatterns, greetingPatterns, instructionEnd, instructionStart, LOCAL_API_URL, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, referencePatterns, TECH_ISSUE_LLM } from '../constants/app';
+import { APP_VERSION, gratitudePatterns, greetingPatterns, instructionEnd, instructionStart, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, referencePatterns, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, cleanText, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
@@ -703,7 +703,10 @@ export function Chat() {
         setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
 
         const isGreeting = greetingPatterns.includes(cleanText(content).toLowerCase())
-        const isGratitude = gratitudePatterns.includes(cleanText(content).toLowerCase())
+        let isGratitude = false
+        cleanText(content).toLowerCase().split(' ').forEach(word => {
+            if (gratitudePatterns.includes(word)) isGratitude = true
+        })
 
         if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude')
 
@@ -727,8 +730,8 @@ export function Chat() {
         let index = 0
         let chunk = ''
         let textResponse = type === 'greetings' ?
-            'Hi, I am Veronica, a helpful assistant from Volvo Cars, specialized in HPx development. How can I help you today?'
-            : 'You are welcome! If you have a specific question about HPx, please let me know and I will do my best to provide you with accurate and relevant information.'
+            process.env.REACT_APP_GREETINGS_RESPONSE || `Hi! How may I help you today?`
+            : process.env.REACT_APP_GRATITUDE_RESPONSE || 'You are welcome! Let me know how can I assist you further.'
 
         while (index < textResponse.length - 1) {
             autoScroll(!renderFullApp ? '.chat__main' : 'body')

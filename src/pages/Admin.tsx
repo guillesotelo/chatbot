@@ -68,7 +68,7 @@ export default function Admin({ }: Props) {
     const [isLoading, setIsLoading] = useState(false)
     const [vectorSearchModal, setVectorSearchModal] = useState(false)
     const [searchResults, setSearchResults] = useState<dataObj>({})
-    const [selectedVersion, setSelectedVersion] = useState('Beta v0.x')
+    const [selectedVersion, setSelectedVersion] = useState('Production v1.x')
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
 

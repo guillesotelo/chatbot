@@ -77,7 +77,7 @@ export const referencePatterns = [
     // Pronouns and references
     "it", "this", "that", "those", "them", "they", "he", "she", "him", "her",
     "these", "one", "ones", "something", "someone", "somebody", "thing",
-
+    
     // Continuation words
     "but", "so", "then", "also", "and", "or", "besides", "anyway", "however",
     "furthermore", "nevertheless", "moreover", "thus", "therefore", "hence",
@@ -85,7 +85,7 @@ export const referencePatterns = [
 
     // Common phrases indicating a follow-up
     "tell me more", "explain", "what about", "continue", "go on",
-    "expand on that", "elaborate", "give me details", "give me more info",
+    "expand on that", "elaborate", "give me details", "more info",
     "what else", "how about", "what was that", "can you clarify", "remind me",
 
     // Questions referring to prior context
@@ -94,7 +94,7 @@ export const referencePatterns = [
 
     // Commands that imply previous discussion
     "keep going", "finish your thought", "more details", "clarify that", "sum it up",
-    "give me a summary", "summarize", "tell me the key points"
+    "give me a summary", "summarize", "tell me the key points", "other",
 ]
 
 export const greetingPatterns = [
@@ -105,7 +105,7 @@ export const greetingPatterns = [
 ]
 
 export const gratitudePatterns = [
-    "thanks", "thank you", "thx", "appreciate it", "much appreciated",
+    "thanks", "thank you", "thank you!", "thx", "appreciate it", "much appreciated",
     "gracias", "merci", "danke", "thanks a lot", "thank you so much",
     "many thanks", "thanks a bunch", "thanks a million", "thanks again", "tack"
 ]
