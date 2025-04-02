@@ -786,7 +786,7 @@ export function Chat() {
         form.style.alignItems = 'center'
         send.forEach(s => s.style.marginBottom = '0')
 
-        outputChat.style.marginBottom = textarea.scrollHeight > 80 ? '46vh' : '6rem'
+        outputChat.style.marginBottom = textarea.scrollHeight > 80 ? '46vh' : renderFullApp ? '6rem' : '0'
         if (textarea.scrollHeight > 60) {
             style.padding = '1rem 0'
             form.style.alignItems = 'flex-end'
@@ -1582,6 +1582,7 @@ export function Chat() {
                         justifyContent: getSession().messages.length ? 'flex-start' : 'center',
                         margin: !getSession().messages.length ? 'auto' : renderFullApp ? '' : '0 auto 10vh',
                         paddingTop: renderFullApp ? '' : '0vh',
+                        paddingBottom: !renderFullApp && getSession().messages.length ? '9vh' : '',
                         overflowY: renderFullApp || !getSession().messages.length ? 'unset' : 'scroll',
                         overflowX: renderFullApp || !getSession().messages.length ? 'unset' : 'hidden',
                         height: !getSession().messages.length ? 'auto' : ''
@@ -1592,7 +1593,7 @@ export function Chat() {
                         className="chat__output"
                         style={{
                             filter: feedbackData?.score === false ? 'blur(5px)' : '',
-                            margin: !getSession().messages.length ? 'auto' : !renderFullApp ? '0 auto' : '',
+                            margin: !getSession().messages.length ? 'auto' : renderFullApp ? '' : '0 auto',
                             minHeight: renderFullApp ? '' : 'unset'
                         }}>
                         {renderChatBox()}
