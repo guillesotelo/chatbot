@@ -94,7 +94,7 @@ export const referencePatterns = [
 
     // Commands that imply previous discussion
     "keep going", "finish your thought", "more details", "clarify that", "sum it up",
-    "give me a summary", "summarize", "tell me the key points", "other",
+    "give me a summary", "summarize", "tell me the key points", "other", "more", "else",
 ]
 
 export const greetingPatterns = [
@@ -107,7 +107,7 @@ export const greetingPatterns = [
 export const gratitudePatterns = [
     "thanks", "thank you", "thank you!", "thx", "appreciate it", "much appreciated",
     "gracias", "merci", "danke", "thanks a lot", "thank you so much",
-    "many thanks", "thanks a bunch", "thanks a million", "thanks again", "tack"
+    "many thanks", "thanks a bunch", "thanks a million", "thanks again", "tack", "ok"
 ]
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
