@@ -81,7 +81,7 @@ export const referencePatterns = [
     // Continuation words
     "but", "so", "then", "also", "and", "or", "besides", "anyway", "however",
     "furthermore", "nevertheless", "moreover", "thus", "therefore", "hence",
-    "mean", "refer",
+    "mean", "refer", "meant", "meaning",
 
     // Common phrases indicating a follow-up
     "tell me more", "explain", "what about", "continue", "go on",
