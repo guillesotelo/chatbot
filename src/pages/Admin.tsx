@@ -259,6 +259,7 @@ export default function Admin({ }: Props) {
             if (response && response.ok) {
                 const data = await response.json()
                 setSearchResults(data)
+                console.log('results', data)
             }
             setIsLoading(false)
         } catch (error) {
@@ -314,9 +315,15 @@ export default function Admin({ }: Props) {
                                             <div style={{ margin: '1rem' }}>
                                                 <p><strong>Matches:</strong>
                                                     <br /> {searchResults.matches ?
-                                                        searchResults.matches.map((m: string) => <div className='chat__admin-search-textresult'>
-                                                            <span>{m}</span><br /><br />
-                                                        </div>)
+                                                        searchResults.matches.map((m: string, i: number) =>
+                                                            <div className='chat__admin-search-textresult'>
+                                                                <span>{m}</span>
+                                                                <br />
+                                                                <i>{searchResults.results && searchResults.results.distances ? `Score (distance): ${searchResults.results.distances[0][i]}` : ''}</i>
+                                                                <br />
+                                                                <i>{searchResults.results && searchResults.results.metadatas ? `Source (distance): ${searchResults.results.metadatas[0][i].source}` : ''}</i>
+                                                                <br />
+                                                            </div>)
                                                         : 'No matching docs'}</p>
                                             </div>
                                             : ''}
