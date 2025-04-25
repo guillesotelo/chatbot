@@ -677,7 +677,7 @@
             position: fixed;
             bottom: 0;
             padding-bottom: 2rem;
-            width: 800px;
+            width: 100%;
             max-width: -webkit-fill-available;
             margin: 0 1rem;
             border-top-left-radius: 2rem;
@@ -692,7 +692,7 @@
                 position: fixed;
                 bottom: 0;
                 padding-bottom: 2rem;
-                width: 800px;
+                width: 100%;
                 max-width: -webkit-fill-available;
                 margin: 0 1rem;
                 border-top-left-radius: 2rem;
@@ -863,9 +863,8 @@
                 align-items: flex-start;
                 position: fixed;
                 z-index: 5;
-                width: -webkit-fill-available;
+                width: 100%;
                 background: #252525;
-                padding: .6rem;
                 height: 10vh;
 
                 &-info {
@@ -874,7 +873,7 @@
                     align-items: center;
                     gap: 1rem;
                     height: 100%;
-                    margin: .5rem;
+                    margin: 1rem;
                     cursor: pointer;
 
                     &-text {
@@ -934,6 +933,7 @@
                     justify-content: space-between;
                     align-items: center;
                     gap: .1rem;
+                    margin: 1rem;
                 }
 
                 &-newchat {
@@ -1158,7 +1158,6 @@
         }
 
         &__main {
-            min-height: -webkit-fill-ava;
             padding-top: 15vh;
             width: 100%;
             max-width: 100%;
@@ -1167,7 +1166,6 @@
         &__form {
             &-container {
                 margin: 0 2rem -1px;
-                max-width: 90vw;
             }
         }
 

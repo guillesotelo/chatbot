@@ -219,7 +219,10 @@ export function Chat() {
     }, [sessionId, feedbackData])
 
     useEffect(() => {
-        if (!minimized) generateGreetings()
+        if (!minimized) {
+            generateGreetings()
+            renderCodeBlockHeaders()
+        }
     }, [minimized])
 
     const needsContext = (userPrompt: string): boolean => {
@@ -1473,6 +1476,7 @@ export function Chat() {
                 background: renderFullApp && theme ? '#14181E' : '',
                 animation: getSession().messages.length ? 'none' : '',
                 opacity: getSession().messages.length ? '1' : '',
+                width: renderFullApp ? '800px' : '100%'
             }}>
             {getSession().messages.length > 1 && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
                 <div className='chat__message-memory-empty'>{!getSession().isLoading || !getSession().completion ?
@@ -1585,7 +1589,8 @@ export function Chat() {
                         paddingBottom: !renderFullApp && getSession().messages.length ? '9vh' : '',
                         overflowY: renderFullApp || !getSession().messages.length ? 'unset' : 'scroll',
                         overflowX: renderFullApp || !getSession().messages.length ? 'unset' : 'hidden',
-                        height: !getSession().messages.length ? 'auto' : ''
+                        height: !getSession().messages.length ? 'auto' : '',
+                        width: renderFullApp ? '' : '100%'
                     }}>
                     <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
                     {feedbackData?.score === false ? renderFeedbackModal() : ''}
