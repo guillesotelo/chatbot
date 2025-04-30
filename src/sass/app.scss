@@ -17,7 +17,7 @@ body {
 
     &.--dark {
         &::-webkit-scrollbar {
-            background: #14181e;
+            background: #212121;
         }
 
         &::-webkit-scrollbar-thumb {
@@ -27,7 +27,7 @@ body {
 }
 
 * {
-    // background: #14181E;
+    // background: #212121;
     // color: lightgray;
     font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Helvetica, Apple Color Emoji, Arial, sans-serif, Segoe UI Emoji, Segoe UI Symbol;
 }
@@ -40,9 +40,9 @@ body {
     --main-color: #000;
 
     // Dark Mode
-    --main-bg-color-dark: #14181E;
-    --secondary-bg-color-dark: #2F2F2F;
-    --terceary-bg-color-dark: #0c0c0c;
+    --main-bg-color-dark: #212121;
+    --secondary-bg-color-dark: #303030;
+    --terceary-bg-color-dark: #171717;
     --main-color-dark: #D3D3D3;
 }
 
@@ -54,7 +54,7 @@ code {
     width: 100% !important;
     overflow-wrap: anywhere !important;
     // font-style: italic;
-    // background: #0c0c0c !important;
+    // background: #171717 !important;
     margin: 1rem 0 !important;
     font-size: .9rem !important;
 }
@@ -64,7 +64,7 @@ code * {
 }
 
 pre code {
-    // background: #0c0c0c !important;
+    // background: #171717 !important;
     padding: 1.5rem;
     display: block;
     white-space: pre-wrap;
@@ -79,11 +79,12 @@ code[class*="language-"],
 pre[class*="language-"] {
     text-shadow: none;
     overflow: unset !important;
-    color: black;
+    color: #171717;
     max-width: -webkit-fill-available;
     background: #F4F4F4;
     position: relative;
     padding-top: 3rem;
+    border-radius: .5rem;
 }
 
 .--dark code[class*="language-"],
@@ -92,7 +93,7 @@ pre[class*="language-"] {
     overflow: unset !important;
     color: lightgray;
     max-width: -webkit-fill-available;
-    background: black;
+    background: #171717;
     position: relative;
     padding-top: 3rem;
 
@@ -107,7 +108,6 @@ pre[class*="language-"] {
 
 :not(pre)>code[class*="language-"],
 pre[class*="language-"] {
-    background: transparent !important;
     margin: 0 !important;
     padding: 0 !important;
     max-width: 100% !important;
@@ -127,7 +127,7 @@ pre[class*="language-"] {
 }
 
 --dark body {
-    background: #14181E;
+    background: #212121;
 }
 
 a {
