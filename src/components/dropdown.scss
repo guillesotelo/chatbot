@@ -197,9 +197,11 @@
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
+        background: transparent !important;
 
         &--dark {
             color: #adadad;
+            background: transparent !important;
             display: flex;
             gap: .5rem;
             font-weight: normal;

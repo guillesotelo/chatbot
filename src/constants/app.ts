@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.2'
+export const APP_VERSION = '1.3'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const TECH_ISSUE_LLM = [
@@ -95,6 +95,7 @@ export const referencePatterns = [
     // Commands that imply previous discussion
     "keep going", "finish your thought", "more details", "clarify that", "sum it up",
     "give me a summary", "summarize", "tell me the key points", "other", "more", "else",
+    "example",
 ]
 
 export const greetingPatterns = [
