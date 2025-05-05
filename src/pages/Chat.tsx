@@ -373,6 +373,46 @@ export function Chat() {
         );
     };
 
+    let tokenBuffer = ''
+    const addToken = async (newToken: string, animate: boolean = true) => {
+        if (!outputRef.current) return
+
+        if (!tokenBuffer && getSession().messages.length > 2) {
+            outputRef.current.style.transition = '1s'
+            outputRef.current.style.minHeight = '65vh'
+            autoScroll(!renderFullApp ? '.chat__main' : 'body')
+        }
+
+        tokenBuffer += newToken
+
+        if (!animate) {
+            return outputRef.current.innerHTML = await marked.parse(tokenBuffer + ' ⬤')
+        }
+
+        const shouldRender = isCompleteBlock(tokenBuffer) || tokenBuffer.length > 200
+        if (!shouldRender || !outputRef.current) return;
+
+        // Treat tokenBuffer as a paragraph
+        const markdown = tokenBuffer.trim();
+        if (!markdown) return;
+
+        const html = await marked.parse(markdown);
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        // Append each top-level node with animation
+        Array.from(temp.childNodes).forEach(node => {
+            console.log(node)
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const span = document.createElement('span')
+                span.innerHTML = (node as HTMLElement).innerHTML;
+                span.classList.add('chat__token');
+                outputRef.current!.appendChild(span);
+            } else if (node.nodeValue !== '\n') outputRef.current!.appendChild(node);
+        });
+
+        tokenBuffer = ''
+    };
 
     const getModelResponse = async (content: string) => {
         if (isLoading) return
@@ -410,41 +450,7 @@ export function Chat() {
                 const decoder = new TextDecoder()
                 let done = false
                 let result = ''
-                let tokenBuffer = ''
 
-                const addToken = async (newToken: string) => {
-                    if (!tokenBuffer && outputRef.current) {
-                        outputRef.current.style.transition = '1s'
-                        outputRef.current.style.height = '65vh'
-                        autoScroll(!renderFullApp ? '.chat__main' : 'body')
-                    }
-
-                    tokenBuffer += newToken;
-
-                    const shouldRender = isCompleteBlock(tokenBuffer) || tokenBuffer.length > 200
-                    if (!shouldRender || !outputRef.current) return;
-
-                    // Treat tokenBuffer as a paragraph
-                    const markdown = tokenBuffer.trim();
-                    if (!markdown) return;
-
-                    const html = await marked.parse(markdown);
-                    const temp = document.createElement('div');
-                    temp.innerHTML = html;
-
-                    // Append each top-level node with animation
-                    Array.from(temp.childNodes).forEach(node => {
-                        console.log(node)
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            const span = document.createElement('span')
-                            span.innerHTML = (node as HTMLElement).innerHTML;
-                            span.classList.add('chat__token');
-                            outputRef.current!.appendChild(span);
-                        } else if (node.nodeValue !== '\n') outputRef.current!.appendChild(node);
-                    });
-
-                    tokenBuffer = ''
-                };
 
                 while (!done) {
                     const { value, done: doneReading } = await reader.read()
@@ -461,7 +467,7 @@ export function Chat() {
                         const cleanedChunk = removeUnwantedChars(chunk)
                         result += cleanedChunk
 
-                        addToken(cleanedChunk)
+                        addToken(cleanedChunk, false)
 
                         setSessions(prev => {
                             return prev.map(s => {
@@ -561,8 +567,10 @@ export function Chat() {
 
         while (index < issueResponse.split(' ').length) {
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
-            const regex = new RegExp("<span id='chat__token'>|</span>", 'g')
-            chunk = chunk.replace(regex, '') + `<span id='chat__token'>${issueResponse.split(' ')[index]} </span>`
+            const newToken = issueResponse.split(' ')[index]
+            chunk += newToken
+
+            addToken(newToken, false)
 
             setSessions(prev => {
                 return prev.map(s => {
@@ -654,21 +662,20 @@ export function Chat() {
                 codeBlock.setAttribute("data-highlighted", "true")
             }
 
-            if (!codeBlock.querySelector(".chat__code-header")) {
+            if (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark")) {
                 const language = (codeBlock.outerHTML.split('"')[1] || 'code').replace('language-', '')
 
                 const header = document.createElement('div')
-                header.className = 'chat__code-header'
-                header.innerHTML = `<p class="chat__code-header-language" style="color: ${theme ? '#ececec' : 'black'};">${language}</p>`
-                header.style.backgroundColor = theme ? '' : '#e5e5e5'
+                header.className = `chat__code-header`
+                header.innerHTML = `<p class="chat__code-header-language">${language}</p>`
 
                 const headerCopy = document.createElement('div')
                 headerCopy.className = 'chat__code-header-copy'
                 headerCopy.innerHTML = `
-                    <svg style="color: ${theme ? '#ececec' : '#000'}" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy${theme}-svg">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
                         <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
                     </svg>
-                    <p class="chat__code-header-copy${theme}-text">Copy code</p>
+                    <p class="chat__code-header-copy-text">Copy code</p>
                 `
                 headerCopy.onclick = () => copyCodeToClipboard(index)
 
@@ -792,8 +799,10 @@ export function Chat() {
 
         while (index < textResponse.split(' ').length) {
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
-            const regex = new RegExp("<span id='chat__token'>|</span>", 'g')
-            chunk = chunk.replace(regex, '') + `<span id='chat__token'>${textResponse.split(' ')[index] + ' '}</span>`
+            const newToken = textResponse.split(' ')[index]
+            chunk += newToken
+
+            addToken(newToken, false)
 
             setSessions(prev => {
                 return prev.map(s => {
@@ -860,7 +869,7 @@ export function Chat() {
         if (copyDiv && copyDiv.innerHTML.includes('Copy code')) {
             const prevHtml = copyDiv.innerHTML
             copyDiv.innerHTML = `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy${theme}-svg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
                     <path fill-rule="evenodd" clip-rule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path>
                 </svg>
                 <p class="chat__code-header-copy-text">Copied!</p>
@@ -1532,7 +1541,7 @@ export function Chat() {
             className={`chat__form-container${theme}`}
             style={{
                 position: getSession().messages.length ? 'fixed' : 'unset',
-                background: renderFullApp && theme ? '#212121' : '',
+                background: renderFullApp && theme ? '#14181E' : '',
                 animation: getSession().messages.length ? 'none' : '',
                 opacity: getSession().messages.length ? '1' : '',
                 width: renderFullApp ? '800px' : '100%'
@@ -1633,12 +1642,12 @@ export function Chat() {
             <div
                 className={`chat__container${theme}`}
                 style={{
-                    background: renderFullApp && theme ? '#212121' : '',
+                    background: renderFullApp && theme ? '#14181E' : '',
                     height: renderFullApp ? '' : POPUP_WINDOW_HEIGHT
                 }}>
                 {/* <p className='chat__banner-message'>🚧 Currently on maintenance 🚧</p> */}
                 {renderFullApp ? renderFullAppSidebar() : renderPopupHeader()}
-                {!renderFullApp && getSession().messages.length ? <div style={{ height: '16vh' }} /> : ''}
+                {!renderFullApp && getSession().messages.length ? <div style={{ height: '14vh' }} /> : ''}
                 <main
                     className="chat__main"
                     style={{

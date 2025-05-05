@@ -50,7 +50,7 @@ code {
     white-space: pre-wrap !important;
     font-family: "Fira Code", "Consolas", "Monaco", "Courier New", monospace !important;
     line-height: 1.5 !important;
-    border-radius: 1rem !important;
+    border-radius: .5rem !important;
     width: 100% !important;
     overflow-wrap: anywhere !important;
     // font-style: italic;
@@ -73,6 +73,7 @@ pre code {
     // max-width: 100%;
     min-width: 100px;
     font-style: normal;
+    border: 1px solid #72727240;
 }
 
 code[class*="language-"],
@@ -111,6 +112,11 @@ pre[class*="language-"] {
     margin: 0 !important;
     padding: 0 !important;
     max-width: 100% !important;
+}
+
+.--dark div[class*="chat__code-header"] {
+    background: #2f2f2f !important;
+    color: #ececec;
 }
 
 ::-webkit-scrollbar {
