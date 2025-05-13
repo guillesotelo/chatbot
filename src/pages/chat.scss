@@ -511,7 +511,8 @@
             height: 1.1rem;
             padding: .4rem .2rem;
             border-radius: .5rem;
-            opacity: .8;
+            opacity: 0;
+            animation: fade-in-controls .5s ease-in forwards;
 
             &:hover {
                 background: #e7e7e7;
@@ -523,7 +524,8 @@
                 height: 1.1rem;
                 padding: .4rem .2rem;
                 border-radius: .5rem;
-                opacity: .8;
+                opacity: 0;
+                animation: fade-in-controls .5s ease-in forwards;
 
                 &:hover {
                     background: #323232;
@@ -535,8 +537,6 @@
             display: flex;
             flex-direction: row;
             align-items: center;
-            opacity: 0;
-            animation: fade-in .5s ease-in forwards;
         }
 
         &-memory {
@@ -1055,6 +1055,11 @@
             // width: 50vw;
         }
 
+        &-title {
+            width: 100%;
+            border-bottom: 2px solid gray;
+        }
+
         &-row {
             display: flex;
             flex-direction: row;
@@ -1225,5 +1230,5 @@
 
 .chat__token {
     opacity: 0;
-    animation: fade-in-token .2s ease-in forwards;
+    animation: fade-in-token .4s ease-in forwards;
 }

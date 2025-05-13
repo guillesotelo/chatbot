@@ -17,6 +17,7 @@ export type messageType = {
     error?: boolean
     stopped?: boolean
     sessionId?: number | string
+    date?: string | Date | number
 }
 
 export type sessionType = dataObj & {

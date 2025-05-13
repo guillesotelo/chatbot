@@ -227,7 +227,7 @@
         border-top: none;
         margin-top: 2.3rem;
         width: calc(100% - 2px);
-        z-index: 5;
+        z-index: 9999;
         max-height: 20rem;
         transition: .2s;
         overflow-y: auto;

@@ -4,7 +4,7 @@ import { feedbackHeaders } from '../constants/app'
 import { dataObj, sessionType } from '../types'
 import { AppContext } from '../AppContext'
 import { useNavigate } from 'react-router-dom'
-import { sortArray } from '../helpers'
+import { getAverage, sortArray } from '../helpers'
 import InputField from '../components/InputField'
 import { Button } from '../components/Button'
 import { toast, ToastContainer } from 'react-toastify'
@@ -53,9 +53,19 @@ import 'prismjs/themes/prism.css';
 import { marked } from 'marked';
 import Tooltip from '../components/Tooltip'
 import Modal from '../components/Modal'
+import TextData from '../components/TextData'
 
 type Props = {}
 const apiURl = process.env.REACT_APP_SERVER_URL
+
+const analyticTimeOptions = [
+    'Last minute',
+    'Last hour',
+    'Last 24h',
+    'Last 7 days',
+    'Last 30 days',
+    'From the start'
+]
 
 export default function Admin({ }: Props) {
     const [userFeedback, setUserFeedback] = useState<dataObj[]>([])
@@ -68,13 +78,19 @@ export default function Admin({ }: Props) {
     const [isLoading, setIsLoading] = useState(false)
     const [vectorSearchModal, setVectorSearchModal] = useState(false)
     const [searchResults, setSearchResults] = useState<dataObj>({})
+    const [analytics, setAnalytics] = useState<dataObj[]>([])
+    const [analyticsCopy, setAnalyticsCopy] = useState<dataObj[]>([])
+    const [analyticTime, setAnalyticTime] = useState(analyticTimeOptions[2])
     const [selectedVersion, setSelectedVersion] = useState('Production v1.x')
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
 
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
-        else getFeedback()
+        else {
+            getFeedback()
+            getAnalytics()
+        }
         // setTheme('')
         Prism.highlightAll()
     }, [])
@@ -96,6 +112,21 @@ export default function Admin({ }: Props) {
         Prism.highlightAll()
         renderCodeBlockHeaders()
     }, [selectedFeedback])
+
+    useEffect(() => {
+        const timeMap: { [value: string]: number } = {
+            'Last minute': 60000,
+            'Last hour': 3600000,
+            'Last 24h': 86400000,
+            'Last 7 days': 604800000,
+            'Last 30 days': 2592000000,
+            'From the start': new Date().getTime()
+        }
+
+        setAnalytics(analyticsCopy.filter(row => {
+            return new Date(row.timestamp).getTime() - new Date().getTime() + timeMap[analyticTime] > 0
+        }))
+    }, [analyticTime, analyticsCopy])
 
     const filterFeedbackByVersion = () => {
         setFilteredUserFeedback(userFeedback
@@ -127,6 +158,23 @@ export default function Admin({ }: Props) {
                         sortArray(feedback, 'session_id', true), 'createdAt', true
                     ).map(item => ({ ...item, score: item.score === 'True' ? true : false }))
                 )
+            }
+
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const getAnalytics = async () => {
+        try {
+            const response = await fetch(`${apiURl}/api/get_analytics`, {
+                method: 'GET',
+                headers: { "Authorization": process.env.REACT_APP_API_TOKEN || '' }
+            })
+
+            const analytics = await response.json()
+            if (analytics && Array.isArray(analytics)) {
+                setAnalyticsCopy(sortArray(sortArray(analytics, 'session_id', true), 'createdAt', true))
             }
 
         } catch (error) {
@@ -259,7 +307,6 @@ export default function Admin({ }: Props) {
             if (response && response.ok) {
                 const data = await response.json()
                 setSearchResults(data)
-                console.log('results', data)
             }
             setIsLoading(false)
         } catch (error) {
@@ -267,14 +314,13 @@ export default function Admin({ }: Props) {
         }
     }
 
-
     return !isLoggedIn ? null :
-        <div style={{ margin: '1rem' }}>
+        <div className='chat__admin'>
             <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
             <div className="">
                 <h1>Admin panel</h1>
                 <Button
-                    label='Search Vector Store'
+                    label='Vector Store Search'
                     className={`button__outline${theme}`}
                     onClick={() => setVectorSearchModal(true)}
                     style={{ marginBottom: '2rem' }}
@@ -370,9 +416,28 @@ export default function Admin({ }: Props) {
                         </div>
                     </Modal>
                     : ''}
+
+                <div className="chat__admin-row">
+                    <div className="chat__admin-col" style={{ width: '50%', margin: '0 0 2rem 0' }}>
+                        <h2 className='chat__admin-title'>Analytics</h2>
+                        <Dropdown
+                            label='Show data from'
+                            value={analyticTime}
+                            selected={analyticTime}
+                            setSelected={setAnalyticTime}
+                            options={analyticTimeOptions}
+                            style={{ width: '10rem', margin: '1rem 0' }}
+                        />
+                        <TextData label='Total events' value={analytics.length} inline color='#5b5bd1' />
+                        <TextData label='Avg conversation time' value={getAverage(analytics, 'duration_seconds').toFixed(0) + 's'} inline color='#5b5bd1' />
+                        <TextData label='Avg messages' value={getAverage(analytics, 'message_count').toFixed(0)} inline color='#5b5bd1' />
+                        <TextData label='Avg token count' value={getAverage(analytics, 'token_count').toFixed(0)} inline color='#5b5bd1' />
+                    </div>
+                </div>
+
                 <div className="chat__admin-row">
                     <div className="chat__admin-col" style={{ width: '50%' }}>
-                        <h2 style={{ marginTop: '0' }}>Feedback</h2>
+                        <h2 className='chat__admin-title'>Feedback</h2>
                         <Dropdown
                             label='Version'
                             value={selectedVersion}
