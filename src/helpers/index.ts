@@ -1,3 +1,5 @@
+import { dataObj } from "../types";
+
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 export const autoScroll = (element: string = 'body', behavior: any = 'smooth') => {
@@ -38,3 +40,9 @@ export const sortArray = (arr: any[], key: string | number, order?: boolean) => 
 }
 
 export const cleanText = (text: string) => text.replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim()
+
+export const getAverage = (data: dataObj[], key: string) => {
+    let count = 0
+    data.forEach(row => count += (row[key] || 0))
+    return count / (data.length || 1)
+}
