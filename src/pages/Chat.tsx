@@ -595,7 +595,7 @@ export function Chat() {
         while (index < issueResponse.split(' ').length) {
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
             const newToken = issueResponse.split(' ')[index]
-            chunk += newToken
+            chunk += newToken + ' '
 
             addToken(newToken, false)
 
@@ -829,7 +829,7 @@ export function Chat() {
         while (index < textResponse.split(' ').length) {
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
             const newToken = textResponse.split(' ')[index]
-            chunk += newToken
+            chunk += newToken + ' '
 
             addToken(newToken, false)
 
