@@ -382,7 +382,7 @@ export function Chat() {
 
         if (!tokenBuffer && getSession().messages.length > 2) {
             outputRef.current.style.transition = '1s'
-            outputRef.current.style.minHeight = '65vh'
+            outputRef.current.style.minHeight = renderFullApp ? '65vh' : '45vh'
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
         }
 
@@ -597,7 +597,7 @@ export function Chat() {
             const newToken = issueResponse.split(' ')[index]
             chunk += newToken + ' '
 
-            addToken(newToken, false)
+            addToken(newToken + ' ', false)
 
             setSessions(prev => {
                 return prev.map(s => {
@@ -831,7 +831,7 @@ export function Chat() {
             const newToken = textResponse.split(' ')[index]
             chunk += newToken + ' '
 
-            addToken(newToken, false)
+            addToken(newToken + ' ', false)
 
             setSessions(prev => {
                 return prev.map(s => {
