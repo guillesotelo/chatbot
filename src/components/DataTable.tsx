@@ -157,7 +157,7 @@ export default function DataTable(props: Props) {
                     className={selected === i ? `datatable__row-selected${theme}` : `datatable__row${theme}`}
                     onClick={() => setSelected ? i === selected ? setSelected(-1) : setSelected(i) : {}}
                     style={{
-                        backgroundColor: highlight && row[highlight] ? '#ffae003d' : !theme ? selected === i ? '#d4e1f6' : i % 2 === 0 ? 'white' : '#f5f5f5'
+                        backgroundColor: highlight && row[highlight] ? '#00ff261f' : !theme ? selected === i ? '#d4e1f6' : i % 2 === 0 ? 'white' : '#f5f5f5'
                             : selected === i ? '#656565' : i % 2 === 0 ? '#383838' : '',
                         animationDelay: `${((i || 1) + (maxItems > 10 ? (max || 10) - maxItems : maxItems)) / 30}s`
                     }}>
@@ -212,7 +212,7 @@ export default function DataTable(props: Props) {
                                             <div className={selected === i ? `datatable__row-selected${theme}` : `datatable__row${theme}`}
                                                 onClick={() => setSelected ? i === selected ? setSelected(-1) : setSelected(i) : {}}
                                                 style={{
-                                                    backgroundColor: highlight && row[highlight] ? '#ffae003d' : !theme ? selected === i ? '#d4e1f6' : i % 2 === 0 ? 'white' : '#f5f5f5'
+                                                    backgroundColor: highlight && row[highlight] ? '#00ff261f' : !theme ? selected === i ? '#d4e1f6' : i % 2 === 0 ? 'white' : '#f5f5f5'
                                                         : selected === i ? '#656565' : i % 2 === 0 ? '#383838' : '',
                                                     animationDelay: `${((i || 1) + (maxItems > 10 ? (max || 10) - maxItems : maxItems)) / 30}s`
                                                 }}>
