@@ -4,7 +4,7 @@ import { feedbackHeaders } from '../constants/app'
 import { dataObj, sessionType } from '../types'
 import { AppContext } from '../AppContext'
 import { useNavigate } from 'react-router-dom'
-import { getAverage, sortArray } from '../helpers'
+import { getAverage, getDate, sortArray } from '../helpers'
 import InputField from '../components/InputField'
 import { Button } from '../components/Button'
 import { toast, ToastContainer } from 'react-toastify'
@@ -91,13 +91,17 @@ export default function Admin({ }: Props) {
             getFeedback()
             getAnalytics()
         }
-        // setTheme('')
         Prism.highlightAll()
     }, [])
 
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
     }, [isLoggedIn])
+
+    useEffect(() => {
+        setTheme('')
+    }, [userFeedback])
+
 
     useEffect(() => {
         filterFeedbackByVersion()
@@ -319,12 +323,6 @@ export default function Admin({ }: Props) {
             <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
             <div className="">
                 <h1>Admin panel</h1>
-                <Button
-                    label='Vector Store Search'
-                    className={`button__outline${theme}`}
-                    onClick={() => setVectorSearchModal(true)}
-                    style={{ marginBottom: '2rem' }}
-                />
                 {vectorSearchModal ?
                     <Modal title='Vector Store Search' onClose={() => setVectorSearchModal(false)}>
                         <div className="chat__admin-col">
@@ -365,10 +363,15 @@ export default function Admin({ }: Props) {
                                                             <div className='chat__admin-search-textresult'>
                                                                 <span>{m}</span>
                                                                 <br />
-                                                                <i>{searchResults.results && searchResults.results.distances ? `Score (distance): ${searchResults.results.distances[0][i]}` : ''}</i>
                                                                 <br />
-                                                                <i>{searchResults.results && searchResults.results.metadatas ? `Source (distance): ${searchResults.results.metadatas[0][i].source}` : ''}</i>
-                                                                <br />
+                                                                <ul>
+                                                                    {searchResults.results && searchResults.results.distances ?
+                                                                        <li><strong>Score (distance): </strong>{searchResults.results.distances[0][i]}</li>
+                                                                        : ''}
+                                                                    {searchResults.results && searchResults.results.metadatas ?
+                                                                        <li><strong>Sources: </strong><div className='chat__admin-sources' dangerouslySetInnerHTML={{ __html: marked.parse(searchResults.results.metadatas[0][i].source) as string }} /></li>
+                                                                        : ''}
+                                                                </ul>
                                                             </div>)
                                                         : 'No matching docs'}</p>
                                             </div>
@@ -417,8 +420,8 @@ export default function Admin({ }: Props) {
                     </Modal>
                     : ''}
 
-                <div className="chat__admin-row">
-                    <div className="chat__admin-col" style={{ width: '50%', margin: '0 0 2rem 0' }}>
+                <div className="chat__admin-row" style={{ filter: selectedFeedback !== -1 || deleteFeedback || vectorSearchModal ? 'blur(5px)' : '' }}>
+                    <div className="chat__admin-col" style={{ width: '30%', margin: '0 0 2rem 0' }}>
                         <h2 className='chat__admin-title'>Analytics</h2>
                         <Dropdown
                             label='Show data from'
@@ -432,11 +435,15 @@ export default function Admin({ }: Props) {
                         <TextData label='Avg conversation time' value={getAverage(analytics, 'duration_seconds').toFixed(0) + 's'} inline color='#5b5bd1' />
                         <TextData label='Avg messages' value={getAverage(analytics, 'message_count').toFixed(0)} inline color='#5b5bd1' />
                         <TextData label='Avg token count' value={getAverage(analytics, 'token_count').toFixed(0)} inline color='#5b5bd1' />
-                    </div>
-                </div>
 
-                <div className="chat__admin-row">
-                    <div className="chat__admin-col" style={{ width: '50%' }}>
+                        <h2 className='chat__admin-title' style={{ margin: '3rem 0 1rem' }}>Search</h2>
+                        <Button
+                            label='Vector Store Search'
+                            className={`button__outline${theme}`}
+                            onClick={() => setVectorSearchModal(true)}
+                        />
+                    </div>
+                    <div className="chat__admin-col" style={{ width: '65%' }}>
                         <h2 className='chat__admin-title'>Feedback</h2>
                         <Dropdown
                             label='Version'
@@ -458,14 +465,25 @@ export default function Admin({ }: Props) {
                             max={20}
                         />
                     </div>
-                    {deleteFeedback ?
+                </div>
+
+                {deleteFeedback ?
+                    <Modal
+                        title={`Are you sure you want to permanently delete ${userFeedback[selectedFeedback].username || 'user'}'s feedback?`}
+                        onClose={() => {
+                            setSelectedFeedback(-1)
+                            setDeleteFeedback(false)
+                        }}>
                         <div className='chat__admin-delete'>
                             <p>Are you sure you want to permanently delete {userFeedback[selectedFeedback].username || 'user'}'s feedback?</p>
                             <div className="chat__admin-delete-buttons">
                                 <Button
                                     label='Maybe not'
                                     className={`button__outline${theme}`}
-                                    onClick={() => setDeleteFeedback(false)}
+                                    onClick={() => {
+                                        setSelectedFeedback(-1)
+                                        setDeleteFeedback(false)
+                                    }}
                                     disabled={isLoading}
                                 />
                                 <Button
@@ -476,9 +494,14 @@ export default function Admin({ }: Props) {
                                 />
                             </div>
                         </div>
-                        : selectedFeedback !== -1 ?
+                    </Modal>
+                    : selectedFeedback !== -1 ?
+                        <Modal
+                            title={`${userFeedback[selectedFeedback].score ? 'Good feedback' : 'Bad feedback'} from ${userFeedback[selectedFeedback].username || 'user'}`}
+                            subtitle={getDate(userFeedback[selectedFeedback].createdAt)}
+                            onClose={() => setSelectedFeedback(-1)}>
                             <div className={`chat__admin-session${theme}`}>
-                                <div className="chat__feedback-content" style={{ border: '1px solid lightgray', padding: '.5rem', borderRadius: '.5rem' }}>
+                                <div className="chat__feedback-content">
                                     {userFeedback[selectedFeedback].messages.map((feedback: sessionType) => (
                                         <div
                                             key={feedback.id}
@@ -542,8 +565,10 @@ export default function Admin({ }: Props) {
                                     </div>
                                 </div>
                             </div>
-                            : ''}
-                </div>
+                        </Modal>
+                        : ''}
+
             </div>
+
         </div >
 }

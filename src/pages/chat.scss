@@ -1049,6 +1049,7 @@
         flex-direction: column;
         margin: 1rem;
         min-height: calc(100vh - 2rem);
+        padding-bottom: 20vh;
         // background: white;
 
         &-container {
@@ -1068,9 +1069,7 @@
         }
 
         &-session {
-            width: 45%;
-            box-shadow: 0 3px 10px #d3d3d3af;
-            padding: 1rem;
+            // box-shadow: 0 3px 10px #d3d3d3af;
             border-radius: .5rem;
 
             &--dark {
@@ -1105,18 +1104,12 @@
         &-delete {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            width: 30%;
-            padding: 1rem;
-            margin: auto;
-            box-shadow: 0 3px 10px #d3d3d3af;
-            border-radius: .5rem;
 
             &-buttons {
                 display: flex;
                 flex-direction: row;
                 align-items: flex-end;
-                justify-content: space-evenly;
+                justify-content: space-between;
                 margin: 1rem 0 0;
                 width: 100%;
             }
@@ -1129,6 +1122,12 @@
                 padding: .5rem;
                 margin: 1rem 0;
                 overflow: auto;
+            }
+        }
+
+        &-sources {
+            &>p {
+                margin: 0 0 0 1rem;
             }
         }
     }
