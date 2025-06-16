@@ -312,18 +312,40 @@ export function Chat() {
         const localSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
         // const localMemory = JSON.parse(localStorage.getItem('memory') || 'null')
         if (localSessions.length) {
-            setSessions(localSessions.map((s: sessionType) => (
-                {
-                    ...s,
-                    updated: s.updated || s.id
-                }
-            )))
             // setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
             // setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
             // if (localMemory) memoryRef.current = localMemory
 
             // Lets bring a new session each time we open Veronica
-            createSession()
+            let newChatId = null
+            localSessions.forEach((s: sessionType) => {
+                if (s.name === 'New chat' && !s.messages.length)
+                    newChatId = s.id
+            })
+            if (newChatId) {
+                setSessionId(newChatId)
+                setSessions(localSessions)
+                return generateGreetings()
+            }
+
+            const newId = new Date().getTime()
+            const newSession = {
+                id: newId,
+                messages: [],
+                name: 'New chat',
+                updated: newId
+            }
+            setSessions(localSessions.map((s: sessionType) => (
+                {
+                    ...s,
+                    updated: s.updated || s.id
+                }
+            )).concat(newSession))
+
+            setTimeout(() => {
+                setSessionId(newId)
+                generateGreetings()
+            }, 100)
 
         } else {
             const newId = new Date().getTime()
