@@ -1,4 +1,4 @@
-import { memo, useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { marked } from 'marked';
 import { useLocalStorage } from 'usehooks-ts';
@@ -57,7 +57,7 @@ import ExportDark from '../assets/icons/export-dark.svg'
 import Reload from '../assets/icons/reload3.png'
 import HP from '../assets/images/veronica.png';
 import NewContext from '../assets/icons/new-context.svg';
-import { dataObj, messageType, onChangeEventType, sessionType } from '../types';
+import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { APP_VERSION, gratitudePatterns, greetingPatterns, instructionEnd, instructionStart, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, referencePatterns, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, cleanText, sleep, sortArray } from '../helpers';
@@ -821,10 +821,7 @@ export function Chat() {
         setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
 
         const isGreeting = greetingPatterns.includes(cleanText(content).toLowerCase())
-        let isGratitude = false
-        cleanText(content).toLowerCase().split(' ').forEach(word => {
-            if (gratitudePatterns.includes(word)) isGratitude = true
-        })
+        let isGratitude = gratitudePatterns.includes(cleanText(content).toLowerCase())
 
         if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude')
 
@@ -1228,6 +1225,7 @@ export function Chat() {
         a.href = `${process.env.REACT_APP_ABOUT_PAGE}`
         a.target = `_blank`
         a.click()
+        a.remove()
     }
 
     const renderSessionAge = (index: number) => {

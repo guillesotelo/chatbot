@@ -45,8 +45,8 @@ export default function Tooltip({ tooltip, children, inline, style, boxStyle, sh
             {tooltip ?
                 <div className={inline ? 'tooltip__box-inline' : 'tooltip__box'} style={{
                     display: showTooltip ? 'block' : 'none',
-                    marginLeft: inline ? childrenWidth * 1.2 : '',
-                    top: !inline ? position === 'up' ? childrenHeight * -1.4 : childrenHeight * 1.4 : '',
+                    marginLeft: inline ? childrenWidth + 20 : '',
+                    top: !inline ? position === 'up' ? childrenHeight * -1.4 : childrenHeight + 10 : '',
                     marginTop: inline ? childrenHeight / 10 : '',
                     ...boxStyle
                 }}>
