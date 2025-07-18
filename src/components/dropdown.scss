@@ -270,6 +270,7 @@
         text-overflow: ellipsis;
         font-weight: normal;
         transition: .1s;
+        overflow: hidden;
 
         &:hover {
             // color: #7089AC;
@@ -290,6 +291,7 @@
             text-overflow: ellipsis;
             font-weight: normal;
             transition: .1s;
+            overflow: hidden;
 
             &:hover {
                 // color: #7089AC;
