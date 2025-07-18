@@ -305,18 +305,15 @@ export function Chat() {
         }
         memoryRef.current = newMemory
         localStorage.setItem('memory', JSON.stringify(newMemory))
-
     }
 
     const getLocalSessions = () => {
         const localSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
-        // const localMemory = JSON.parse(localStorage.getItem('memory') || 'null')
+        const localMemory = JSON.parse(localStorage.getItem('memory') || 'null')
         if (localSessions.length) {
-            // setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
-            // setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
-            // if (localMemory) memoryRef.current = localMemory
+            if (localMemory) memoryRef.current = localMemory
 
-            // Lets bring a new session each time we open Veronica
+            // Lets bring a new session each time we open the chat in popup mode
             let newChatId = null
             localSessions.forEach((s: sessionType) => {
                 if (s.name === 'New chat' && !s.messages.length)
@@ -328,24 +325,38 @@ export function Chat() {
                 return generateGreetings()
             }
 
-            const newId = new Date().getTime()
-            const newSession = {
-                id: newId,
-                messages: [],
-                name: 'New chat',
-                updated: newId
-            }
-            setSessions(localSessions.map((s: sessionType) => (
-                {
-                    ...s,
-                    updated: s.updated || s.id
-                }
-            )).concat(newSession))
+            if (renderFullApp) {
+                setSessions(localSessions.map((s: sessionType) => (
+                    {
+                        ...s,
+                        updated: s.updated || s.id
+                    }
+                )))
 
-            setTimeout(() => {
-                setSessionId(newId)
-                generateGreetings()
-            }, 100)
+                setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
+                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
+
+            } else {
+                const newId = new Date().getTime()
+                const newSession = {
+                    id: newId,
+                    messages: [],
+                    name: 'New chat',
+                    updated: newId
+                }
+                setSessions(localSessions.map((s: sessionType) => (
+                    {
+                        ...s,
+                        updated: s.updated || s.id
+                    }
+                )).concat(newSession))
+
+                setTimeout(() => {
+                    setSessionId(newId)
+                    generateGreetings()
+                }, 100)
+            }
+
 
         } else {
             const newId = new Date().getTime()
@@ -936,7 +947,10 @@ export function Chat() {
     }
 
     const copyMessageToClipboard = (index: number) => {
-        const text = (getSession().messages[index].content || '').replaceAll('\n\n', '\n').trim()
+        const text = (getSession().messages[index].content || '')
+            .split('<br/><br/><strong>Sources:')[0]
+            .replaceAll('\n\n', '\n').trim()
+
         navigator.clipboard.writeText(text).then(() => {
             setTimeout(() => setCopyMessage(index), 200)
             setTimeout(() => setCopyMessage(-1), 1500)
@@ -1220,7 +1234,8 @@ export function Chat() {
                 'Chat context cleared' : ''
     }
 
-    const goToAboutVeronica = () => {
+    const goToAboutVeronica = (e: any) => {
+        e.preventDefault()
         const a = document.createElement('a')
         a.href = `${process.env.REACT_APP_ABOUT_PAGE}`
         a.target = `_blank`
@@ -1376,9 +1391,9 @@ export function Chat() {
                 }}>
                 {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
                 <Tooltip tooltip='Learn about Veronica'>
-                    <div className="chat__popup-window-header-info" onClick={goToAboutVeronica}>
-                        <img src={HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image${theme}`} />
-                        <div className="chat__popup-window-header-info-text">
+                    <div className="chat__popup-window-header-info">
+                        <img onClick={goToAboutVeronica} src={HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image${theme}`} />
+                        <div onClick={goToAboutVeronica} className="chat__popup-window-header-info-text">
                             <p className='chat__popup-window-header-title'>Veronica</p>
                             <p className="chat__popup-window-header-subtitle">HPx Assistant</p>
                         </div>
@@ -1467,7 +1482,7 @@ export function Chat() {
                         <Tooltip tooltip='Write some comments first' inline>
                             <Button
                                 label='Send feedback'
-                                disabled={!feedbackData.comments || feedbackData.loading}
+                                disabled={!feedbackData.type || !feedbackData.username || feedbackData.loading}
                                 onClick={sendFeedback}
                                 className={`button__outline${theme}`}
                                 style={{ fontSize: '1rem' }}
