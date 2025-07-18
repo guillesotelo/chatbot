@@ -1077,7 +1077,7 @@ export function Chat() {
         const separator = '_________________________________________________________________\n\n\n'
         const sessionTitle = `HP Chatbot - Chat session "${getSession().name}" (${sessionDate})\n` + separator
         getSession().messages.map((m: messageType) => {
-            sessionText += `${sessionText ? '' : sessionTitle}${m.role === 'user' ? '\n\n' : ''}${m.role?.toUpperCase()}: ${m.content}\n`
+            sessionText += `${sessionText ? '' : sessionTitle}${m.role === 'user' ? '\n\n' : '\n'}${m.role === 'user' ? 'User' : 'Veronica'}: ${m.content}\n`
         })
 
         const blob = new Blob([sessionText], { type: 'text/plain' })
