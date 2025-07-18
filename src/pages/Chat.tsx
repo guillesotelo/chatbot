@@ -163,7 +163,7 @@ export function Chat() {
             }
         }
 
-        getLocalSessions()
+        getLocalSessions(popup)
         checkForAppUpdates()
 
         window.addEventListener('scroll', handleScroll)
@@ -307,7 +307,7 @@ export function Chat() {
         localStorage.setItem('memory', JSON.stringify(newMemory))
     }
 
-    const getLocalSessions = () => {
+    const getLocalSessions = (popup: undefined | null | string = null) => {
         const localSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]')
         const localMemory = JSON.parse(localStorage.getItem('memory') || 'null')
         if (localSessions.length) {
@@ -325,18 +325,7 @@ export function Chat() {
                 return generateGreetings()
             }
 
-            if (renderFullApp) {
-                setSessions(localSessions.map((s: sessionType) => (
-                    {
-                        ...s,
-                        updated: s.updated || s.id
-                    }
-                )))
-
-                setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
-                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
-
-            } else {
+            if (popup) {
                 const newId = new Date().getTime()
                 const newSession = {
                     id: newId,
@@ -355,8 +344,17 @@ export function Chat() {
                     setSessionId(newId)
                     generateGreetings()
                 }, 100)
-            }
+            } else {
+                setSessions(localSessions.map((s: sessionType) => (
+                    {
+                        ...s,
+                        updated: s.updated || s.id
+                    }
+                )))
 
+                setSessionId(JSON.parse(localStorage.getItem('currentSession') || 'null') || localSessions[localSessions.length - 1].id)
+                setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'auto' }), 5)
+            }
 
         } else {
             const newId = new Date().getTime()
