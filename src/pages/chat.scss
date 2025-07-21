@@ -49,6 +49,13 @@
             width: 16rem;
         }
 
+        &-logo {
+            height: 1.5rem;
+            width: 1.5rem;
+            cursor: pointer;
+            padding: .4rem 0;
+        }
+
         &-form {
             margin: 1rem 0 1rem 1rem;
             display: flex;
@@ -59,7 +66,7 @@
                 display: flex;
                 flex-direction: row;
                 align-items: center;
-                gap: 1rem;
+                gap: .5rem;
                 margin: 0 1rem 0 0;
             }
 
@@ -437,16 +444,10 @@
         }
 
         &-avatar {
-            width: 2rem;
-            height: 2rem;
+            width: 1.5rem;
+            height: 1.5rem;
             background: transparent;
-
-            &--dark {
-                width: 2rem;
-                height: 2rem;
-                background: transparent;
-                filter: invert(88%) sepia(0%) saturate(46%) hue-rotate(166deg) brightness(92%) contrast(106%);
-            }
+            margin-top: .3rem;
         }
 
         &-bubble {
@@ -865,18 +866,7 @@
                 &-image {
                     height: 2rem;
                     width: 2rem;
-                    border-radius: 50%;
-                    border: 2px solid #000;
                     padding: .2rem;
-
-                    &--dark {
-                        height: 2rem;
-                        width: 2rem;
-                        border-radius: 50%;
-                        padding: .2rem;
-                        border: 2px solid #000;
-                        filter: invert(95%) sepia(97%) saturate(14%) hue-rotate(213deg) brightness(104%) contrast(104%);
-                    }
                 }
 
                 &-options {
@@ -980,18 +970,8 @@
         }
 
         &-icon {
-            border: 3px solid #000;
-            border-radius: 50%;
-            padding: .2rem;
+            padding: 0 .2rem;
             height: 1.5rem;
-
-            &--dark {
-                border: 3px solid #000;
-                border-radius: 50%;
-                padding: .2rem;
-                height: 1.5rem;
-                filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(288deg) brightness(102%) contrast(102%);
-            }
         }
 
         &-minimized {
@@ -1144,14 +1124,14 @@
         }
 
         &__main {
-            padding-top: 15vh;
+            padding-top: 9vh;
             width: 100%;
             max-width: 100%;
         }
 
         &__form {
             &-container {
-                margin: 0 2rem -1px;
+                margin: 0 1rem -1px;
             }
         }
 
@@ -1162,7 +1142,7 @@
         &__panel {
             width: 100vw;
             position: fixed;
-            height: 15vh;
+            height: 9vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -1210,11 +1190,6 @@
                 &-assistant {
                     max-width: unset;
                 }
-            }
-
-            &-avatar {
-                width: 2rem;
-                height: 2rem;
             }
         }
 

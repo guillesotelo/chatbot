@@ -3,7 +3,6 @@ import { Button } from '../components/Button';
 import { marked } from 'marked';
 import { useLocalStorage } from 'usehooks-ts';
 import Dropdown from '../components/Dropdown';
-import AssistantAvatar from '../assets/images/logo.png'
 import Prism from 'prismjs';
 import 'prismjs/components/prism-markup-templating.js';
 import 'prismjs/components/prism-javascript';
@@ -55,7 +54,8 @@ import Trash from '../assets/icons/trash.svg'
 import Export from '../assets/icons/export.svg'
 import ExportDark from '../assets/icons/export-dark.svg'
 import Reload from '../assets/icons/reload3.png'
-import HP from '../assets/images/veronica.png';
+import HP from '../assets/images/veronica-logo3.png';
+import HP_DARK from '../assets/images/veronica-logo3_dark.png';
 import NewContext from '../assets/icons/new-context.svg';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
@@ -1253,7 +1253,7 @@ export function Chat() {
         const prevSessionDay = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').toLocaleDateString() : null
         const prevSessionTime = sessions[index - 1] ? new Date(sessions[index - 1].updated || '').getTime() : null
 
-        const sessionAgeStyle = { marginTop: getSession().messages.length || sessions.length > 1 ? '' : 0 }
+        const sessionAgeStyle = { marginTop: getSession().messages.length || sessions.length > 1 ? '' : '1rem' }
 
         if (currentSessionDay === prevSessionDay) return '' // Avoid repeat the age header
         if (currentSessionDay === today) return <p className='chat__panel-session-age' style={sessionAgeStyle}>Today</p>
@@ -1289,10 +1289,13 @@ export function Chat() {
                         background: theme ? '' : '#F9F9F9',
                         filter: feedbackData?.score === false ? 'blur(5px)' : '',
                         borderRadius: renderFullApp ? 0 : ''
-                    }}
-                >
+                    }}>
                     <div className="chat__panel-form">
                         <div className="chat__panel-form-controls">
+                            {!isMobile ?
+                                <Tooltip tooltip='Learn about Veronica' inline>
+                                    <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__panel-logo`} draggable={false} />
+                                </Tooltip> : ''}
                             {!isMobile && sessions.length > 1 ?
                                 <SearchBar
                                     handleChange={handleChangeSearch}
@@ -1306,7 +1309,8 @@ export function Chat() {
                                 : ''}
                         </div>
                         {isMobile ?
-                            <div className="chat__popup-window-header-options" style={{ justifyContent: 'center' }}>
+                            <div className="chat__popup-window-header-options" style={{ justifyContent: 'space-between' }}>
+                                <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__panel-logo`} draggable={false} />
                                 {getSession().messages.length ?
                                     <Tooltip tooltip='Start new chat' inline={sessions.length <= 1}>
                                         <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__panel-form-newchat${theme}`} />
@@ -1319,7 +1323,7 @@ export function Chat() {
                                     selected={getSession()}
                                     setSelected={selectSession}
                                     value={getSession()}
-                                    style={{ width: '60vw' }}
+                                    style={{ width: '60vw', marginRight: '1rem' }}
                                 />
                             </div>
                             :
@@ -1390,10 +1394,10 @@ export function Chat() {
                 {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
                 <Tooltip tooltip='Learn about Veronica'>
                     <div className="chat__popup-window-header-info">
-                        <img onClick={goToAboutVeronica} src={HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image${theme}`} />
-                        <div onClick={goToAboutVeronica} className="chat__popup-window-header-info-text">
-                            <p className='chat__popup-window-header-title'>Veronica</p>
-                            <p className="chat__popup-window-header-subtitle">HPx Assistant</p>
+                        <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image`} />
+                        <div className="chat__popup-window-header-info-text">
+                            <p onClick={goToAboutVeronica} className='chat__popup-window-header-title'>Veronica</p>
+                            <p onClick={goToAboutVeronica} className="chat__popup-window-header-subtitle">HPx Assistant</p>
                         </div>
                     </div>
                 </Tooltip>
@@ -1508,7 +1512,7 @@ export function Chat() {
                         <div key={index}>
                             {conversationContextMessage(index)}
                             <div className={`chat__message chat__message-${message.role || ''}`}>
-                                {message.role === 'assistant' ? <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} /> : ''}
+                                {message.role === 'assistant' ? <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} /> : ''}
                                 <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}>
                                     <div
                                         className={`chat__message-content${theme} chat__message-content-${message.role || ''}`}
@@ -1554,7 +1558,7 @@ export function Chat() {
                 <div
                     className='chat__message chat__message-assistant chat__message-completion'
                     style={{ display: outputRef.current && outputRef.current.innerHTML ? '' : 'none' }}>
-                    <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
+                    <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
                     <div className="chat__message-bubble">
                         <div className={`chat__message-content${theme} chat__message-content-assistant`} ref={outputRef}>
                         </div>
@@ -1562,7 +1566,7 @@ export function Chat() {
                 </div>
                 {!outputRef.current?.innerHTML && isLoading && getSession().isLoading ?
                     <div className='chat__message chat__message-assistant chat__message-completion'>
-                        <img src={AssistantAvatar} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
+                        <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
                         <div className="chat__message-bubble">
                             <div
                                 className={`chat__message-content${theme} chat__message-content-assistant chat__message-loading`}
@@ -1613,7 +1617,8 @@ export function Chat() {
                 background: renderFullApp && theme ? '#14181E' : '',
                 animation: getSession().messages.length ? 'none' : '',
                 opacity: getSession().messages.length ? '1' : '',
-                width: renderFullApp ? '800px' : '100%'
+                width: renderFullApp ? '800px' : '100%',
+                margin: isMobile && !getSession().messages.length ? 0 : ''
             }}>
             {getSession().messages.length > 1 && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
                 <div className='chat__message-memory-empty'>{!getSession().isLoading || !getSession().completion ?
@@ -1702,7 +1707,7 @@ export function Chat() {
     return minimized ?
         <div className={`chat__popup-minimized${theme}`} onClick={maximize} style={{ height: popupHeight }}>
             <div className="chat__popup-logo">
-                <img src={HP} alt='Ask Veronica' className={`chat__popup-icon${theme}`} draggable={false} />
+                <img src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__popup-icon`} draggable={false} />
                 <p className={`chat__popup-minimized-label${theme}`}>Ask<br />Veronica</p>
             </div>
         </div>
