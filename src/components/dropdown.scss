@@ -220,6 +220,9 @@
 
     &__options {
         position: absolute;
+        position: absolute;
+        display: flex;
+        flex-direction: column;
         background-color: white;
         border: 1px solid #7089AC;
         border-bottom-right-radius: 0.5rem;
@@ -246,7 +249,7 @@
             border-top: none;
             margin-top: 2.3rem;
             width: calc(100% - 2px);
-            z-index: 5;
+            z-index: 9999;
             max-height: 20rem;
             transition: .2s;
             overflow-y: auto;
@@ -257,46 +260,32 @@
     }
 
     &__option {
-        font-size: .9rem;
         color: black;
-        margin: 0;
-        height: 1.5rem;
-        line-height: 1.5rem;
         cursor: pointer;
-        padding: .4rem .7rem;
-        // border-top: 1px solid #e7e7e7;
-        // transition: .2s;
-        white-space: nowrap;
-        text-overflow: ellipsis;
         font-weight: normal;
         transition: .1s;
-        overflow: hidden;
 
         &:hover {
-            // color: #7089AC;
             background-color: #96a7c06b;
         }
 
         &--dark {
-            font-size: .9rem;
             color: lightgray;
-            margin: 0;
-            height: 1.5rem;
-            line-height: 1.5rem;
             cursor: pointer;
-            padding: .4rem .7rem;
-            // border-top: 1px solid #e7e7e7;
-            // transition: .2s;
-            white-space: nowrap;
-            text-overflow: ellipsis;
             font-weight: normal;
             transition: .1s;
-            overflow: hidden;
 
             &:hover {
-                // color: #7089AC;
                 background-color: #1B365D;
             }
+        }
+
+        &-text {
+            font-size: .9rem;
+            margin: .6rem;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
     }
 }
@@ -395,24 +384,6 @@
             overflow-y: auto;
             overflow-x: hidden;
             transition: .1s;
-        }
-
-        &__option {
-            font-size: .9rem;
-            color: gray;
-            margin: 0;
-            height: 1.2rem;
-            line-height: 1.2rem;
-            cursor: pointer;
-            padding: .5rem .7rem;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-            transition: .1s;
-
-            &:hover {
-                color: #7089AC;
-            }
         }
     }
 }

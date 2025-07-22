@@ -71,7 +71,7 @@ export default function Dropdown(props: Props) {
             const bounding = dropRef.current.getBoundingClientRect()
             if (bounding) {
                 optionsRef.current.style.marginTop = (bounding.height - 2).toFixed(0) + 'px'
-                optionsRef.current.style.width = (bounding.width -2).toFixed(0) + 'px'
+                optionsRef.current.style.width = (bounding.width - 2).toFixed(0) + 'px'
             }
         }
     }, [openDrop])
@@ -155,7 +155,7 @@ export default function Dropdown(props: Props) {
             ref={optionsRef}>
             {options?.length ?
                 options.map((option: any, i: number) =>
-                    <h4
+                    <div
                         key={i}
                         className={`dropdown__option${theme}`}
                         onClick={() => {
@@ -168,10 +168,12 @@ export default function Dropdown(props: Props) {
                             else setSelected(option)
                             setOpenDrop(false)
                         }}>
-                        {isDate ? new Date(option).toLocaleDateString(locale || 'sv-SE') :
-                            isTime ? new Date(option).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
-                                objKey ? option[objKey] : option}
-                    </h4>)
+                        <p className={`dropdown__option-text`}>
+                            {isDate ? new Date(option).toLocaleDateString(locale || 'sv-SE') :
+                                isTime ? new Date(option).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
+                                    objKey ? option[objKey] : option}
+                        </p>
+                    </div>)
                 :
                 <h4 className={`dropdown__option${theme}`} style={{ borderTop: 'none' }}>Loading...</h4>
             }
