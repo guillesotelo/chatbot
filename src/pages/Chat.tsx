@@ -1558,7 +1558,7 @@ export function Chat() {
                 <div
                     className='chat__message chat__message-assistant chat__message-completion'
                     style={{ display: outputRef.current && outputRef.current.innerHTML ? '' : 'none' }}>
-                    <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
+                    <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} />
                     <div className="chat__message-bubble">
                         <div className={`chat__message-content${theme} chat__message-content-assistant`} ref={outputRef}>
                         </div>
@@ -1566,7 +1566,7 @@ export function Chat() {
                 </div>
                 {!outputRef.current?.innerHTML && isLoading && getSession().isLoading ?
                     <div className='chat__message chat__message-assistant chat__message-completion'>
-                        <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar${theme}`} draggable={false} />
+                        <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} />
                         <div className="chat__message-bubble">
                             <div
                                 className={`chat__message-content${theme} chat__message-content-assistant chat__message-loading`}
