@@ -847,15 +847,15 @@
                 z-index: 5;
                 width: 100%;
                 background: #0e0e0e;
-                height: 10vh;
+                // height: 10vh;
 
                 &-info {
                     display: flex;
                     flex-direction: row;
                     align-items: center;
-                    gap: 1rem;
+                    gap: .5rem;
                     height: 100%;
-                    margin: 1rem;
+                    margin: .5rem .5rem .5rem .7rem;
                     cursor: pointer;
 
                     &-text {
@@ -864,8 +864,8 @@
                 }
 
                 &-image {
-                    height: 2rem;
-                    width: 2rem;
+                    height: 1.7rem;
+                    width: 1.7rem;
                     padding: .2rem;
                 }
 
@@ -887,13 +887,13 @@
 
 
                 &-title {
-                    font-size: 1.4rem;
+                    font-size: 1.25rem;
                     margin: 0;
                     user-select: none;
                 }
 
                 &-subtitle {
-                    font-size: .9rem;
+                    font-size: .8rem;
                     margin: 0;
                     user-select: none;
                 }
@@ -904,7 +904,7 @@
                     justify-content: space-between;
                     align-items: center;
                     gap: .1rem;
-                    margin: 1rem;
+                    margin: .5rem;
                 }
 
                 &-newchat {
