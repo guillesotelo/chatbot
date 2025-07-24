@@ -644,7 +644,7 @@ export function Chat() {
                     return s
                 })
             })
-            await sleep(20)
+            await sleep(60)
             index++
         }
 
@@ -1293,7 +1293,7 @@ export function Chat() {
                     <div className="chat__panel-form">
                         <div className="chat__panel-form-controls">
                             {!isMobile ?
-                                <Tooltip tooltip='Learn about Veronica' inline>
+                                <Tooltip tooltip='About Veronica' inline>
                                     <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__panel-logo`} draggable={false} />
                                 </Tooltip> : ''}
                             {!isMobile && sessions.length > 1 ?
@@ -1392,7 +1392,7 @@ export function Chat() {
                     borderBottom: theme ? '' : '1px solid #d3d3d399'
                 }}>
                 {/* {messages.length || Object.keys(localSessions).length ? <p className='chat__panel-hp-new' onClick={startNewChat}>New chat</p> : ''} */}
-                <Tooltip tooltip='Learn about Veronica'>
+                <Tooltip tooltip='About Veronica'>
                     <div className="chat__popup-window-header-info">
                         <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image`} />
                         <div className="chat__popup-window-header-info-text">
@@ -1721,7 +1721,7 @@ export function Chat() {
                 }}>
                 {/* <p className='chat__banner-message'>🚧 Currently on maintenance 🚧</p> */}
                 {renderFullApp ? renderFullAppSidebar() : renderPopupHeader()}
-                {!renderFullApp && getSession().messages.length ? <div style={{ height: '14vh' }} /> : ''}
+                {!renderFullApp && getSession().messages.length ? <div style={{ height: '10vh' }} /> : ''}
                 <main
                     className="chat__main"
                     style={{
