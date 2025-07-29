@@ -1294,7 +1294,7 @@ export function Chat() {
                         <div className="chat__panel-form-controls">
                             {!isMobile ?
                                 <Tooltip tooltip='About Veronica' inline>
-                                    <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__panel-logo`} draggable={false} />
+                                    <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__panel-logo`} style={{ padding: 0, height: '1.2rem', width: '1.2rem' }} draggable={false} />
                                 </Tooltip> : ''}
                             {!isMobile && sessions.length > 1 ?
                                 <SearchBar

@@ -431,10 +431,10 @@ export default function Admin({ }: Props) {
                             options={analyticTimeOptions}
                             style={{ width: '10rem', margin: '1rem 0' }}
                         />
-                        <TextData label='Total events' value={analytics.length} inline color='#5b5bd1' />
+                        <TextData label='Total events (LLM requests)' value={analytics.length} inline color='#5b5bd1' />
                         <TextData label='Avg conversation time' value={getAverage(analytics, 'duration_seconds').toFixed(0) + 's'} inline color='#5b5bd1' />
-                        <TextData label='Avg messages' value={getAverage(analytics, 'message_count').toFixed(0)} inline color='#5b5bd1' />
-                        <TextData label='Avg token count' value={getAverage(analytics, 'token_count').toFixed(0)} inline color='#5b5bd1' />
+                        <TextData label='Avg messages (per conversation)' value={getAverage(analytics, 'message_count').toFixed(0)} inline color='#5b5bd1' />
+                        <TextData label='Avg token count (per conversation)' value={getAverage(analytics, 'token_count').toFixed(0)} inline color='#5b5bd1' />
 
                         <h2 className='chat__admin-title' style={{ margin: '3rem 0 1rem' }}>Search</h2>
                         <Button
