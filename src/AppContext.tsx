@@ -25,7 +25,7 @@ export const AppProvider = ({ children }: Props) => {
         if (typeof window !== 'undefined') {
             setWindowLoading(false)
         }
-        const localTheme = JSON.parse(localStorage.getItem('preferredMode') || 'false')
+        const localTheme = localStorage.getItem('preferredMode')
         setTheme(localTheme ? '--dark' : '')
         setIsMobile(isMobileDevice())
 
@@ -60,7 +60,7 @@ export const AppProvider = ({ children }: Props) => {
                 theme ? "dark" : "light"
             )
         }
-        localStorage.setItem('preferredMode', JSON.stringify(theme ? true : false))
+        localStorage.setItem('preferredMode', theme)
     }, [theme])
 
     const isMobileDevice = () => {
@@ -81,8 +81,7 @@ export const AppProvider = ({ children }: Props) => {
 
     const getPreferredScheme = () => {
         const savedMode = localStorage.getItem('preferredMode')
-        const mode = JSON.parse(localStorage.getItem('preferredMode') || 'false') ? '--dark' : ''
-        setTheme(savedMode ? mode : window?.matchMedia?.('(prefers-color-scheme:dark)')?.matches ? '--dark' : '')
+        setTheme(savedMode || window?.matchMedia?.('(prefers-color-scheme:dark)')?.matches ? '--dark' : '')
     }
 
     const checkCredentials = () => {
