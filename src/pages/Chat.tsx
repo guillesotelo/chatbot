@@ -232,8 +232,14 @@ export function Chat() {
     const needsContext = (userPrompt: string): boolean => {
         let matches = false
         if (sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory) {
-            referencePatterns.forEach(refference => {
-                if (userPrompt.toLowerCase().includes(refference)) matches = true
+            const splittedPrompt = userPrompt.toLowerCase().match(/\b[a-zA-Z]+\b/g)
+            referencePatterns.forEach(ref => {
+                splittedPrompt?.forEach(word => {
+                    if (ref && word && word.includes(ref)) {
+                        matches = true
+                        // console.log('Answer sent with conversation context because of match in word reference: ', ref)
+                    }
+                })
             })
         }
         return matches
