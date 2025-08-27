@@ -232,11 +232,9 @@ export function Chat() {
     const needsContext = (userPrompt: string): boolean => {
         let matches = false
         if (sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory) {
-            const splittedPrompt = userPrompt.split(' ')
-            splittedPrompt.forEach(word => {
-                if (referencePatterns.includes(cleanText(word.replace('?', '')).toLowerCase())) matches = true
+            referencePatterns.forEach(refference => {
+                if (userPrompt.toLowerCase().includes(refference)) matches = true
             })
-            if (referencePatterns.includes(cleanText(userPrompt.replace('?', '')).toLowerCase())) matches = true
         }
         return matches
     }
