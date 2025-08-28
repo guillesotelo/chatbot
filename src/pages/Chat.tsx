@@ -60,7 +60,7 @@ import NewContext from '../assets/icons/new-context.svg';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import { APP_VERSION, gratitudePatterns, greetingPatterns, instructionEnd, instructionStart, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, referencePatterns, TECH_ISSUE_LLM } from '../constants/app';
-import { autoScroll, cleanText, sleep, sortArray } from '../helpers';
+import { autoScroll, cleanText, fixMarkdownLinks, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
@@ -380,7 +380,7 @@ export function Chat() {
         }, 100)
     }
 
-    const removeUnwantedChars = (str: string) => {
+    const curateResponse = (str: string) => {
         const unwantedPatterns = [
             ' ',
             'Assistant:',
@@ -393,7 +393,8 @@ export function Chat() {
             '", respond to this:'
         ]
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
-        return str.replace(regex, '')
+        const stringWithoutPatterns = str.replace(regex, '')
+        return fixMarkdownLinks(stringWithoutPatterns)
     }
 
     const isCompleteBlock = (text: string) => {
@@ -527,7 +528,7 @@ export function Chat() {
 
                     if (value) {
                         const chunk = decoder.decode(value, { stream: true })
-                        const cleanedChunk = removeUnwantedChars(chunk)
+                        const cleanedChunk = curateResponse(chunk)
                         result += cleanedChunk
 
                         addToken(cleanedChunk, false)
@@ -551,7 +552,7 @@ export function Chat() {
 
                 setIsLoading(false)
                 const time = timePassedRef.current
-                const finalContent = removeUnwantedChars(result).replace('⬤', '') + (stopGenerationRef.current ? ' [STOPPED].' : '')
+                const finalContent = curateResponse(result).replace('⬤', '') + (stopGenerationRef.current ? ' [STOPPED].' : '')
                 const newMessage = {
                     role: 'assistant',
                     content: finalContent,
@@ -1751,6 +1752,6 @@ export function Chat() {
                         {feedbackData?.score === false ? '' : renderChatForm()}
                     </div>
                 </main>
-                {isMobile ? <p className='chat__panel-version'>v{APP_VERSION}</p> : ''}
+                {isMobile ? <p className='chat__panel-version'>v{APP_VERSION} • Veronica may be inaccurate — verify important details.</p> : ''}
             </div>
 }

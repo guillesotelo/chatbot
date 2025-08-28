@@ -46,3 +46,5 @@ export const getAverage = (data: dataObj[], key: string) => {
     data.forEach(row => count += (row[key] || 0))
     return count / (data.length || 1)
 }
+
+export const fixMarkdownLinks = (text: string) => text.replace(/\[([^\]]+)\]\(([^)]+)\)\]+/g, "[$1]($2)")
