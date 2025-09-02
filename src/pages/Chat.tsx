@@ -1078,7 +1078,7 @@ export function Chat() {
         let sessionText = ''
         const sessionDate = new Date(id || new Date()).toLocaleString('sv-SE')
         const separator = '_________________________________________________________________\n\n\n'
-        const sessionTitle = `HP Chatbot - Chat session "${getSession().name}" (${sessionDate})\n` + separator
+        const sessionTitle = `Veronica - Chat session "${getSession().name}" (${sessionDate})\n` + separator
         getSession().messages.map((m: messageType) => {
             sessionText += `${sessionText ? '' : sessionTitle}${m.role === 'user' ? '\n\n' : '\n'}${m.role === 'user' ? 'User' : 'Veronica'}: ${m.content}\n`
         })
@@ -1087,7 +1087,7 @@ export function Chat() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `HP Chatbot - ${getSession().name?.replace(/[<>:"\/\\|?*\x00-\x1F]/g, '')}`
+        a.download = `Veronica - ${getSession().name?.replace(/[<>:"\/\\|?*\x00-\x1F]/g, '')}`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
