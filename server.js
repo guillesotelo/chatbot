@@ -53,7 +53,7 @@ if (process.env.NODE_ENV === 'production' && indexExists) {
 }
 
 app.get('/health', (_, res) => {
-    res.status(200).send('Chatbot Server [Status: OK]')
+    res.status(200).send('Veronica Server [Status: OK]')
 })
 
 app.listen(PORT, () => console.log(`Server listening on Port: ${PORT}...`))
