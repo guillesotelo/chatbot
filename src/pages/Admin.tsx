@@ -82,6 +82,7 @@ export default function Admin({ }: Props) {
     const [analyticsCopy, setAnalyticsCopy] = useState<dataObj[]>([])
     const [analyticTime, setAnalyticTime] = useState(analyticTimeOptions[2])
     const [selectedVersion, setSelectedVersion] = useState('Production v1.x')
+    const [showFullChat, setShowFullChat] = useState<dataObj>({})
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
 
@@ -115,6 +116,8 @@ export default function Admin({ }: Props) {
         setDeleteFeedback(false)
         Prism.highlightAll()
         renderCodeBlockHeaders()
+
+        console.log(userFeedback[selectedFeedback])
     }, [selectedFeedback])
 
     useEffect(() => {
@@ -160,7 +163,11 @@ export default function Admin({ }: Props) {
                 setUserFeedback(
                     sortArray(
                         sortArray(feedback, 'session_id', true), 'createdAt', true
-                    ).map(item => ({ ...item, score: item.score === 'True' ? true : false }))
+                    ).map(item => ({
+                        ...item,
+                        score: item.score === 'True' ? true : false,
+                        conversation: JSON.parse(item.conversation || '[]')
+                    }))
                 )
             }
 
@@ -497,19 +504,38 @@ export default function Admin({ }: Props) {
                     </Modal>
                     : selectedFeedback !== -1 ?
                         <Modal
-                            title={`${userFeedback[selectedFeedback].score ? 'Good feedback' : 'Bad feedback'} from ${userFeedback[selectedFeedback].username || 'user'}`}
+                            title={`${userFeedback[selectedFeedback].score ? 'Good' : 'Bad'} feedback from ${userFeedback[selectedFeedback].username || 'user'}`}
                             subtitle={getDate(userFeedback[selectedFeedback].createdAt)}
                             onClose={() => setSelectedFeedback(-1)}>
                             <div className={`chat__admin-session${theme}`}>
                                 <div className="chat__feedback-content">
-                                    {userFeedback[selectedFeedback].messages.map((feedback: sessionType) => (
+                                    {userFeedback[selectedFeedback][(showFullChat[selectedFeedback] ? 'conversation' : 'messages')].map((feedback: sessionType) => (
                                         <div
                                             key={feedback.id}
                                             className={`chat__feedback-content-${feedback.role}${theme}`}
-                                            style={{ borderColor: feedback.score ? 'green' : '' }}
+                                            style={{
+                                                borderColor: feedback.score === false ? 'red' : feedback.score === true ? 'green' : 'transparent',
+                                                marginBottom: typeof feedback.score === 'boolean' ? '1rem' : '' 
+                                            }}
                                             dangerouslySetInnerHTML={{
                                                 __html: marked.parse(feedback.content || '') as string,
                                             }} />))}
+                                    {showFullChat[selectedFeedback] ?
+                                        <Button
+                                            label='Show scored message'
+                                            onClick={() => setShowFullChat(prev => ({ ...prev, [selectedFeedback]: false }))}
+                                            className={`button__outline${theme}`}
+                                            style={{ marginTop: '1.5rem' }}
+                                        />
+                                        : userFeedback[selectedFeedback].conversation.length ?
+                                            <Button
+                                                label='Show full conversation'
+                                                onClick={() => setShowFullChat(prev => ({ ...prev, [selectedFeedback]: true }))}
+                                                className={`button__outline${theme}`}
+                                                style={{ marginTop: '1.5rem' }}
+                                            />
+                                            : ''
+                                    }
                                 </div>
                                 <span>Comment from {userFeedback[selectedFeedback].username || 'user'}: <p className='chat__admin-comment'>{userFeedback[selectedFeedback].comments || 'Not registered.'}</p></span>
                                 <div style={{ margin: '2rem 0' }}>
