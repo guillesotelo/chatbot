@@ -93,7 +93,7 @@ export function Chat() {
     const [copyMessage, setCopyMessage] = useState(-1)
     const [goodScore, setGoodScore] = useState(-1)
     const [badScore, setBadScore] = useState(-1)
-    const [greetings, setGreetings] = useState(' ⬤')
+    const [greetings, setGreetings] = useState('')
     const [prod, setProd] = useState(true)
     const [renderFullApp, setRenderFullApp] = useState(true) // Change to window.innerWidth > 1050 when ready to use popup mode
     const [renderAdmin, setRenderAdmin] = useState(false)
@@ -428,7 +428,7 @@ export function Chat() {
         tokenBuffer += newToken
 
         if (!animate) {
-            return outputRef.current.innerHTML = await marked.parse(tokenBuffer + ' ⬤')
+            return outputRef.current.innerHTML = await marked.parse(tokenBuffer)
         }
 
         const shouldRender = isCompleteBlock(outputRef.current.innerHTML) && tokenBuffer.length > 60
@@ -552,7 +552,7 @@ export function Chat() {
 
                 setIsLoading(false)
                 const time = timePassedRef.current
-                const finalContent = curateResponse(result).replace('⬤', '') + (stopGenerationRef.current ? ' [STOPPED].' : '')
+                const finalContent = curateResponse(result) + (stopGenerationRef.current ? ' [STOPPED].' : '')
                 const newMessage = {
                     role: 'assistant',
                     content: finalContent,
@@ -762,15 +762,14 @@ export function Chat() {
 
     const generateGreetings = () => {
         const message = "Hi, what can I help you with today?"
-        const promptSymbol = "⬤"
         let index = 0
 
         if (greetingsInterval.current) clearInterval(greetingsInterval.current)
-        setGreetings(promptSymbol)
+        setGreetings('')
 
         greetingsInterval.current = setInterval(() => {
             if (index < message.length) {
-                setGreetings(message.slice(0, index + 1) + promptSymbol)
+                setGreetings(message.slice(0, index + 1))
                 index++
             } else {
                 clearInterval(greetingsInterval.current)
@@ -778,7 +777,7 @@ export function Chat() {
                     setGreetings(message)
                 }, 1000)
             }
-        }, 50)
+        }, 35)
     }
 
     const stopGenerating = async () => {
@@ -982,6 +981,7 @@ export function Chat() {
         const newFeedbackData = {
             ...feedbackData,
             ...getSession(),
+            conversation: JSON.stringify(getSession().messages),
             messages: [scoredMessages[index - 1] || {}, scoredMessages[index]],
             appVersion: APP_VERSION,
             session_id: getSession().id,
@@ -1752,6 +1752,6 @@ export function Chat() {
                         {feedbackData?.score === false ? '' : renderChatForm()}
                     </div>
                 </main>
-                {isMobile ? <p className='chat__panel-version'>v{APP_VERSION} • Veronica may be inaccurate — verify important details.</p> : ''}
+                {isMobile ? <p className='chat__panel-version'>v{APP_VERSION} • Veronica may be inaccurate. Verify important details.</p> : ''}
             </div>
 }
