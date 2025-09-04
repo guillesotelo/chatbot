@@ -463,6 +463,7 @@ export function Chat() {
                 session_id: session.id,
                 message_count: session.messages.length,
                 token_count: prompt.length,
+                prompt: prompt.substring(0, 300),
                 duration_seconds
             }
 
@@ -493,8 +494,9 @@ export function Chat() {
                 })
             })
 
-            saveAnalytics(content)
-
+            const use_context = useDocumentContext ? 'true' : 'false'
+            const first_query = getSession().messages.length <= 2 ? 'true' : ''
+            
             const response = await fetch(`${apiURl}/api/prompt_route`, {
                 method: 'POST',
                 headers: {
@@ -503,7 +505,8 @@ export function Chat() {
                 },
                 body: new URLSearchParams({
                     user_prompt: content || '',
-                    use_context: useDocumentContext ? 'true' : 'false',
+                    use_context,
+                    first_query,
                     // use_history: useMemory ? 'true' : 'false',
                     // stream_id: streamId ? String(streamId) : ''
                 }),
@@ -515,22 +518,22 @@ export function Chat() {
                 const decoder = new TextDecoder()
                 let done = false
                 let result = ''
-
+                
                 while (!done) {
                     const { value, done: doneReading } = await reader.read()
                     done = doneReading
-
+                    
                     if (stopGenerationRef.current) {
                         reader.cancel()
                         setIsLoading(false)
                         break
                     }
-
+                    
                     if (value) {
                         const chunk = decoder.decode(value, { stream: true })
                         const cleanedChunk = curateResponse(chunk)
                         result += cleanedChunk
-
+                        
                         addToken(cleanedChunk, false)
 
                         setSessions(prev => {
@@ -549,7 +552,7 @@ export function Chat() {
                 }
 
                 if (outputRef.current) outputRef.current.innerHTML = ''
-
+                
                 setIsLoading(false)
                 const time = timePassedRef.current
                 const finalContent = curateResponse(result) + (stopGenerationRef.current ? ' [STOPPED].' : '')
@@ -581,11 +584,12 @@ export function Chat() {
                 }, 100)
                 streamIdRef.current = null
                 stopGenerationRef.current = false
-
+                
             } else {
                 renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
             }
+            await saveAnalytics(content)
         } catch (error) {
             renderErrorResponse()
             console.error(error)

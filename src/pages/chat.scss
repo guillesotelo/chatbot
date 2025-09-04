@@ -1110,6 +1110,26 @@
                 margin: 0 0 0 1rem;
             }
         }
+
+        &-queries {
+            display: flex;
+            flex-direction: column;
+        }
+
+        &-query {
+            display: flex;
+            flex-direction: column;
+
+            &-prompt {
+                margin: .5rem 0 0 0;
+            }
+
+            &-date {
+                margin: 0;
+                font-size: .75rem;
+                opacity: .7;
+            }
+        }
     }
 }
 
