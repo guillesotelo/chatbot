@@ -77,6 +77,7 @@ export default function Admin({ }: Props) {
     const [latestQuery, setLatestQuery] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [vectorSearchModal, setVectorSearchModal] = useState(false)
+    const [showUserQueries, setShowUserQueries] = useState(false)
     const [searchResults, setSearchResults] = useState<dataObj>({})
     const [analytics, setAnalytics] = useState<dataObj[]>([])
     const [analyticsCopy, setAnalyticsCopy] = useState<dataObj[]>([])
@@ -117,7 +118,6 @@ export default function Admin({ }: Props) {
         Prism.highlightAll()
         renderCodeBlockHeaders()
 
-        console.log(userFeedback[selectedFeedback])
     }, [selectedFeedback])
 
     useEffect(() => {
@@ -325,109 +325,260 @@ export default function Admin({ }: Props) {
         }
     }
 
+    const getFilterStyle = () => ({ filter: showUserQueries || selectedFeedback !== -1 || deleteFeedback || vectorSearchModal ? 'blur(5px)' : '' })
+
+    const renderVectorSearchModal = () => {
+        return (
+            <Modal title='Vector Store Search' onClose={() => setVectorSearchModal(false)}>
+                <div className="chat__admin-col">
+                    <div
+                        className={`chat__admin-container${theme}`}
+                        style={{
+                            position: 'relative',
+                            border: searchResults.query ? '1px solid lightgray' : '',
+                            borderRadius: '1rem',
+                            margin: searchResults.query ? '2rem 0' : '2rem 0 0 0'
+                        }}>
+                        {searchResults.query ?
+                            <>
+                                <div className="chat__admin-row" style={{ margin: '1rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <p style={{ margin: 0 }}><strong>Query: </strong>{latestQuery}</p>
+                                        <p style={{ margin: '.5rem 0' }}><strong>Exact match:</strong> {searchResults.exact ? 'Yes' : 'No'}</p>
+                                    </div>
+                                    <Button
+                                        label='Clear result'
+                                        className={`button__delete${theme}`}
+                                        onClick={() => {
+                                            setSearchResults({})
+                                            setSearchQuery('')
+                                            setLatestQuery('')
+                                        }}
+                                    />
+                                </div>
+                            </>
+                            : ''}
+                        <div className="chat__admin-search">
+                            {isLoading ? <p style={{ margin: '1rem' }}>Embedding query and searching in vector store...</p>
+                                : searchResults.query ?
+                                    <div style={{ margin: '1rem' }}>
+                                        <p><strong>Matches:</strong>
+                                            <br /> {searchResults.matches ?
+                                                searchResults.matches.map((m: string, i: number) =>
+                                                    <div className='chat__admin-search-textresult'>
+                                                        <span>{m}</span>
+                                                        <br />
+                                                        <br />
+                                                        <ul>
+                                                            {searchResults.results && searchResults.results.distances ?
+                                                                <li><strong>Score (distance): </strong>{searchResults.results.distances[0][i]}</li>
+                                                                : ''}
+                                                            {searchResults.results && searchResults.results.metadatas ?
+                                                                <li><strong>Sources: </strong><div className='chat__admin-sources' dangerouslySetInnerHTML={{ __html: marked.parse(searchResults.results.metadatas[0][i].source) as string }} /></li>
+                                                                : ''}
+                                                        </ul>
+                                                    </div>)
+                                                : 'No matching docs'}</p>
+                                    </div>
+                                    : ''}
+                        </div>
+                    </div>
+                    <div
+                        className={`chat__form-container${theme}`}
+                        style={{
+                            position: 'relative',
+                            background: theme ? '#212121' : '',
+                            padding: 0,
+                            animation: 'none',
+                            opacity: 1
+                        }}>
+                        <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
+                            <textarea
+                                id="message"
+                                placeholder="Search a word or phrase in the vector store"
+                                className={`chat__form-input${theme}`}
+                                value={searchQuery}
+                                name="content"
+                                rows={1}
+                                onKeyDown={(event) => {
+                                    if (!isLoading && event.key === 'Enter' && !event.shiftKey) {
+                                        handleSubmit(event)
+                                    }
+                                }}
+                                autoFocus
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                style={{ marginLeft: '1.5rem' }}
+                            />
+                            <Tooltip tooltip={searchQuery ? 'Send message' : 'Write a message to send'} position='up'>
+                                <div
+                                    className='chat__form-send'
+                                    style={{
+                                        background: searchQuery ? theme ? 'lightgray' : 'black' : theme ? 'gray' : '#d2d2d2',
+                                        cursor: isLoading || !searchQuery ? 'not-allowed' : ''
+                                    }}
+                                    onClick={handleSubmit} >
+                                    <svg className='chat__form-send-svg' width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill={theme ? '#303030' : '#fff'} fillRule="evenodd" clipRule="evenodd" d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z"></path>
+                                    </svg>
+                                </div>
+                            </Tooltip>
+                        </form>
+                    </div>
+                </div>
+            </Modal>
+        )
+    }
+
+    const deleteFeedbackModal = () => {
+        return (
+            <Modal
+                title={`Are you sure you want to permanently delete ${userFeedback[selectedFeedback].username || 'user'}'s feedback?`}
+                onClose={() => {
+                    setSelectedFeedback(-1)
+                    setDeleteFeedback(false)
+                }}>
+                <div className='chat__admin-delete'>
+                    <p>Are you sure you want to permanently delete {userFeedback[selectedFeedback].username || 'user'}'s feedback?</p>
+                    <div className="chat__admin-delete-buttons">
+                        <Button
+                            label='Maybe not'
+                            className={`button__outline${theme}`}
+                            onClick={() => {
+                                setSelectedFeedback(-1)
+                                setDeleteFeedback(false)
+                            }}
+                            disabled={isLoading}
+                        />
+                        <Button
+                            label='Confirm deletion'
+                            className={`button__delete${theme}`}
+                            onClick={deleteReview}
+                            disabled={isLoading}
+                        />
+                    </div>
+                </div>
+            </Modal>
+        )
+    }
+
+    const renderUserQueriesModal = () => {
+        return (
+            <Modal
+                title={`User queries`}
+                onClose={() => setShowUserQueries(false)}>
+                <div className='chat__admin-queries'>
+                    {analyticsCopy.filter(a => a.prompt).map((analytic, i) =>
+                        <div key={i} className='chat__admin-query'>
+                            <p className='chat__admin-query-prompt'>{analytic.prompt}</p>
+                            <p className='chat__admin-query-date'>{getDate(analytic.timestamp)}</p>
+                        </div>)}
+                </div>
+            </Modal>
+        )
+    }
+
+
+    const renderFeedbackModal = () => {
+        return (
+            <Modal
+                title={`${userFeedback[selectedFeedback].score ? 'Good' : 'Bad'} feedback from ${userFeedback[selectedFeedback].username || 'user'}`}
+                subtitle={getDate(userFeedback[selectedFeedback].createdAt)}
+                onClose={() => setSelectedFeedback(-1)}>
+                <div className={`chat__admin-session${theme}`}>
+                    <div className="chat__feedback-content">
+                        {userFeedback[selectedFeedback][(showFullChat[selectedFeedback] ? 'conversation' : 'messages')].map((feedback: sessionType) => (
+                            <div
+                                key={feedback.id}
+                                className={`chat__feedback-content-${feedback.role}${theme}`}
+                                style={{
+                                    borderColor: feedback.score === false ? 'red' : feedback.score === true ? 'green' : 'transparent',
+                                    marginBottom: typeof feedback.score === 'boolean' ? '1rem' : ''
+                                }}
+                                dangerouslySetInnerHTML={{
+                                    __html: marked.parse(feedback.content || '') as string,
+                                }} />))}
+                        {showFullChat[selectedFeedback] ?
+                            <Button
+                                label='Show scored message'
+                                onClick={() => setShowFullChat(prev => ({ ...prev, [selectedFeedback]: false }))}
+                                className={`button__outline${theme}`}
+                                style={{ marginTop: '1.5rem' }}
+                            />
+                            : userFeedback[selectedFeedback].conversation.length ?
+                                <Button
+                                    label='Show full conversation'
+                                    onClick={() => setShowFullChat(prev => ({ ...prev, [selectedFeedback]: true }))}
+                                    className={`button__outline${theme}`}
+                                    style={{ marginTop: '1.5rem' }}
+                                />
+                                : ''
+                        }
+                    </div>
+                    <span>Comment from {userFeedback[selectedFeedback].username || 'user'}: <p className='chat__admin-comment'>{userFeedback[selectedFeedback].comments || 'Not registered.'}</p></span>
+                    <div style={{ margin: '2rem 0' }}>
+                        {userFeedback[selectedFeedback].modelSettings ?
+                            <>
+                                <p>Model Settings</p>
+                                {Object.keys(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}'))
+                                    .map(key => key ?
+                                        <p key={key} style={{ fontSize: '.9rem', margin: 0 }}>
+                                            <strong>{String(key)}: </strong>
+                                            {JSON.stringify(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}')[key])}
+                                        </p> : '')}
+                            </>
+                            : ''}
+                    </div>
+                    <InputField
+                        label='Review notes'
+                        name='notes'
+                        type='textarea'
+                        rows={5}
+                        updateData={updateData}
+                        value={data?.notes || ''}
+                        style={{ marginTop: '1rem' }}
+                    />
+                    <div className="chat__admin-review-buttons">
+                        <Dropdown
+                            label='Status'
+                            options={['Disregardable', 'Corrected', 'On hold']}
+                            selected={data?.status}
+                            value={data?.status}
+                            setSelected={value => setData(prev => ({ ...prev, status: value }))}
+                            style={{ width: '10rem', marginTop: '.5rem' }}
+                        />
+                        <div className="chat__admin-review-buttons">
+                            <Button
+                                label='Discard review'
+                                onClick={discardChanges}
+                                disabled={isLoading}
+                            />
+                            <Button
+                                label='Save review'
+                                className={`button__outline${theme}`}
+                                onClick={saveReview}
+                                disabled={isLoading}
+                            />
+                            <Button
+                                label='Delete feedback'
+                                className={`button__delete${theme}`}
+                                onClick={() => setDeleteFeedback(true)}
+                                style={{ justifySelf: 'flex-end' }}
+                                disabled={isLoading}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+        )
+    }
+
     return !isLoggedIn ? null :
         <div className='chat__admin'>
             <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
             <div className="">
-                <h1>Admin panel</h1>
-                {vectorSearchModal ?
-                    <Modal title='Vector Store Search' onClose={() => setVectorSearchModal(false)}>
-                        <div className="chat__admin-col">
-                            <div
-                                className={`chat__admin-container${theme}`}
-                                style={{
-                                    position: 'relative',
-                                    border: searchResults.query ? '1px solid lightgray' : '',
-                                    borderRadius: '1rem',
-                                    margin: searchResults.query ? '2rem 0' : '2rem 0 0 0'
-                                }}>
-                                {searchResults.query ?
-                                    <>
-                                        <div className="chat__admin-row" style={{ margin: '1rem' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <p style={{ margin: 0 }}><strong>Query: </strong>{latestQuery}</p>
-                                                <p style={{ margin: '.5rem 0' }}><strong>Exact match:</strong> {searchResults.exact ? 'Yes' : 'No'}</p>
-                                            </div>
-                                            <Button
-                                                label='Clear result'
-                                                className={`button__delete${theme}`}
-                                                onClick={() => {
-                                                    setSearchResults({})
-                                                    setSearchQuery('')
-                                                    setLatestQuery('')
-                                                }}
-                                            />
-                                        </div>
-                                    </>
-                                    : ''}
-                                <div className="chat__admin-search">
-                                    {isLoading ? <p style={{ margin: '1rem' }}>Embedding query and searching in vector store...</p>
-                                        : searchResults.query ?
-                                            <div style={{ margin: '1rem' }}>
-                                                <p><strong>Matches:</strong>
-                                                    <br /> {searchResults.matches ?
-                                                        searchResults.matches.map((m: string, i: number) =>
-                                                            <div className='chat__admin-search-textresult'>
-                                                                <span>{m}</span>
-                                                                <br />
-                                                                <br />
-                                                                <ul>
-                                                                    {searchResults.results && searchResults.results.distances ?
-                                                                        <li><strong>Score (distance): </strong>{searchResults.results.distances[0][i]}</li>
-                                                                        : ''}
-                                                                    {searchResults.results && searchResults.results.metadatas ?
-                                                                        <li><strong>Sources: </strong><div className='chat__admin-sources' dangerouslySetInnerHTML={{ __html: marked.parse(searchResults.results.metadatas[0][i].source) as string }} /></li>
-                                                                        : ''}
-                                                                </ul>
-                                                            </div>)
-                                                        : 'No matching docs'}</p>
-                                            </div>
-                                            : ''}
-                                </div>
-                            </div>
-                            <div
-                                className={`chat__form-container${theme}`}
-                                style={{
-                                    position: 'relative',
-                                    background: theme ? '#212121' : '',
-                                    padding: 0
-                                }}>
-                                <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
-                                    <textarea
-                                        id="message"
-                                        placeholder="Search a word or phrase in the vector store"
-                                        className={`chat__form-input${theme}`}
-                                        value={searchQuery}
-                                        name="content"
-                                        rows={1}
-                                        onKeyDown={(event) => {
-                                            if (!isLoading && event.key === 'Enter' && !event.shiftKey) {
-                                                handleSubmit(event)
-                                            }
-                                        }}
-                                        autoFocus
-                                        onChange={(event) => setSearchQuery(event.target.value)}
-                                        style={{ marginLeft: '1.5rem' }}
-                                    />
-                                    <Tooltip tooltip={searchQuery ? 'Send message' : 'Write a message to send'} position='up'>
-                                        <div
-                                            className='chat__form-send'
-                                            style={{
-                                                background: searchQuery ? theme ? 'lightgray' : 'black' : theme ? 'gray' : '#d2d2d2',
-                                                cursor: isLoading || !searchQuery ? 'not-allowed' : ''
-                                            }}
-                                            onClick={handleSubmit} >
-                                            <svg className='chat__form-send-svg' width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill={theme ? '#303030' : '#fff'} fillRule="evenodd" clipRule="evenodd" d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z"></path>
-                                            </svg>
-                                        </div>
-                                    </Tooltip>
-                                </form>
-                            </div>
-                        </div>
-                    </Modal>
-                    : ''}
-
-                <div className="chat__admin-row" style={{ filter: selectedFeedback !== -1 || deleteFeedback || vectorSearchModal ? 'blur(5px)' : '' }}>
+                <h1 style={getFilterStyle()}>Admin panel</h1>
+                {vectorSearchModal ? renderVectorSearchModal() : ''}
+                {showUserQueries ? renderUserQueriesModal() : ''}
+                <div className="chat__admin-row" style={getFilterStyle()}>
                     <div className="chat__admin-col" style={{ width: '30%', margin: '0 0 2rem 0' }}>
                         <h2 className='chat__admin-title'>Analytics</h2>
                         <Dropdown
@@ -442,7 +593,12 @@ export default function Admin({ }: Props) {
                         <TextData label='Avg conversation time' value={getAverage(analytics, 'duration_seconds').toFixed(0) + 's'} inline color='#5b5bd1' />
                         <TextData label='Avg messages (per conversation)' value={getAverage(analytics, 'message_count').toFixed(0)} inline color='#5b5bd1' />
                         <TextData label='Avg token count (per conversation)' value={getAverage(analytics, 'token_count').toFixed(0)} inline color='#5b5bd1' />
-
+                        <Button
+                            label='Show user queries'
+                            className={`button__outline${theme}`}
+                            onClick={() => setShowUserQueries(true)}
+                            style={{ marginTop: '1rem' }}
+                        />
                         <h2 className='chat__admin-title' style={{ margin: '3rem 0 1rem' }}>Search</h2>
                         <Button
                             label='Vector Store Search'
@@ -473,127 +629,8 @@ export default function Admin({ }: Props) {
                         />
                     </div>
                 </div>
-
-                {deleteFeedback ?
-                    <Modal
-                        title={`Are you sure you want to permanently delete ${userFeedback[selectedFeedback].username || 'user'}'s feedback?`}
-                        onClose={() => {
-                            setSelectedFeedback(-1)
-                            setDeleteFeedback(false)
-                        }}>
-                        <div className='chat__admin-delete'>
-                            <p>Are you sure you want to permanently delete {userFeedback[selectedFeedback].username || 'user'}'s feedback?</p>
-                            <div className="chat__admin-delete-buttons">
-                                <Button
-                                    label='Maybe not'
-                                    className={`button__outline${theme}`}
-                                    onClick={() => {
-                                        setSelectedFeedback(-1)
-                                        setDeleteFeedback(false)
-                                    }}
-                                    disabled={isLoading}
-                                />
-                                <Button
-                                    label='Confirm deletion'
-                                    className={`button__delete${theme}`}
-                                    onClick={deleteReview}
-                                    disabled={isLoading}
-                                />
-                            </div>
-                        </div>
-                    </Modal>
-                    : selectedFeedback !== -1 ?
-                        <Modal
-                            title={`${userFeedback[selectedFeedback].score ? 'Good' : 'Bad'} feedback from ${userFeedback[selectedFeedback].username || 'user'}`}
-                            subtitle={getDate(userFeedback[selectedFeedback].createdAt)}
-                            onClose={() => setSelectedFeedback(-1)}>
-                            <div className={`chat__admin-session${theme}`}>
-                                <div className="chat__feedback-content">
-                                    {userFeedback[selectedFeedback][(showFullChat[selectedFeedback] ? 'conversation' : 'messages')].map((feedback: sessionType) => (
-                                        <div
-                                            key={feedback.id}
-                                            className={`chat__feedback-content-${feedback.role}${theme}`}
-                                            style={{
-                                                borderColor: feedback.score === false ? 'red' : feedback.score === true ? 'green' : 'transparent',
-                                                marginBottom: typeof feedback.score === 'boolean' ? '1rem' : '' 
-                                            }}
-                                            dangerouslySetInnerHTML={{
-                                                __html: marked.parse(feedback.content || '') as string,
-                                            }} />))}
-                                    {showFullChat[selectedFeedback] ?
-                                        <Button
-                                            label='Show scored message'
-                                            onClick={() => setShowFullChat(prev => ({ ...prev, [selectedFeedback]: false }))}
-                                            className={`button__outline${theme}`}
-                                            style={{ marginTop: '1.5rem' }}
-                                        />
-                                        : userFeedback[selectedFeedback].conversation.length ?
-                                            <Button
-                                                label='Show full conversation'
-                                                onClick={() => setShowFullChat(prev => ({ ...prev, [selectedFeedback]: true }))}
-                                                className={`button__outline${theme}`}
-                                                style={{ marginTop: '1.5rem' }}
-                                            />
-                                            : ''
-                                    }
-                                </div>
-                                <span>Comment from {userFeedback[selectedFeedback].username || 'user'}: <p className='chat__admin-comment'>{userFeedback[selectedFeedback].comments || 'Not registered.'}</p></span>
-                                <div style={{ margin: '2rem 0' }}>
-                                    {userFeedback[selectedFeedback].modelSettings ?
-                                        <>
-                                            <p>Model Settings</p>
-                                            {Object.keys(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}'))
-                                                .map(key => key ?
-                                                    <p key={key} style={{ fontSize: '.9rem', margin: 0 }}>
-                                                        <strong>{String(key)}: </strong>
-                                                        {JSON.stringify(JSON.parse(userFeedback[selectedFeedback].modelSettings || '{}')[key])}
-                                                    </p> : '')}
-                                        </>
-                                        : ''}
-                                </div>
-                                <InputField
-                                    label='Review notes'
-                                    name='notes'
-                                    type='textarea'
-                                    rows={5}
-                                    updateData={updateData}
-                                    value={data?.notes || ''}
-                                    style={{ marginTop: '1rem' }}
-                                />
-                                <div className="chat__admin-review-buttons">
-                                    <Dropdown
-                                        label='Status'
-                                        options={['Disregardable', 'Corrected', 'On hold']}
-                                        selected={data?.status}
-                                        value={data?.status}
-                                        setSelected={value => setData(prev => ({ ...prev, status: value }))}
-                                        style={{ width: '10rem', marginTop: '.5rem' }}
-                                    />
-                                    <div className="chat__admin-review-buttons">
-                                        <Button
-                                            label='Discard review'
-                                            onClick={discardChanges}
-                                            disabled={isLoading}
-                                        />
-                                        <Button
-                                            label='Save review'
-                                            className={`button__outline${theme}`}
-                                            onClick={saveReview}
-                                            disabled={isLoading}
-                                        />
-                                        <Button
-                                            label='Delete feedback'
-                                            className={`button__delete${theme}`}
-                                            onClick={() => setDeleteFeedback(true)}
-                                            style={{ justifySelf: 'flex-end' }}
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </Modal>
-                        : ''}
-
+                {deleteFeedback ? deleteFeedbackModal()
+                    : selectedFeedback !== -1 ? renderFeedbackModal() : ''}
             </div>
 
         </div >
