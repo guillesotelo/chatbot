@@ -114,6 +114,7 @@ export function Chat() {
     const [loginMessage, setLoginMessage] = useState('')
     const [popupHeight, setPopupHeight] = useState('60px')
     const [sessionDate, setSessionDate] = useState<Date | null>(null)
+    const [sendAnalytics, setSendAnalytics] = useState(true)
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const messageRef = useRef<HTMLTextAreaElement>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
@@ -132,6 +133,7 @@ export function Chat() {
         const token = new URLSearchParams(window.location.search).get('token')
         const _theme = new URLSearchParams(window.location.search).get('theme')
         const login = new URLSearchParams(window.location.search).get('login')
+        const analytics = new URLSearchParams(window.location.search).get('analytics')
 
         if (popup) {
             setRenderFullApp(false)
@@ -139,10 +141,9 @@ export function Chat() {
             const body = document.querySelector('body')
             if (body) body.style.overflow = 'hidden'
         }
-
         if (token === process.env.REACT_APP_ADMIN_TOKEN) setRenderAdmin(true)
-
         if (_theme) setTheme(_theme !== 'false' ? '--dark' : '')
+        if (analytics && analytics === 'false') setSendAnalytics(false)
 
         setShowLogin(Boolean(login))
 
@@ -221,6 +222,10 @@ export function Chat() {
         renderCodeBlockHeaders()
         if (messageRef.current) messageRef.current.focus()
     }, [sessionId, feedbackData])
+
+    useEffect(() => {
+        updateSourceStyles()
+    }, [theme])
 
     useEffect(() => {
         if (!minimized) {
@@ -455,6 +460,8 @@ export function Chat() {
 
     const saveAnalytics = async (prompt: string) => {
         try {
+            if (!sendAnalytics) return null
+
             const session = getSession()
             const duration_seconds = (new Date().getTime() - new Date(sessionDate || new Date()).getTime()) / 1000
 
@@ -496,7 +503,7 @@ export function Chat() {
 
             const use_context = useDocumentContext ? 'true' : 'false'
             const first_query = getSession().messages.length <= 2 ? 'true' : ''
-            
+
             const response = await fetch(`${apiURl}/api/prompt_route`, {
                 method: 'POST',
                 headers: {
@@ -518,22 +525,22 @@ export function Chat() {
                 const decoder = new TextDecoder()
                 let done = false
                 let result = ''
-                
+
                 while (!done) {
                     const { value, done: doneReading } = await reader.read()
                     done = doneReading
-                    
+
                     if (stopGenerationRef.current) {
                         reader.cancel()
                         setIsLoading(false)
                         break
                     }
-                    
+
                     if (value) {
                         const chunk = decoder.decode(value, { stream: true })
                         const cleanedChunk = curateResponse(chunk)
                         result += cleanedChunk
-                        
+
                         addToken(cleanedChunk, false)
 
                         setSessions(prev => {
@@ -552,7 +559,7 @@ export function Chat() {
                 }
 
                 if (outputRef.current) outputRef.current.innerHTML = ''
-                
+
                 setIsLoading(false)
                 const time = timePassedRef.current
                 const finalContent = curateResponse(result) + (stopGenerationRef.current ? ' [STOPPED].' : '')
@@ -584,7 +591,7 @@ export function Chat() {
                 }, 100)
                 streamIdRef.current = null
                 stopGenerationRef.current = false
-                
+
             } else {
                 renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
@@ -756,11 +763,57 @@ export function Chat() {
             }
         })
 
-        // Making links on responses add new tab
-        Array.from(document.querySelectorAll('.chat__message-bubble')).forEach(message => {
-            Array.from(message.querySelectorAll('a')).forEach(anchor => {
-                anchor.target = '_blank'
+        // Apply source links styles
+        Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
+            Array.from(message.querySelectorAll('strong')).forEach(s => {
+                if (s.textContent?.includes('Source')) {
+                    const header = document.createElement('h3')
+                    header.textContent = s.textContent
+                    header.className = `chat__message-content-assistant-source-header`
+                    s.replaceWith(header)
+                }
             })
+
+            Array.from(message.querySelectorAll('ul')).forEach(ul => {
+                Array.from(ul.querySelectorAll('a')).forEach(a => {
+                    a.target = '_blank'
+                    if (a.textContent) {
+
+                        if (!a.hasAttribute('data-source-processed')) {
+                            const title = document.createElement('p')
+                            const subtitle = document.createElement('p')
+                            title.className = `chat__message-content-assistant-source${theme}-title`
+                            subtitle.className = `chat__message-content-assistant-source${theme}-subtitle`
+                            a.className = `chat__message-content-assistant-source${theme}`
+
+                            const parts = a.textContent.split('»').map(s => s.trim())
+                            const titleText = parts.pop() || ''
+                            const subtitleText = parts.join(' / ')
+                            title.textContent = titleText
+                            subtitle.textContent = subtitleText || 'HP Developer Portal'
+
+                            a.setAttribute('data-source-processed', 'true')
+                            a.replaceChildren(title, subtitle)
+                        }
+                    }
+                })
+                if (ul.previousElementSibling && ul.previousElementSibling.outerHTML.includes('Sources')) {
+                    ul.style.listStyle = 'none';
+                    ul.style.padding = '0';
+                    const lastChild = Array.from(ul.querySelectorAll('li')).pop()
+                    if (lastChild) lastChild.style.marginBottom = '.5rem'
+                }
+            })
+        })
+    }
+
+    const updateSourceStyles = () => {
+        Array.from(document.querySelectorAll('a')).forEach(a => {
+            if (a.className.includes('chat__message-content-assistant-source')) {
+                if (a.className.includes('subtitle')) a.className = `chat__message-content-assistant-source${theme}-subtitle`
+                else if (a.className.includes('title')) a.className = `chat__message-content-assistant-source${theme}-title`
+                else a.className = `chat__message-content-assistant-source${theme}`
+            }
         })
     }
 
