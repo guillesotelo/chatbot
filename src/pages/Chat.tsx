@@ -767,7 +767,7 @@ export function Chat() {
         Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
             Array.from(message.querySelectorAll('strong')).forEach(s => {
                 if (s.textContent?.includes('Source')) {
-                    const header = document.createElement('h3')
+                    const header = document.createElement('p')
                     header.textContent = s.textContent
                     header.className = `chat__message-content-assistant-source-header`
                     s.replaceWith(header)
@@ -775,29 +775,28 @@ export function Chat() {
             })
 
             Array.from(message.querySelectorAll('ul')).forEach(ul => {
-                Array.from(ul.querySelectorAll('a')).forEach(a => {
-                    a.target = '_blank'
-                    if (a.textContent) {
-
-                        if (!a.hasAttribute('data-source-processed')) {
-                            const title = document.createElement('p')
-                            const subtitle = document.createElement('p')
-                            title.className = `chat__message-content-assistant-source${theme}-title`
-                            subtitle.className = `chat__message-content-assistant-source${theme}-subtitle`
-                            a.className = `chat__message-content-assistant-source${theme}`
-
-                            const parts = a.textContent.split('»').map(s => s.trim())
-                            const titleText = parts.pop() || ''
-                            const subtitleText = parts.join(' / ')
-                            title.textContent = titleText
-                            subtitle.textContent = subtitleText || 'HP Developer Portal'
-
-                            a.setAttribute('data-source-processed', 'true')
-                            a.replaceChildren(title, subtitle)
-                        }
-                    }
-                })
                 if (ul.previousElementSibling && ul.previousElementSibling.outerHTML.includes('Sources')) {
+                    Array.from(ul.querySelectorAll('a')).forEach(a => {
+                        a.target = '_blank'
+                        if (a.textContent) {
+                            if (!a.hasAttribute('data-source-processed')) {
+                                const title = document.createElement('p')
+                                const subtitle = document.createElement('p')
+                                title.className = `chat__message-content-assistant-source${theme}-title`
+                                subtitle.className = `chat__message-content-assistant-source${theme}-subtitle`
+                                a.className = `chat__message-content-assistant-source${theme}`
+
+                                const parts = a.textContent.split('»').map(s => s.trim())
+                                const titleText = parts.pop() || ''
+                                const subtitleText = parts.join(' / ')
+                                title.textContent = titleText
+                                subtitle.textContent = subtitleText || 'HP Developer Portal'
+
+                                a.setAttribute('data-source-processed', 'true')
+                                a.replaceChildren(title, subtitle)
+                            }
+                        }
+                    })
                     ul.style.listStyle = 'none';
                     ul.style.padding = '0';
                     const lastChild = Array.from(ul.querySelectorAll('li')).pop()
@@ -810,9 +809,11 @@ export function Chat() {
     const updateSourceStyles = () => {
         Array.from(document.querySelectorAll('a')).forEach(a => {
             if (a.className.includes('chat__message-content-assistant-source')) {
-                if (a.className.includes('subtitle')) a.className = `chat__message-content-assistant-source${theme}-subtitle`
-                else if (a.className.includes('title')) a.className = `chat__message-content-assistant-source${theme}-title`
-                else a.className = `chat__message-content-assistant-source${theme}`
+                Array.from(a.querySelectorAll('p')).forEach(p => {
+                    if (p.className.includes('subtitle')) p.className = `chat__message-content-assistant-source${theme}-subtitle`
+                    else if (p.className.includes('title')) p.className = `chat__message-content-assistant-source${theme}-title`
+                })
+                a.className = `chat__message-content-assistant-source${theme}`
             }
         })
     }
