@@ -1,4 +1,4 @@
-export const APP_VERSION = '2.4'
+export const APP_VERSION = '2.5'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const TECH_ISSUE_LLM = [
