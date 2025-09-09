@@ -458,6 +458,14 @@ export function Chat() {
         tokenBuffer = ''
     };
 
+    const getPromptSubstract = (prompt: string) => {
+        let subs = prompt.substring(0, 300)
+        if (prompt.length > 300 && prompt.includes(instructionEnd)) {
+            subs = `${prompt.replace(instructionStart, 'With context: "').substring(0, 100)}... [...]" Question: ${prompt.split(instructionEnd)[1]?.substring(0, 200)}`
+        }
+        return subs
+    }
+
     const saveAnalytics = async (prompt: string) => {
         try {
             if (!sendAnalytics) return null
@@ -470,7 +478,7 @@ export function Chat() {
                 session_id: session.id,
                 message_count: session.messages.length,
                 token_count: prompt.length,
-                prompt: prompt.substring(0, 300),
+                prompt: getPromptSubstract(prompt),
                 duration_seconds
             }
 
