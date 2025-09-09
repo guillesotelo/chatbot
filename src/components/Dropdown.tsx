@@ -20,6 +20,7 @@ type Props = {
     loading?: boolean
     bgColor?: string
     color?: string
+    noBorder?: boolean
 }
 
 export default function Dropdown(props: Props) {
@@ -44,7 +45,8 @@ export default function Dropdown(props: Props) {
         multiselect,
         loading,
         bgColor,
-        color
+        color,
+        noBorder
     } = props
 
     useEffect(() => {
@@ -98,12 +100,13 @@ export default function Dropdown(props: Props) {
         return <div
             className={`dropdown__select${theme}`}
             style={{
-                border: color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
+                border: noBorder ? '1px solid transparent' : color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
                 borderBottomRightRadius: openDrop ? 0 : '',
                 borderBottomLeftRadius: openDrop ? 0 : '',
                 filter: openDrop ? theme ? 'brightness(120%)' : 'brightness(95%)' : '',
                 backgroundColor: bgColor || '',
-                color: color || ''
+                color: color || '',
+                textAlign: noBorder && !openDrop ? 'end' : 'start'
             }}
             ref={selectRef}
             onClick={() => setOpenDrop(!openDrop)}>
@@ -124,7 +127,7 @@ export default function Dropdown(props: Props) {
         return <div
             className={`dropdown__select${theme}`}
             style={{
-                border: color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
+                border: noBorder ? '1px solid transparent' : color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
                 borderBottomRightRadius: openDrop ? 0 : '',
                 borderBottomLeftRadius: openDrop ? 0 : '',
                 filter: openDrop ? theme ? 'brightness(120%)' : 'brightness(95%)' : ''

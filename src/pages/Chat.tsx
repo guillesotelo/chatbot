@@ -775,7 +775,9 @@ export function Chat() {
             })
 
             Array.from(message.querySelectorAll('ul')).forEach(ul => {
-                if (ul.previousElementSibling && ul.previousElementSibling.outerHTML.includes('Sources')) {
+                if (ul.previousElementSibling &&
+                    (ul.previousElementSibling.outerHTML.includes('Source:')
+                        || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
                     Array.from(ul.querySelectorAll('a')).forEach(a => {
                         a.target = '_blank'
                         if (a.textContent) {
@@ -1474,6 +1476,7 @@ export function Chat() {
                             setSelected={selectSession}
                             value={getSession()}
                             style={{ width: '35vw' }}
+                            noBorder
                         />
                         <Tooltip tooltip='Start new chat'>
                             <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__popup-window-header-newchat${theme}`} />
