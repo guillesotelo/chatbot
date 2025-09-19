@@ -844,28 +844,41 @@ export function Chat() {
             "Hi there! What's on your mind?",
             "Hello! Anything specific I can do for you?",
             "Hey! How can I make things easier for you today?",
-            "Hi! I'm here to help whenever you're ready.",
+            "Hi! I'm here to help whenever you're ready",
             "Hello there! Got something you'd like to explore?",
             "Hey! Looking for some answers?",
             "Hi again! What's next on your list?",
-            "Hello! Tell me what you're looking for.",
-            "Hi! Let's solve something together."
+            "Hello! Tell me what you're looking for",
+            "Hi! Let's solve something together"
         ]
 
-        const message = greetings[Math.floor(Math.random() * (greetings.length -1))]
+        const message = greetings[Math.floor(Math.random() * greetings.length)];
+
         if (greetingsRef.current) {
             greetingsRef.current.innerHTML = ''
             let delay = 0
-            message.split("").forEach((char, i) => {
-                const span = document.createElement("span")
-                span.innerHTML = char === " " ? "&nbsp;" : char
-                span.classList.add("chat__box-greetings-letter")
-                greetingsRef.current?.appendChild(span)
 
-                setTimeout(() => {
-                    span.classList.add("chat__box-greetings-letter--visible")
-                }, delay)
-                delay += 35
+            const words = message.split(" ")
+
+            words.forEach((word, wi) => {
+                const wordSpan = document.createElement("span");
+                wordSpan.style.display = "inline-block"
+                wordSpan.style.marginRight = "0.3em"
+
+                word.split("").forEach((char) => {
+                    const span = document.createElement("span")
+                    span.textContent = char
+                    span.classList.add("chat__box-greetings-letter")
+                    wordSpan.appendChild(span)
+
+                    setTimeout(() => {
+                        span.classList.add("chat__box-greetings-letter--visible")
+                    }, delay)
+
+                    delay += 35
+                })
+
+                greetingsRef.current?.appendChild(wordSpan)
             })
         }
     }
