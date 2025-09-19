@@ -100,7 +100,7 @@ export default function Dropdown(props: Props) {
         return <div
             className={`dropdown__select${theme}`}
             style={{
-                border: noBorder ? '1px solid transparent' : color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
+                border: noBorder && !openDrop ? '1px solid transparent' : color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
                 borderBottomRightRadius: openDrop ? 0 : '',
                 borderBottomLeftRadius: openDrop ? 0 : '',
                 filter: openDrop ? theme ? 'brightness(120%)' : 'brightness(95%)' : '',
@@ -127,7 +127,7 @@ export default function Dropdown(props: Props) {
         return <div
             className={`dropdown__select${theme}`}
             style={{
-                border: noBorder ? '1px solid transparent' : color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
+                border: noBorder && !openDrop ? '1px solid transparent' : color ? `1px solid ${color}` : openDrop ? '1px solid #7089AC' : '',
                 borderBottomRightRadius: openDrop ? 0 : '',
                 borderBottomLeftRadius: openDrop ? 0 : '',
                 filter: openDrop ? theme ? 'brightness(120%)' : 'brightness(95%)' : ''

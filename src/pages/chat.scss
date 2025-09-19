@@ -412,13 +412,22 @@
             margin-bottom: 2rem;
         }
 
-        &-hi {
+        &-greetings {
             font-size: 1.8rem;
             font-weight: bold;
             text-align: center;
-            transition: .5s;
-            opacity: 0;
-            animation: fade-in .5s ease-in forwards;
+            animation: fade-in 1.5s ease-in forwards;
+
+            &-letter {
+                opacity: 0;
+                display: inline-block;
+                transition: opacity 0.4s ease;
+
+                &--visible {
+                    opacity: 1;
+                }
+            }
+
         }
     }
 
@@ -522,6 +531,7 @@
 
                         &:hover {
                             background: #00000087;
+
                             &>* {
                                 opacity: .85;
                             }
