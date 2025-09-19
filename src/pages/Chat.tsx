@@ -93,7 +93,6 @@ export function Chat() {
     const [copyMessage, setCopyMessage] = useState(-1)
     const [goodScore, setGoodScore] = useState(-1)
     const [badScore, setBadScore] = useState(-1)
-    const [greetings, setGreetings] = useState('')
     const [prod, setProd] = useState(true)
     const [renderFullApp, setRenderFullApp] = useState(true) // Change to window.innerWidth > 1050 when ready to use popup mode
     const [renderAdmin, setRenderAdmin] = useState(false)
@@ -123,9 +122,9 @@ export function Chat() {
     const streamIdRef = useRef<string | null>(null)
     const resetMemoryRef = useRef<null | HTMLImageElement>(null)
     const memoryRef = useRef<dataObj>({})
-    const greetingsInterval = useRef<any>(null)
     const appUpdateRef = useRef<any>(null)
     const outputRef = useRef<HTMLDivElement>(null)
+    const greetingsRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -221,6 +220,7 @@ export function Chat() {
     useEffect(() => {
         renderCodeBlockHeaders()
         if (messageRef.current) messageRef.current.focus()
+        generateGreetings()
     }, [sessionId, feedbackData])
 
     useEffect(() => {
@@ -829,23 +829,45 @@ export function Chat() {
     }
 
     const generateGreetings = () => {
-        const message = "Hi, what can I help you with today?"
-        let index = 0
+        const greetings = [
+            "Hi, what can I help you with today?",
+            "Hello! How can I assist you?",
+            "Hey there. What brings you here?",
+            "Hi! Need help with something?",
+            "What would you like to know today?",
+            "Hi there! How can I support you?",
+            "Hi there! Got a question for me?",
+            "Hey! What can I do for you?",
+            "Hello! Ready to get started?",
+            "Hi, what can I help with?",
+            "Good to see you! How can I help?",
+            "Hi there! What's on your mind?",
+            "Hello! Anything specific I can do for you?",
+            "Hey! How can I make things easier for you today?",
+            "Hi! I'm here to help whenever you're ready.",
+            "Hello there! Got something you'd like to explore?",
+            "Hey! Looking for some answers?",
+            "Hi again! What's next on your list?",
+            "Hello! Tell me what you're looking for.",
+            "Hi! Let's solve something together."
+        ]
 
-        if (greetingsInterval.current) clearInterval(greetingsInterval.current)
-        setGreetings('')
+        const message = greetings[Math.floor(Math.random() * (greetings.length -1))]
+        if (greetingsRef.current) {
+            greetingsRef.current.innerHTML = ''
+            let delay = 0
+            message.split("").forEach((char, i) => {
+                const span = document.createElement("span")
+                span.innerHTML = char === " " ? "&nbsp;" : char
+                span.classList.add("chat__box-greetings-letter")
+                greetingsRef.current?.appendChild(span)
 
-        greetingsInterval.current = setInterval(() => {
-            if (index < message.length) {
-                setGreetings(message.slice(0, index + 1))
-                index++
-            } else {
-                clearInterval(greetingsInterval.current)
                 setTimeout(() => {
-                    setGreetings(message)
-                }, 1000)
-            }
-        }, 35)
+                    span.classList.add("chat__box-greetings-letter--visible")
+                }, delay)
+                delay += 35
+            })
+        }
     }
 
     const stopGenerating = async () => {
@@ -1581,7 +1603,7 @@ export function Chat() {
         return (<div className="chat__box">
             <div className="chat__box-list">
                 {!getSession().messages.length ?
-                    <p className='chat__box-hi'>{greetings}</p>
+                    <p ref={greetingsRef} className='chat__box-greetings'></p>
                     : getSession().messages.map((message: dataObj, index: number) => (
                         <div key={index}>
                             {conversationContextMessage(index)}
