@@ -1,6 +1,28 @@
-export const APP_VERSION = '2.5'
+export const APP_VERSION = '2.6'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
+export const GREETINGS = [
+    "Hi, what can I help you with today?",
+    "Hello! How can I assist you?",
+    "Hey there. What brings you here?",
+    "Hi! Need help with something?",
+    "What would you like to know today?",
+    "Hi there! How can I support you?",
+    "Hi there! Got a question for me?",
+    "Hey! What can I do for you?",
+    "Hello! Ready to get started?",
+    "Hi, what can I help with?",
+    "Good to see you! How can I help?",
+    "Hi there! What's on your mind?",
+    "Hello! Anything specific I can do for you?",
+    "Hey! How can I make things easier for you today?",
+    "Hi! I'm here to help whenever you're ready",
+    "Hello there! Got something you'd like to explore?",
+    "Hey! Looking for some answers?",
+    "Hi again! What's next on your list?",
+    "Hello! Tell me what you're looking for",
+    "Hi! Let's solve something together"
+]
 export const TECH_ISSUE_LLM = [
     "I'm really sorry, but I'm experiencing some technical difficulties at the moment. Please try again later, and I'll do my best to assist you. Thank you for your patience!",
     "Apologies for the inconvenience, but it seems I'm temporarily unable to provide responses due to a system issue or maintenance. Please check back shortly. Thank you for understanding!",
@@ -77,7 +99,7 @@ export const referencePatterns = [
     // Pronouns and references
     "it", "this", "that", "those", "them", "they", "he", "she", "him", "her",
     "these", "one", "ones", "something", "someone", "somebody", "thing",
-    
+
     // Continuation words
     "but", "so", "then", "also", "and", "or", "besides", "anyway", "however",
     "furthermore", "nevertheless", "moreover", "thus", "therefore", "hence",
@@ -101,7 +123,7 @@ export const referencePatterns = [
 export const greetingPatterns = [
     "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
     "what's up", "howdy", "greetings", "sup", "morning", "evening",
-    "hola", "bonjour", "ciao", "salut", "hallo", "namaste", 
+    "hola", "bonjour", "ciao", "salut", "hallo", "namaste",
     "hej", "god morgon", "hejdå", "tjena", "hallå"
 ]
 
