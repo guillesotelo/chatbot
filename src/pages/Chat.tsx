@@ -59,7 +59,7 @@ import HP_DARK from '../assets/images/veronica-logo3_dark.png';
 import NewContext from '../assets/icons/new-context.svg';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
-import { APP_VERSION, gratitudePatterns, greetingPatterns, instructionEnd, instructionStart, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, referencePatterns, TECH_ISSUE_LLM } from '../constants/app';
+import { APP_VERSION, gratitudePatterns, greetingPatterns, GREETINGS, instructionEnd, instructionStart, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, referencePatterns, TECH_ISSUE_LLM } from '../constants/app';
 import { autoScroll, cleanText, fixMarkdownLinks, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
@@ -829,30 +829,7 @@ export function Chat() {
     }
 
     const generateGreetings = () => {
-        const greetings = [
-            "Hi, what can I help you with today?",
-            "Hello! How can I assist you?",
-            "Hey there. What brings you here?",
-            "Hi! Need help with something?",
-            "What would you like to know today?",
-            "Hi there! How can I support you?",
-            "Hi there! Got a question for me?",
-            "Hey! What can I do for you?",
-            "Hello! Ready to get started?",
-            "Hi, what can I help with?",
-            "Good to see you! How can I help?",
-            "Hi there! What's on your mind?",
-            "Hello! Anything specific I can do for you?",
-            "Hey! How can I make things easier for you today?",
-            "Hi! I'm here to help whenever you're ready",
-            "Hello there! Got something you'd like to explore?",
-            "Hey! Looking for some answers?",
-            "Hi again! What's next on your list?",
-            "Hello! Tell me what you're looking for",
-            "Hi! Let's solve something together"
-        ]
-
-        const message = greetings[Math.floor(Math.random() * greetings.length)];
+        const message = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
 
         if (greetingsRef.current) {
             greetingsRef.current.innerHTML = ''
