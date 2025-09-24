@@ -274,9 +274,9 @@ export function Chat() {
                     const { app_version } = await response.json()
                     if (app_version && app_version !== APP_VERSION) {
                         const tryUpdate = localStorage.getItem('tryUpdate')
-                        if (!tryUpdate) window.location.reload()
-                        localStorage.setItem('tryUpdate', APP_VERSION)
+                        localStorage.setItem('tryUpdate', app_version)
                         console.log('Veronica just updated to the latest version: ', app_version)
+                        if (!tryUpdate || tryUpdate !== app_version) window.location.reload()
                     } else {
                         console.log('Veronica version is the latest: ', app_version)
                     }
@@ -289,7 +289,7 @@ export function Chat() {
         if (appUpdateRef.current) clearInterval(appUpdateRef.current)
         checkAppVersion()
 
-        appUpdateRef.current = setInterval(checkAppVersion, 60000)
+        appUpdateRef.current = setInterval(checkAppVersion, 600000)
     }
 
     const updateMemory = () => {
@@ -437,19 +437,19 @@ export function Chat() {
         return subs
     }
 
-    const saveAnalytics = async (prompt: string) => {
+    const saveAnalytics = async (session: sessionType, prompt: string) => {
         try {
             if (!sendAnalytics) return null
 
-            const session = getSession()
             const duration_seconds = (new Date().getTime() - new Date(sessionDate || new Date()).getTime()) / 1000
 
             const analytics = {
+                ...session,
                 duration: 0,
                 session_id: session.id,
                 message_count: session.messages.length,
                 token_count: prompt.length,
-                prompt: getPromptSubstract(prompt),
+                prompt,
                 duration_seconds
             }
 
@@ -464,9 +464,10 @@ export function Chat() {
         }
     }
 
-    const getModelResponse = async (content: string) => {
+    const getModelResponse = async (content: string, unparsedContent: string) => {
         const sId = sessionId || ''
         if (isLoading[sId]) return
+
         try {
             setIsLoading(p => ({ ...p, [sId]: true }))
             setSessions(prev => {
@@ -565,6 +566,16 @@ export function Chat() {
                     })
                 })
 
+                const userMessage = { role: 'user', content: unparsedContent }
+                const cachedSession = {
+                    ...getSession(),
+                    completion: null,
+                    messages: [...getSession().messages, userMessage, newMessage],
+                    isLoading: false,
+                    updated: new Date().getTime()
+                }
+                await saveAnalytics(cachedSession, unparsedContent)
+
                 setTimeout(() => {
                     setTimePassed(0)
                     renderCodeBlockHeaders()
@@ -573,10 +584,10 @@ export function Chat() {
                 stopGenerationRef.current = false
 
             } else {
+                await saveAnalytics(getSession(), unparsedContent)
                 renderErrorResponse()
                 console.error('Failed to fetch streamed answer')
             }
-            await saveAnalytics(content)
         } catch (error) {
             renderErrorResponse()
             console.error(error)
@@ -894,7 +905,7 @@ export function Chat() {
 
         if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude')
 
-        getModelResponse(curatePrompt(content))
+        getModelResponse(curatePrompt(content), content)
     }
 
     const curatePrompt = (userPrompt: string) => {
@@ -910,7 +921,7 @@ export function Chat() {
     }
 
     const generateGreetingResponse = async (type: 'greetings' | 'gratitude') => {
-        setIsLoading(p => ({...p, [sessionId || ''] : true}))
+        setIsLoading(p => ({ ...p, [sessionId || '']: true }))
         const firstUse = sessions.length <= 1
         const greetings = firstUse ? NEW_USER_GREETINGS : RETURNING_USER_GREETINGS
         const welcomeMessage = greetings[Math.floor(Math.random() * greetings.length)]
@@ -964,7 +975,7 @@ export function Chat() {
             })
         })
         setTimeout(() => setTimePassed(0), 100)
-        setIsLoading(p => ({...p, [sessionId || ''] : false}))
+        setIsLoading(p => ({ ...p, [sessionId || '']: false }))
     }
 
     const resizeTextArea = (textarea: any) => {

@@ -22,8 +22,8 @@ export const autoScroll = (element: string = 'body', behavior: any = 'smooth') =
 
 export const getDate = (dateString: Date | number | string | undefined) => {
     if (dateString) {
-        dateString = dateString instanceof Date || typeof dateString === 'string' ? dateString : Number(dateString)
-        const date = new Date(dateString)
+
+        const date = Number(dateString) > 10000 ? new Date(Number(dateString)) : new Date(dateString)
         if (date.getHours() === 24) date.setHours(0)
         return date.toLocaleDateString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
     }
