@@ -171,7 +171,7 @@ export default function DataTable(props: Props) {
                                     typeof row[header.value] === 'boolean' && header.value != 'userAlert' ?
                                         row[header.value] ? theme ? '#00b000' : 'green' : 'red' : ''
                             }}>
-                            {(header.value === 'createdAt' || header.value === 'updatedAt' || header.value === 'session_id' || header.value === 'start' || header.value === 'end')
+                            {(header.value === 'timestamp' || header.value === 'createdAt' || header.value === 'updatedAt' || header.value === 'session_id' || header.value === 'start' || header.value === 'end')
                                 && row[header.value] ? `${getDate(row[header.value])}` :
                                 header.value === 'active' || header.value === 'isSuper' ? row[header.value] ? 'Yes' : 'No' :
                                     header.value === 'score' ? row[header.value] ? 'GOOD' : 'BAD' :

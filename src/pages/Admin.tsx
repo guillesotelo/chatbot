@@ -84,6 +84,7 @@ export default function Admin({ }: Props) {
     const [analyticTime, setAnalyticTime] = useState(analyticTimeOptions[2])
     const [selectedVersion, setSelectedVersion] = useState('Production v1.x')
     const [showFullChat, setShowFullChat] = useState<dataObj>({})
+    const [selectedSession, setSelectedSession] = useState(-1)
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
 
@@ -118,7 +119,7 @@ export default function Admin({ }: Props) {
         Prism.highlightAll()
         renderCodeBlockHeaders()
 
-    }, [selectedFeedback])
+    }, [selectedFeedback, selectedSession])
 
     useEffect(() => {
         const timeMap: { [value: string]: number } = {
@@ -185,7 +186,11 @@ export default function Admin({ }: Props) {
 
             const analytics = await response.json()
             if (analytics && Array.isArray(analytics)) {
-                setAnalyticsCopy(sortArray(sortArray(analytics, 'session_id', true), 'createdAt', true))
+                const parsedAnalytics = analytics.map(a => ({
+                    ...a,
+                    messages: JSON.parse(a.messages || '[]')
+                }))
+                setAnalyticsCopy(sortArray(sortArray(parsedAnalytics, 'session_id', true), 'timestamp', true))
             }
 
         } catch (error) {
@@ -268,13 +273,21 @@ export default function Admin({ }: Props) {
     }
 
     const renderCodeBlockHeaders = () => {
-        const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
+        // const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
+        const codeBlocks = document.querySelectorAll('pre')
+
         codeBlocks.forEach((codeBlock, index) => {
-            if (!codeBlock.innerHTML.includes('chat__code-header') || !codeBlock.outerHTML.includes('chat__code-header')) {
-                const language = codeBlock.className.replace('language-', '')
+            if (!codeBlock.hasAttribute("data-highlighted")) {
+                const child = codeBlock.querySelector('code') as HTMLElement
+                Prism.highlightElement(child)
+                codeBlock.setAttribute("data-highlighted", "true")
+            }
+
+            if (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark")) {
+                const language = (codeBlock.outerHTML.split('"')[1] || 'code').replace('language-', '')
 
                 const header = document.createElement('div')
-                header.className = 'chat__code-header'
+                header.className = `chat__code-header`
                 header.innerHTML = `<p class="chat__code-header-language">${language}</p>`
 
                 const headerCopy = document.createElement('div')
@@ -292,10 +305,47 @@ export default function Admin({ }: Props) {
             }
         })
 
-        // Making links on responses add new tab
+        // Apply source links styles
         Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
-            Array.from(message.querySelectorAll('a')).forEach(anchor => {
-                anchor.target = '_blank'
+            Array.from(message.querySelectorAll('strong')).forEach(s => {
+                if (s.textContent?.includes('Source')) {
+                    const header = document.createElement('p')
+                    header.textContent = s.textContent
+                    header.className = `chat__message-content-assistant-source-header`
+                    s.replaceWith(header)
+                }
+            })
+
+            Array.from(message.querySelectorAll('ul')).forEach(ul => {
+                if (ul.previousElementSibling &&
+                    (ul.previousElementSibling.outerHTML.includes('Source:')
+                        || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
+                    Array.from(ul.querySelectorAll('a')).forEach(a => {
+                        a.target = '_blank'
+                        if (a.textContent) {
+                            if (!a.hasAttribute('data-source-processed')) {
+                                const title = document.createElement('p')
+                                const subtitle = document.createElement('p')
+                                title.className = `chat__message-content-assistant-source${theme}-title`
+                                subtitle.className = `chat__message-content-assistant-source${theme}-subtitle`
+                                a.className = `chat__message-content-assistant-source${theme}`
+
+                                const parts = a.textContent.split('»').map(s => s.trim())
+                                const titleText = parts.pop() || ''
+                                const subtitleText = parts.join(' / ')
+                                title.textContent = titleText
+                                subtitle.textContent = subtitleText || 'HP Developer Portal'
+
+                                a.setAttribute('data-source-processed', 'true')
+                                a.replaceChildren(title, subtitle)
+                            }
+                        }
+                    })
+                    ul.style.listStyle = 'none';
+                    ul.style.padding = '0';
+                    const lastChild = Array.from(ul.querySelectorAll('li')).pop()
+                    if (lastChild) lastChild.style.marginBottom = '.5rem'
+                }
             })
         })
     }
@@ -463,19 +513,53 @@ export default function Admin({ }: Props) {
     const renderUserQueriesModal = () => {
         return (
             <Modal
-                title={`User queries`}
-                onClose={() => setShowUserQueries(false)}>
-                <div className='chat__admin-queries'>
-                    {analyticsCopy.filter(a => a.prompt).map((analytic, i) =>
-                        <div key={i} className='chat__admin-query'>
-                            <p className='chat__admin-query-prompt'>{analytic.prompt}</p>
-                            <p className='chat__admin-query-date'>{getDate(analytic.timestamp)}</p>
-                        </div>)}
+                title={selectedSession !== -1 ?
+                    `${analyticsCopy[selectedSession].messages[0].content}`
+                    : `Registered user queries (${analyticsCopy.filter(a => a.prompt).length})`}
+                subtitle={`Total LLM queries ${analyticsCopy.length}`}
+                onClose={() => {
+                    setShowUserQueries(false)
+                    setSelectedSession(-1)
+                }}>
+                {selectedSession !== -1 ? <div>
+                    <div className="chat__feedback-content">
+                        <Button
+                            label='Back to query list'
+                            className={`button__outline${theme}`}
+                            onClick={() => setSelectedSession(-1)}
+                            style={{ width: 'fit-content' }}
+                        />
+                        {analyticsCopy[selectedSession].messages.map((session: sessionType) => (
+                            <div
+                                key={session.id}
+                                className={`chat__feedback-content-${session.role}${theme}`}
+                                style={{
+                                    borderColor: 'transparent',
+                                    marginBottom: '1rem'
+                                }}
+                                dangerouslySetInnerHTML={{
+                                    __html: marked.parse(session.content || '') as string,
+                                }} />))}
+                    </div>
                 </div>
+                    :
+                    <div className='chat__admin-queries'>
+                        {analyticsCopy.filter(a => a.prompt).map((analytic, i) =>
+                            <div
+                                key={i}
+                                className='chat__admin-query' onClick={analytic.messages.length ? () => setSelectedSession(i) : undefined}
+                                style={{
+                                    background: analytic.messages.length ? '' : 'unset',
+                                    cursor:  analytic.messages.length ? 'pointer' : 'unset'
+                                }}>
+                                <p className='chat__admin-query-prompt'>{analytic.messages[0] ? analytic.messages[0].content : analytic.prompt}</p>
+                                <p className='chat__admin-query-date'>{getDate(analytic.timestamp)}</p>
+                            </div>)}
+                    </div>
+                }
             </Modal>
         )
     }
-
 
     const renderFeedbackModal = () => {
         return (

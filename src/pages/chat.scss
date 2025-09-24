@@ -482,6 +482,9 @@
 
             &>* {
                 background: inherit;
+            }
+
+            &>p {
                 margin: 0;
             }
 
@@ -495,8 +498,12 @@
 
                 &>* {
                     background: inherit;
+                }
+
+                &>p {
                     margin: 0;
                 }
+
             }
 
             &-assistant {
@@ -509,8 +516,11 @@
 
                 &>* {
                     background: inherit;
-                    margin: 0;
                     max-width: 100%;
+                }
+
+                &>p {
+                    margin: 0;
                 }
 
                 &-source {
@@ -1186,9 +1196,16 @@
         &-query {
             display: flex;
             flex-direction: column;
+            padding: 0 .5rem .5rem;
+            border-radius: .5rem;
+
+            &:hover {
+                background: #0000000b;
+            }
 
             &-prompt {
                 margin: .5rem 0 0 0;
+                font-size: .9rem;
             }
 
             &-date {
