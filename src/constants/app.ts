@@ -1,7 +1,7 @@
-export const APP_VERSION = '2.6'
+export const APP_VERSION = '2.7'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
-export const GREETINGS = [
+export const NEW_USER_GREETINGS = [
     "Hi, what can I help you with today?",
     "Hello! How can I assist you?",
     "Hey there. What brings you here?",
@@ -19,10 +19,33 @@ export const GREETINGS = [
     "Hi! I'm here to help whenever you're ready",
     "Hello there! Got something you'd like to explore?",
     "Hey! Looking for some answers?",
-    "Hi again! What's next on your list?",
-    "Hello! Tell me what you're looking for",
-    "Hi! Let's solve something together"
+    "Hello! Tell me what you're looking for.",
+    "Hi! Let's solve something together.",
 ]
+
+export const RETURNING_USER_GREETINGS = [
+    "Hi again! Welcome back.",
+    "Hello again! What's new with you?",
+    "Hey, good to see you again!",
+    "Welcome back! What can I help you with this time?",
+    "Hi again! What's on your mind today?",
+    "Hello! Ready to continue where we left off?",
+    "Hey, you're back! Got another question?",
+    "Hi again! Let's dive right in.",
+    "Good to see you again! What would you like to explore?",
+    "Hey there! Back for more?",
+    "Welcome back! How can I assist this time?",
+    "Hi again! Always happy to help.",
+    "Hello again! What shall we tackle today?",
+    "Hey, good to have you back. Need a hand?",
+    "Welcome back! What's next?",
+    "Hi again! I'm here whenever you need.",
+    "Hello again! What can I do for you today?",
+    "Hey! Glad you returned. What's up?",
+    "Welcome back! Got another topic in mind?",
+    "Hi again! Let's continue your journey."
+]
+
 export const TECH_ISSUE_LLM = [
     "I'm really sorry, but I'm experiencing some technical difficulties at the moment. Please try again later, and I'll do my best to assist you. Thank you for your patience!",
     "Apologies for the inconvenience, but it seems I'm temporarily unable to provide responses due to a system issue or maintenance. Please check back shortly. Thank you for understanding!",
@@ -38,6 +61,19 @@ export const TECH_ISSUE_LLM = [
     "Oh no! I'm experiencing a temporary glitch or maintenance downtime. Please bear with me and check back soon. I'll be happy to help once I'm back up.",
     "Sorry for the interruption! I'm momentarily offline due to a technical issue or updates. Please revisit in a bit, and I'll be ready to assist!",
     "Thank you for your patience! I'm unavailable right now due to a system update or issue. Please come back shortly, and I'll do my best to help you."
+]
+
+export const WELCOME_RESPONSES = [
+    "You are welcome! If you have a specific question about HPx, please let me know and I'll do my best to provide accurate information.",
+    "No problem! Feel free to ask me anything about HPx and I'll help however I can.",
+    "You're very welcome! Do you have a particular question about HPx I can answer?",
+    "Glad I could help! If there's something specific about HPx you'd like to know, just ask.",
+    "You're welcome! Let me know your HPx question and I'll do my best to assist.",
+    "Anytime! If you'd like more details about HPx, just tell me what you're curious about.",
+    "You are welcome! Do you want me to go into something specific regarding HPx?",
+    "Happy to help! If you have a focused question on HPx, let me know.",
+    "You're very welcome! What would you like to dive into about HPx?",
+    "No worries! If you'd like, I can explain something specific about HPx for you."
 ]
 
 export const API_URL = ''
