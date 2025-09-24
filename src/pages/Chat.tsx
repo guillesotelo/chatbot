@@ -59,7 +59,23 @@ import HP_DARK from '../assets/images/veronica-logo3_dark.png';
 import NewContext from '../assets/icons/new-context.svg';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
-import { APP_VERSION, gratitudePatterns, greetingPatterns, GREETINGS, instructionEnd, instructionStart, POPUP_HEIGHT, POPUP_WIDTH, POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH, questionStarters, referencePatterns, TECH_ISSUE_LLM } from '../constants/app';
+import {
+    APP_VERSION,
+    gratitudePatterns,
+    greetingPatterns,
+    instructionEnd,
+    instructionStart,
+    NEW_USER_GREETINGS,
+    POPUP_HEIGHT,
+    POPUP_WIDTH,
+    POPUP_WINDOW_HEIGHT,
+    POPUP_WINDOW_WIDTH,
+    questionStarters,
+    referencePatterns,
+    RETURNING_USER_GREETINGS,
+    TECH_ISSUE_LLM,
+    WELCOME_RESPONSES
+} from '../constants/app';
 import { autoScroll, cleanText, fixMarkdownLinks, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
@@ -97,7 +113,7 @@ export function Chat() {
     const [renderFullApp, setRenderFullApp] = useState(true) // Change to window.innerWidth > 1050 when ready to use popup mode
     const [renderAdmin, setRenderAdmin] = useState(false)
     const [minimized, setMinimized] = useState(false) // Set to default true only for production (to use the button) * default false fixes Firefox issue
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState<dataObj>({})
     const [useDocumentContext, setUseDocumentContext] = useState<boolean>(mode === 'query' || true)
     const [scrollLocked, setScrollLocked] = useState(false)
     const [timePassed, setTimePassed] = useState(0)
@@ -218,9 +234,9 @@ export function Chat() {
     }, [sessions])
 
     useEffect(() => {
-        renderCodeBlockHeaders()
         if (messageRef.current) messageRef.current.focus()
         generateGreetings()
+        renderCodeBlockHeaders()
     }, [sessionId, feedbackData])
 
     useEffect(() => {
@@ -277,7 +293,7 @@ export function Chat() {
     }
 
     const updateMemory = () => {
-        if (!sessionId || isLoading || !memoryRef.current || !getSession().messages.length) return
+        if (!sessionId || isLoading[sessionId] || !memoryRef.current || !getSession().messages.length) return
         let chatContext = ['']
         const maxChars = 3500
         const rMessages = [...getSession().messages].reverse() // mutation from the original
@@ -402,26 +418,7 @@ export function Chat() {
         return fixMarkdownLinks(stringWithoutPatterns)
     }
 
-    const isCompleteBlock = (text: string) => {
-        // const trimmed = text.trim();
-
-        // return (
-        //     /\n{2,}/.test(trimmed) || // Paragraph break
-        //     /(\n[-*+] |\n\d+\. )/.test(trimmed) && /\n\n/.test(trimmed) || // Likely list
-        //     /```[\s\S]*?```/.test(trimmed) || // Complete code block
-        //     />[^\n]*\n\n/.test(trimmed) // Blockquote closed
-        // );
-
-        // code block
-        if (text.includes('```')) return (text.split("```").length - 1) % 2 === 0
-        // lists
-        if (text.includes('*') || text.includes('-')) return (text.indexOf('\n\n') > text.indexOf('*') || text.indexOf('\n\n') > text.indexOf('-'))
-
-        return true
-    }
-
-    let tokenBuffer = ''
-    const addToken = async (newToken: string, animate: boolean = true) => {
+    const addToken = async (tokenBuffer: string) => {
         if (!outputRef.current) return
 
         if (!tokenBuffer && getSession().messages.length > 2) {
@@ -429,34 +426,8 @@ export function Chat() {
             outputRef.current.style.minHeight = renderFullApp ? '65vh' : '45vh'
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
         }
-
-        tokenBuffer += newToken
-
-        if (!animate) {
-            return outputRef.current.innerHTML = await marked.parse(tokenBuffer)
-        }
-
-        const shouldRender = isCompleteBlock(outputRef.current.innerHTML) && tokenBuffer.length > 60
-        //  || tokenBuffer.length > 200
-
-        if (!shouldRender || !tokenBuffer) return
-
-        const html = await marked.parse(tokenBuffer);
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-
-        // Append each top-level node with animation
-        Array.from(temp.childNodes).forEach(node => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                const span = document.createElement('span')
-                span.innerHTML = (node as HTMLElement).innerHTML.replaceAll('```\n', '</code></pre>').replaceAll('```', '<pre><code class="language-">')
-                span.classList.add('chat__token');
-                outputRef.current!.appendChild(span);
-            } else if (node.nodeValue !== '\n') outputRef.current!.appendChild(node);
-        });
-
-        tokenBuffer = ''
-    };
+        outputRef.current.innerHTML = await marked.parse(tokenBuffer)
+    }
 
     const getPromptSubstract = (prompt: string) => {
         let subs = prompt.substring(0, 300)
@@ -494,9 +465,10 @@ export function Chat() {
     }
 
     const getModelResponse = async (content: string) => {
-        if (isLoading) return
+        const sId = sessionId || ''
+        if (isLoading[sId]) return
         try {
-            setIsLoading(true)
+            setIsLoading(p => ({ ...p, [sId]: true }))
             setSessions(prev => {
                 return prev.map(s => {
                     if (s.id === getSession().id) {
@@ -540,7 +512,7 @@ export function Chat() {
 
                     if (stopGenerationRef.current) {
                         reader.cancel()
-                        setIsLoading(false)
+                        setIsLoading(p => ({ ...p, [sId]: false }))
                         break
                     }
 
@@ -549,7 +521,7 @@ export function Chat() {
                         const cleanedChunk = curateResponse(chunk)
                         result += cleanedChunk
 
-                        addToken(cleanedChunk, false)
+                        addToken(result)
 
                         setSessions(prev => {
                             return prev.map(s => {
@@ -568,7 +540,7 @@ export function Chat() {
 
                 if (outputRef.current) outputRef.current.innerHTML = ''
 
-                setIsLoading(false)
+                setIsLoading(p => ({ ...p, [sId]: false }))
                 const time = timePassedRef.current
                 const finalContent = curateResponse(result) + (stopGenerationRef.current ? ' [STOPPED].' : '')
                 const newMessage = {
@@ -626,7 +598,7 @@ export function Chat() {
     const renderErrorResponse = async () => {
         stopGenerationRef.current = false
         const time = timePassedRef.current
-        setIsLoading(false)
+        setIsLoading(p => ({ ...p, [sessionId || '']: false }))
         streamIdRef.current = null
 
         if (getSession().completion) {
@@ -655,7 +627,7 @@ export function Chat() {
             const newToken = issueResponse.split(' ')[index]
             chunk += newToken + ' '
 
-            addToken(newToken + ' ', false)
+            addToken(chunk)
 
             setSessions(prev => {
                 return prev.map(s => {
@@ -668,7 +640,7 @@ export function Chat() {
                     return s
                 })
             })
-            await sleep(60)
+            await sleep(40)
             index++
         }
 
@@ -814,6 +786,8 @@ export function Chat() {
                 }
             })
         })
+
+        setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
     }
 
     const updateSourceStyles = () => {
@@ -829,7 +803,9 @@ export function Chat() {
     }
 
     const generateGreetings = () => {
-        const message = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
+        const firstUse = sessions.length <= 1
+        const greetings = firstUse ? NEW_USER_GREETINGS : RETURNING_USER_GREETINGS
+        const message = greetings[Math.floor(Math.random() * greetings.length)]
 
         if (greetingsRef.current) {
             greetingsRef.current.innerHTML = ''
@@ -892,7 +868,7 @@ export function Chat() {
     const handleSubmit = (event: any) => {
         event.preventDefault()
         const content = input.trim()
-        if (!content || isLoading || forbidSubmit()) return
+        if (!content || isLoading[sessionId || ''] || forbidSubmit()) return
 
         const newMessage = { role: 'user', content }
         const firstMessage = sessions.length === 1 && !getSession().messages.length
@@ -934,19 +910,22 @@ export function Chat() {
     }
 
     const generateGreetingResponse = async (type: 'greetings' | 'gratitude') => {
+        setIsLoading(p => ({...p, [sessionId || ''] : true}))
+        const firstUse = sessions.length <= 1
+        const greetings = firstUse ? NEW_USER_GREETINGS : RETURNING_USER_GREETINGS
+        const welcomeMessage = greetings[Math.floor(Math.random() * greetings.length)]
+        const welcomeResponse = WELCOME_RESPONSES[Math.floor(Math.random() * WELCOME_RESPONSES.length)]
         const time = timePassedRef.current
         let index = 0
         let chunk = ''
-        let textResponse = type === 'greetings' ?
-            process.env.REACT_APP_GREETINGS_RESPONSE || `Hi! How may I help you today?`
-            : process.env.REACT_APP_GRATITUDE_RESPONSE || 'You are welcome! Let me know how can I assist you further.'
+        let textResponse = type === 'greetings' ? welcomeMessage : welcomeResponse
 
         while (index < textResponse.split(' ').length) {
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
             const newToken = textResponse.split(' ')[index]
             chunk += newToken + ' '
 
-            addToken(newToken + ' ', false)
+            addToken(chunk)
 
             setSessions(prev => {
                 return prev.map(s => {
@@ -959,7 +938,7 @@ export function Chat() {
                     return s
                 })
             })
-            await sleep(100)
+            await sleep(60)
             index++
         }
 
@@ -985,6 +964,7 @@ export function Chat() {
             })
         })
         setTimeout(() => setTimePassed(0), 100)
+        setIsLoading(p => ({...p, [sessionId || ''] : false}))
     }
 
     const resizeTextArea = (textarea: any) => {
@@ -1233,7 +1213,7 @@ export function Chat() {
     }
 
     const resetMemory = () => {
-        if (isLoading || !sessionId || !memoryRef.current[sessionId]) return
+        if (isLoading[sessionId || ''] || !sessionId || !memoryRef.current[sessionId]) return
         if (resetMemoryRef.current) {
             resetMemoryRef.current.style.animation = 'transform-reload 1s ease-in'
             setTimeout(() => {
@@ -1594,9 +1574,9 @@ export function Chat() {
             <div className="chat__box-list">
                 {!getSession().messages.length ?
                     <p ref={greetingsRef} className='chat__box-greetings'></p>
-                    : getSession().messages.map((message: dataObj, index: number) => (
+                    : getSession().messages.map((message: messageType, index: number) => (
                         <div key={index}>
-                            {conversationContextMessage(index)}
+                            {/* {conversationContextMessage(index)} */}
                             <div className={`chat__message chat__message-${message.role || ''}`}>
                                 {message.role === 'assistant' ? <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} /> : ''}
                                 <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}>
@@ -1641,16 +1621,20 @@ export function Chat() {
                         </div>
                     ))}
 
-                <div
+                {/* COMPLETION */}
+                {<div
                     className='chat__message chat__message-assistant chat__message-completion'
-                    style={{ display: outputRef.current && outputRef.current.innerHTML ? '' : 'none' }}>
+                    style={{
+                        display: isLoading[sessionId || ''] && outputRef.current && outputRef.current.innerHTML ? '' : 'none'
+                    }}>
                     <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} />
                     <div className="chat__message-bubble">
-                        <div className={`chat__message-content${theme} chat__message-content-assistant`} ref={outputRef}>
-                        </div>
+                        <div className={`chat__message-content${theme} chat__message-content-assistant`} ref={outputRef} />
                     </div>
-                </div>
-                {!outputRef.current?.innerHTML && isLoading && getSession().isLoading ?
+                </div>}
+
+                {/* LOADING BULLET */}
+                {!outputRef.current?.innerHTML && isLoading[sessionId || ''] && getSession().isLoading ?
                     <div className='chat__message chat__message-assistant chat__message-completion'>
                         <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} />
                         <div className="chat__message-bubble">
@@ -1658,8 +1642,7 @@ export function Chat() {
                                 className={`chat__message-content${theme} chat__message-content-assistant chat__message-loading`}
                                 dangerouslySetInnerHTML={{
                                     __html: ' ⬤'
-                                }}
-                            />
+                                }} />
                         </div>
                     </div> : ''}
             </div>
@@ -1728,7 +1711,7 @@ export function Chat() {
                     name="content"
                     rows={1}
                     onKeyDown={(event) => {
-                        if (!isLoading && event.key === 'Enter' && !event.shiftKey) {
+                        if (!isLoading[sessionId || ''] && event.key === 'Enter' && !event.shiftKey) {
                             handleSubmit(event)
                         }
                     }}
@@ -1738,14 +1721,15 @@ export function Chat() {
                         marginLeft: prod ? '1.5rem' : ''
                     }}
                 />
-                {sessionId && !memoryRef.current[sessionId] ? ''
+                {/* CHAT CONTEXT BUTTON (RESET CONTEXT) */}
+                {/* {sessionId && !memoryRef.current[sessionId] ? ''
                     : <Tooltip tooltip={getResetMemoryTooltip()} position='up'>
                         <div
                             className='chat__form-send'
                             onClick={resetMemory}
                             style={{
                                 background: 'transparent',
-                                cursor: isLoading || !sessionId || !memoryRef.current[sessionId] || !memoryRef.current[sessionId].memory ? 'not-allowed' : '',
+                                cursor: isLoading[sessionId || ''] || !sessionId || !memoryRef.current[sessionId] || !memoryRef.current[sessionId].memory ? 'not-allowed' : '',
                                 marginRight: 0
                             }}>
                             <img
@@ -1754,14 +1738,14 @@ export function Chat() {
                                 className={`chat__form-send-svg-reload${theme}`}
                                 draggable={false}
                                 style={{
-                                    filter: !isLoading && sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory ? theme ?
+                                    filter: !isLoading[sessionId || ''] && sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory ? theme ?
                                         'invert(96%) sepia(9%) saturate(0%) hue-rotate(172deg) brightness(91%) contrast(85%)'
                                         : 'none' : ''
                                 }}
                             />
                         </div>
-                    </Tooltip>}
-                {isLoading ? getSession().isLoading ? (
+                    </Tooltip>} */}
+                {isLoading[sessionId || ''] ? getSession().isLoading ? (
                     <Tooltip tooltip='Stop generation' position='up'>
                         <div
                             className='chat__form-send'
