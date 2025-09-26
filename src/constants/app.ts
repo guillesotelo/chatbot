@@ -144,10 +144,10 @@ export const referencePatterns = [
     // Common phrases indicating a follow-up
     "tell me", "more", "explain", "continue", "go on",
     "expand", "elaborate", "details", "info", "wrong",
-    "else", "about", "what", "which", "who", "why", "clarify", "remind",
+    "else", "about", "what", "clarify", "remind",
 
     // Questions referring to prior context
-    "say", "next","why",
+    "say", "next", "which", "who", "why", 
 
     // Commands that imply previous discussion
     "keep", "finish", "sum",
