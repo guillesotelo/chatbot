@@ -295,7 +295,7 @@ export function Chat() {
     const updateMemory = () => {
         if (!sessionId || isLoading[sessionId] || !memoryRef.current || !getSession().messages.length) return
         let chatContext = ['']
-        const maxChars = 3500
+        const maxChars = 2500
         const rMessages = [...getSession().messages].reverse() // mutation from the original
         const getPrompt = (ctx: string[]) => instructionStart + ctx.join('') + instructionEnd // instructions + user prompt
         const currentMemory = memoryRef.current[sessionId] || null
