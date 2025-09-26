@@ -134,25 +134,24 @@ export const questionStarters = [
 export const referencePatterns = [
     // Pronouns and references
     "it", "this", "that", "those", "them", "they", "he", "she", "him", "her",
-    "these", "one", "ones", "something", "someone", "somebody", "thing",
+    "these", "one", "ones", "something", "someone", "somebody", "thing", "to",
 
     // Continuation words
     "but", "so", "then", "also", "and", "or", "besides", "anyway", "however",
     "furthermore", "nevertheless", "moreover", "thus", "therefore", "hence",
-    "mean", "refer", "meant", "meaning",
+    "mean", "refer", "meant", "meaning", "translate",
 
     // Common phrases indicating a follow-up
-    "tell me more", "explain", "what about", "continue", "go on",
-    "expand on that", "elaborate", "give me details", "more info",
-    "what else", "how about", "what was that", "can you clarify", "remind me",
+    "tell me", "more", "explain", "continue", "go on",
+    "expand", "elaborate", "details", "info", "wrong",
+    "else", "about", "what", "which", "who", "why", "clarify", "remind",
 
     // Questions referring to prior context
-    "what do you mean", "what did you say", "did you mean", "what happened next",
-    "why did you say that", "what was that about", "why?", "why not?",
+    "say", "next","why",
 
     // Commands that imply previous discussion
-    "keep going", "finish your thought", "more details", "clarify that", "sum it up",
-    "give me a summary", "summarize", "tell me the key points", "other", "more", "else",
+    "keep", "finish", "sum",
+    "summary", "summarize", "key", "other",
     "example",
 ]
 

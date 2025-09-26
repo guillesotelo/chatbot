@@ -54,6 +54,7 @@ import { marked } from 'marked';
 import Tooltip from '../components/Tooltip'
 import Modal from '../components/Modal'
 import TextData from '../components/TextData'
+import Switch from '../components/Switch'
 
 type Props = {}
 const apiURl = process.env.REACT_APP_SERVER_URL
@@ -77,6 +78,7 @@ export default function Admin({ }: Props) {
     const [latestQuery, setLatestQuery] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [vectorSearchModal, setVectorSearchModal] = useState(false)
+    const [fullSearch, setFullSearch] = useState(false)
     const [showUserQueries, setShowUserQueries] = useState(false)
     const [searchResults, setSearchResults] = useState<dataObj>({})
     const [analytics, setAnalytics] = useState<dataObj[]>([])
@@ -85,6 +87,7 @@ export default function Admin({ }: Props) {
     const [selectedVersion, setSelectedVersion] = useState('Production v1.x')
     const [showFullChat, setShowFullChat] = useState<dataObj>({})
     const [selectedSession, setSelectedSession] = useState(-1)
+    const [retrieveK, setRetrieveK] = useState(0)
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
 
@@ -123,8 +126,8 @@ export default function Admin({ }: Props) {
 
     useEffect(() => {
         const timeMap: { [value: string]: number } = {
-            'Last minute': 60000,
-            'Last hour': 3600000,
+            'Last minute': 7540000,
+            'Last hour': 10800000,
             'Last 24h': 86400000,
             'Last 7 days': 604800000,
             'Last 30 days': 2592000000,
@@ -360,9 +363,14 @@ export default function Admin({ }: Props) {
             setLatestQuery(content)
             setSearchQuery('');
 
-            const response = await fetch(`${apiURl}/api/vectorstore_search?query=${encodeURIComponent(content)}`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
+            const response = await fetch(`${apiURl}/api/vectorstore_search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: encodeURIComponent(content),
+                    fulltext: fullSearch,
+                    k: retrieveK
+                })
             })
 
             if (response && response.ok) {
@@ -379,8 +387,23 @@ export default function Admin({ }: Props) {
 
     const renderVectorSearchModal = () => {
         return (
-            <Modal title='Vector Store Search' onClose={() => setVectorSearchModal(false)}>
+            <Modal title='Vector store search' onClose={() => setVectorSearchModal(false)}>
                 <div className="chat__admin-col">
+                    <div className="chat__admin-row" style={{ justifyContent: 'normal', gap: '2rem' }}>
+                        <Switch
+                            label='Full-text search'
+                            on='Yes'
+                            off='No'
+                            value={fullSearch}
+                            setValue={setFullSearch} />
+                        <Dropdown
+                            label='Retrieve K'
+                            options={Array.from({ length: 50 }).map((_, i) => i + 1)}
+                            value={retrieveK}
+                            selected={retrieveK}
+                            setSelected={setRetrieveK}
+                        />
+                    </div>
                     <div
                         className={`chat__admin-container${theme}`}
                         style={{
@@ -550,7 +573,7 @@ export default function Admin({ }: Props) {
                                 className='chat__admin-query' onClick={analytic.messages.length ? () => setSelectedSession(i) : undefined}
                                 style={{
                                     background: analytic.messages.length ? '' : 'unset',
-                                    cursor:  analytic.messages.length ? 'pointer' : 'unset'
+                                    cursor: analytic.messages.length ? 'pointer' : 'unset'
                                 }}>
                                 <p className='chat__admin-query-prompt'>{analytic.messages[0] ? analytic.messages[0].content : analytic.prompt}</p>
                                 <p className='chat__admin-query-date'>{getDate(analytic.timestamp)}</p>
@@ -673,8 +696,8 @@ export default function Admin({ }: Props) {
                             options={analyticTimeOptions}
                             style={{ width: '10rem', margin: '1rem 0' }}
                         />
-                        <TextData label='Total events (LLM requests)' value={analytics.length} inline color='#5b5bd1' />
-                        <TextData label='Avg conversation time' value={getAverage(analytics, 'duration_seconds').toFixed(0) + 's'} inline color='#5b5bd1' />
+                        <TextData label='Total LLM queries' value={analytics.length} inline color='#5b5bd1' />
+                        <TextData label='Avg session lifetime' value={(getAverage(analytics, 'duration_seconds') / 60).toFixed(0) + 'min'} inline color='#5b5bd1' />
                         <TextData label='Avg messages (per conversation)' value={getAverage(analytics, 'message_count').toFixed(0)} inline color='#5b5bd1' />
                         <TextData label='Avg token count (per conversation)' value={getAverage(analytics, 'token_count').toFixed(0)} inline color='#5b5bd1' />
                         <Button
@@ -685,7 +708,7 @@ export default function Admin({ }: Props) {
                         />
                         <h2 className='chat__admin-title' style={{ margin: '3rem 0 1rem' }}>Search</h2>
                         <Button
-                            label='Vector Store Search'
+                            label='Vector search'
                             className={`button__outline${theme}`}
                             onClick={() => setVectorSearchModal(true)}
                         />
