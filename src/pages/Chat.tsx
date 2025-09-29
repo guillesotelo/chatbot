@@ -66,6 +66,7 @@ import {
     instructionEnd,
     instructionStart,
     NEW_USER_GREETINGS,
+    pageReferences,
     POPUP_HEIGHT,
     POPUP_WIDTH,
     POPUP_WINDOW_HEIGHT,
@@ -130,6 +131,8 @@ export function Chat() {
     const [popupHeight, setPopupHeight] = useState('60px')
     const [sessionDate, setSessionDate] = useState<Date | null>(null)
     const [sendAnalytics, setSendAnalytics] = useState(true)
+    const [currentPage, setCurrentPage] = useState('')
+    const [currentHref, setCurrentHref] = useState<{ href?: string, referenced?: boolean }>({})
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const messageRef = useRef<HTMLTextAreaElement>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
@@ -179,10 +182,29 @@ export function Chat() {
             }
         }
 
+        const getExternalData = (event: any) => {
+            try {
+                const { href } = event.data
+                if (href) {
+                    const splitUrl = href.split('/')
+                    const current = splitUrl[splitUrl.length - 1].replace('.html', '').replace(/[-_]/g, ' ')
+                    const parent = splitUrl[splitUrl.length - 2].replace(/[-_]/g, ' ')
+                    // If the page name is too short we add the parent page for context
+                    const context = current.length < 12 && parent !== current ? parent + ' - ' : ''
+                    const page = `${context}${current}`
+                    setCurrentPage(prev => page || prev || '')
+                    setCurrentHref({ href })
+                }
+            } catch (error) {
+                console.error(error)
+            }
+        }
+
         getLocalSessions(popup)
         checkForAppUpdates()
 
         window.addEventListener('scroll', handleScroll)
+        window.addEventListener('message', getExternalData)
         document.addEventListener('click', hideSessionOptions)
 
         if (messageRef.current) messageRef.current.focus()
@@ -191,8 +213,10 @@ export function Chat() {
 
         return () => {
             window.removeEventListener('scroll', handleScroll)
+            window.removeEventListener("message", getExternalData)
             document.removeEventListener('click', hideSessionOptions)
         }
+
     }, [])
 
     // useEffect(() => {
@@ -769,10 +793,12 @@ export function Chat() {
                 if (ul.previousElementSibling &&
                     (ul.previousElementSibling.outerHTML.includes('Source:')
                         || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
+                    const sourceList: string[] = []
                     Array.from(ul.querySelectorAll('a')).forEach(a => {
                         a.target = '_blank'
                         if (a.textContent) {
                             if (!a.hasAttribute('data-source-processed')) {
+                                sourceList.push(a.href)
                                 const title = document.createElement('p')
                                 const subtitle = document.createElement('p')
                                 title.className = `chat__message-content-assistant-source${theme}-title`
@@ -794,6 +820,28 @@ export function Chat() {
                     ul.style.padding = '0';
                     const lastChild = Array.from(ul.querySelectorAll('li')).pop()
                     if (lastChild) lastChild.style.marginBottom = '.5rem'
+
+                    // Add first source as current page, if user asked about it
+                    if (currentHref.referenced && currentHref.href && !sourceList.includes(currentHref.href)) {
+                        const li = document.createElement('li')
+                        const currentPageSource = document.createElement('a')
+                        const title = document.createElement('p')
+                        const subtitle = document.createElement('p')
+                        title.className = `chat__message-content-assistant-source${theme}-title`
+                        subtitle.className = `chat__message-content-assistant-source${theme}-subtitle`
+                        currentPageSource.className = `chat__message-content-assistant-source${theme}`
+                        currentPageSource.href = currentHref.href
+                        currentPageSource.target = '_blank'
+                        const parts = currentHref.href.split('/').map(s => s.trim().replace('.html', ''))
+                        const titleText = parts.pop() || ''
+                        const subtitleText = parts.join(' / ')
+                        title.textContent = titleText
+                        subtitle.textContent = subtitleText || 'HP Developer Portal'
+                        currentPageSource.setAttribute('data-source-processed', 'true')
+                        currentPageSource.replaceChildren(title, subtitle)
+                        li.appendChild(currentPageSource)
+                        ul.prepend(li)
+                    }
                 }
             })
         })
@@ -910,6 +958,14 @@ export function Chat() {
 
     const curatePrompt = (userPrompt: string) => {
         let prompt = userPrompt
+
+        pageReferences.forEach(reference => {
+            if (currentPage && prompt.toLowerCase().includes(reference)) {
+                prompt = prompt.replace(reference, `${reference} (${currentPage})`)
+                setCurrentHref(prev => ({ ...prev, referenced: true }))
+            }
+        })
+
         const lastChar = prompt.split('')[prompt.length - 1]
         const firstWord = userPrompt.split(' ')[0].toLowerCase()
         if (lastChar !== '?' && lastChar !== '.' && questionStarters.includes(firstWord)) prompt += '?'

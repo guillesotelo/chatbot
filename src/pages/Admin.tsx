@@ -1,10 +1,10 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import DataTable from '../components/DataTable'
 import { feedbackHeaders } from '../constants/app'
 import { dataObj, sessionType } from '../types'
 import { AppContext } from '../AppContext'
 import { useNavigate } from 'react-router-dom'
-import { getAverage, getDate, sortArray } from '../helpers'
+import { getAverage, getDate, sortArray, whenDateIs } from '../helpers'
 import InputField from '../components/InputField'
 import { Button } from '../components/Button'
 import { toast, ToastContainer } from 'react-toastify'
@@ -90,6 +90,7 @@ export default function Admin({ }: Props) {
     const [retrieveK, setRetrieveK] = useState(0)
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
+    const containerRef = useRef(null)
 
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
@@ -105,7 +106,11 @@ export default function Admin({ }: Props) {
     }, [isLoggedIn])
 
     useEffect(() => {
-        setTheme('')
+        setTheme('--dark')
+        if (containerRef.current) {
+            (containerRef.current as HTMLDivElement).style.background = '#171717';
+            (containerRef.current as HTMLDivElement).style.color = 'lightgray'
+        }
     }, [userFeedback])
 
 
@@ -204,6 +209,7 @@ export default function Admin({ }: Props) {
     const discardChanges = () => {
         setSelectedFeedback(-1)
         setDeleteFeedback(false)
+        setSelectedSession(-1)
     }
 
     const saveReview = async () => {
@@ -251,6 +257,28 @@ export default function Admin({ }: Props) {
         } catch (error) {
             setIsLoading(false)
             toast.error('Error deleting review. Please try again')
+            console.error(error)
+        }
+    }
+
+    const deleteAnalytic = async () => {
+        try {
+            setIsLoading(true)
+            const response = await fetch(`${apiURl}/api/delete_analytics`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(analyticsCopy[selectedSession])
+            })
+            if (response && response.ok) {
+                toast.success('Session analytics deleted!')
+                discardChanges()
+                await getAnalytics()
+            }
+            else toast.error('Error deleting session analytics. Please try again')
+            setIsLoading(false)
+        } catch (error) {
+            setIsLoading(false)
+            toast.error('Error deleting session analytics. Please try again')
             console.error(error)
         }
     }
@@ -387,9 +415,9 @@ export default function Admin({ }: Props) {
 
     const renderVectorSearchModal = () => {
         return (
-            <Modal title='Vector store search' onClose={() => setVectorSearchModal(false)}>
+            <Modal title='Vector store search' onClose={() => setVectorSearchModal(false)} style={{ background: '#212121' }}>
                 <div className="chat__admin-col">
-                    <div className="chat__admin-row" style={{ justifyContent: 'normal', gap: '2rem' }}>
+                    <div className="chat__admin-row" style={{ justifyContent: 'normal', gap: '2rem', minHeight: '15vh', minWidth: '35vw' }}>
                         <Switch
                             label='Full-text search'
                             on='Yes'
@@ -564,6 +592,11 @@ export default function Admin({ }: Props) {
                                     __html: marked.parse(session.content || '') as string,
                                 }} />))}
                     </div>
+                    <Button
+                        label='Delete session analytics'
+                        className={`button__delete${theme}`}
+                        onClick={deleteAnalytic}
+                    />
                 </div>
                     :
                     <div className='chat__admin-queries'>
@@ -576,7 +609,7 @@ export default function Admin({ }: Props) {
                                     cursor: analytic.messages.length ? 'pointer' : 'unset'
                                 }}>
                                 <p className='chat__admin-query-prompt'>{analytic.messages[0] ? analytic.messages[0].content : analytic.prompt}</p>
-                                <p className='chat__admin-query-date'>{getDate(analytic.timestamp)}</p>
+                                <p className='chat__admin-query-date'>{whenDateIs(analytic.timestamp)}</p>
                             </div>)}
                     </div>
                 }
@@ -590,7 +623,7 @@ export default function Admin({ }: Props) {
                 title={`${userFeedback[selectedFeedback].score ? 'Good' : 'Bad'} feedback from ${userFeedback[selectedFeedback].username || 'user'}`}
                 subtitle={getDate(userFeedback[selectedFeedback].createdAt)}
                 onClose={() => setSelectedFeedback(-1)}>
-                <div className={`chat__admin-session${theme}`}>
+                <div className={`chat__admin-session`}>
                     <div className="chat__feedback-content">
                         {userFeedback[selectedFeedback][(showFullChat[selectedFeedback] ? 'conversation' : 'messages')].map((feedback: sessionType) => (
                             <div
@@ -679,7 +712,7 @@ export default function Admin({ }: Props) {
     }
 
     return !isLoggedIn ? null :
-        <div className='chat__admin'>
+        <div className={`chat__admin`} ref={containerRef}>
             <ToastContainer position="top-center" style={{ transform: 'none' }} theme={theme ? 'dark' : 'light'} autoClose={1500} />
             <div className="">
                 <h1 style={getFilterStyle()}>Admin panel</h1>
