@@ -20,12 +20,15 @@ export const autoScroll = (element: string = 'body', behavior: any = 'smooth') =
 };
 
 
-export const getDate = (dateString: Date | number | string | undefined) => {
+export const getDate = (dateString: Date | number | string | undefined, showTime = true) => {
     if (dateString) {
 
         const date = Number(dateString) > 10000 ? new Date(Number(dateString)) : new Date(dateString)
         if (date.getHours() === 24) date.setHours(0)
-        return date.toLocaleDateString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        const options: any = showTime ?
+            { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
+            : { year: 'numeric', month: '2-digit', day: '2-digit' }
+        return date.toLocaleDateString('sv-SE', options)
     }
 }
 
@@ -48,3 +51,27 @@ export const getAverage = (data: dataObj[], key: string) => {
 }
 
 export const fixMarkdownLinks = (text: string) => text.replace(/\[([^\]]+)\]\(([^)]+)\)\]+/g, "[$1]($2)")
+
+export const whenDateIs = (date: Date | string | number | undefined, showDates = false) => {
+    if (!date) return ''
+
+    const current = new Date(date)
+    const today = new Date().toLocaleDateString()
+    const yesterday = new Date(new Date().getTime() - 86400000).toLocaleDateString() // minus 1 day in miliseconds
+    const lastWeek = new Date().getTime() - 604800000
+    const lastMonth = new Date().getTime() - 2505600000
+    const lastYear = new Date().getTime() - 31449600000
+
+    if (today === current.toLocaleDateString()) return 'Today'
+    if (yesterday === current.toLocaleDateString()) return 'Yesterday'
+
+    if (showDates) {
+        if (current.getTime() >= lastWeek) return `Last week (${getDate(current)})`
+        if (current.getTime() < lastWeek && current.getTime() > lastMonth) return `Last month (${getDate(current)})`
+        if (current.getTime() < lastMonth && current.getTime() > lastYear) return `Months ago (${getDate(current)})`
+        if (current.getTime() < lastYear) return `More than a year ago (${getDate(current)})`
+        return getDate(current)
+    }
+
+    return getDate(current)
+}

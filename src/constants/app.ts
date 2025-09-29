@@ -1,4 +1,4 @@
-export const APP_VERSION = '2.8'
+export const APP_VERSION = '2.9'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const NEW_USER_GREETINGS = [
@@ -166,6 +166,14 @@ export const gratitudePatterns = [
     "thanks", "thank you", "thank you!", "thx", "appreciate it", "much appreciated",
     "gracias", "merci", "danke", "thanks a lot", "thank you so much",
     "many thanks", "thanks a bunch", "thanks a million", "thanks again", "tack", "ok"
+]
+
+export const pageReferences = [
+    "this page", "the page", "current page", "here", "the webpage", "current webpage",
+    "this section", "the section", "current section", "this part", "this parragraph", "this topic",
+    "this document", "this documentation", 
+    "this article", "the article", "this post", "the post", 
+    "this chapter", "where i am", "this content",
 ]
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'

@@ -1,8 +1,8 @@
 const htmlBuildingTemplate = `
-<div style="display: flex; justify-content: center; align-items: center; height: 90vh; background-color: #202020;">
-    <div style="background-color: #151515; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 50px 1px black; text-align:center">
-        <h2 style="font-family: Arial, sans-serif; font-size: 1.5rem; font-weight: bold; color: #a5a5a5;">Updating Assistant<span id="ellipsis">.</span></h2>
-        <p style="font-family: Arial, sans-serif; font-size: 1rem; color: #a5a5a5;">The chat will be reloaded in <span id="countdown">30</span> seconds. Please wait.</p>
+<div style="display: flex; justify-content: center; align-items: center; background-color: #202020; border-radius: 4rem;">
+    <div style="border-radius: 8px; text-align:center">
+        <p style="font-family: Arial, sans-serif; font-weight: bold; color: #a5a5a5;">Building Veronica<span id="ellipsis">.</span></p>
+        <p style="font-family: Arial, sans-serif; display: none;  font-size: 1rem; color: #a5a5a5;">The chat will be reloaded in <span id="countdown">30</span> seconds. Please wait.</p>
     </div>
 </div>
 <script>

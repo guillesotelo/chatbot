@@ -1104,7 +1104,7 @@
     &__admin {
         display: flex;
         flex-direction: column;
-        margin: 1rem;
+        padding: 1rem;
         min-height: calc(100vh - 2rem);
         padding-bottom: 20vh;
         // background: white;
@@ -1200,7 +1200,7 @@
             border-radius: .5rem;
 
             &:hover {
-                background: #0000000b;
+                background: #68686873;
             }
 
             &-prompt {
