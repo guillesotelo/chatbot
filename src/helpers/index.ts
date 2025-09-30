@@ -42,7 +42,11 @@ export const sortArray = (arr: any[], key: string | number, order?: boolean) => 
     })
 }
 
-export const cleanText = (text: string) => text.replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim()
+export const cleanText = (text: string) => 
+    text
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
 export const getAverage = (data: dataObj[], key: string) => {
     let count = 0

@@ -87,7 +87,7 @@ export default function Admin({ }: Props) {
     const [selectedVersion, setSelectedVersion] = useState('Production v1.x')
     const [showFullChat, setShowFullChat] = useState<dataObj>({})
     const [selectedSession, setSelectedSession] = useState(-1)
-    const [retrieveK, setRetrieveK] = useState(0)
+    const [retrieveK, setRetrieveK] = useState(3)
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
     const containerRef = useRef(null)
