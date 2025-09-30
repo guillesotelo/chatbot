@@ -1,4 +1,4 @@
-export const APP_VERSION = '2.9'
+export const APP_VERSION = '2.9.1'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const NEW_USER_GREETINGS = [
@@ -144,10 +144,11 @@ export const referencePatterns = [
     // Common phrases indicating a follow-up
     "tell me", "more", "explain", "continue", "go on",
     "expand", "elaborate", "details", "info", "wrong",
-    "else", "about", "what", "clarify", "remind",
+    "else", "about", "what is", "whats", "what's", "what mean", "what you", "what do",
+    "clarify", "remind",
 
     // Questions referring to prior context
-    "say", "next", "which", "who", "why", 
+    "say", "next", "which", "who", "why",
 
     // Commands that imply previous discussion
     "keep", "finish", "sum",
@@ -169,10 +170,10 @@ export const gratitudePatterns = [
 ]
 
 export const pageReferences = [
-    "this page", "the page", "current page", "here", "the webpage", "current webpage",
+    "this page", "the page", "current page", " here", "the webpage", "current webpage",
     "this section", "the section", "current section", "this part", "this parragraph", "this topic",
-    "this document", "this documentation", 
-    "this article", "the article", "this post", "the post", 
+    "this document", "this documentation",
+    "this article", "the article", "this post", "the post", "this site",
     "this chapter", "where i am", "this content",
 ]
 
