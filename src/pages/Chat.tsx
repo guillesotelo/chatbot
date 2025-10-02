@@ -57,6 +57,8 @@ import Reload from '../assets/icons/reload3.png'
 import HP from '../assets/images/veronica-logo3.png';
 import HP_DARK from '../assets/images/veronica-logo3_dark.png';
 import NewContext from '../assets/icons/new-context.svg';
+import Mic from '../assets/icons/mic.svg';
+import PlusIcon from '../assets/icons/plus.svg';
 import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import {
@@ -87,6 +89,8 @@ import InputField from '../components/InputField';
 import { useNavigate } from "react-router-dom";
 import SearchBar from '../components/SearchBar';
 import NewChat from '../assets/icons/new-chat.svg'
+import { useSpeechRecognition } from "../hooks/useSpeechRecognition"
+import { BounceLoader } from 'react-spinners';
 
 const MODES = [
     {
@@ -134,6 +138,7 @@ export function Chat() {
     const [currentPage, setCurrentPage] = useState('')
     const [currentHref, setCurrentHref] = useState<{ href?: string, referenced?: boolean }>({})
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
+    const { transcript, listening, startListening, stopListening, speechAvailable } = useSpeechRecognition()
     const messageRef = useRef<HTMLTextAreaElement>(null)
     const stopwatchIntervalId = useRef<number | null>(null)
     const timePassedRef = useRef(timePassed)
@@ -144,6 +149,7 @@ export function Chat() {
     const appUpdateRef = useRef<any>(null)
     const outputRef = useRef<HTMLDivElement>(null)
     const greetingsRef = useRef<HTMLDivElement>(null)
+    const lastSubmittedRef = useRef("")
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -218,6 +224,13 @@ export function Chat() {
         }
 
     }, [])
+
+    useEffect(() => {
+        if (transcript && !listening && transcript !== lastSubmittedRef.current) {
+            handleSubmit(null, transcript)
+            lastSubmittedRef.current = transcript
+        }
+    }, [transcript, listening])
 
     // useEffect(() => {
     //     if (sessionId) console.log('memory', memoryRef.current[sessionId])
@@ -766,7 +779,7 @@ export function Chat() {
                 const headerCopy = document.createElement('div')
                 headerCopy.className = 'chat__code-header-copy'
                 headerCopy.innerHTML = `
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
                         <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
                     </svg>
                     <p class="chat__code-header-copy-text">Copy code</p>
@@ -924,10 +937,10 @@ export function Chat() {
         }
     }
 
-    const handleSubmit = (event: any) => {
-        event.preventDefault()
-        const content = input.trim()
-        if (!content || isLoading[sessionId || ''] || forbidSubmit()) return
+    const handleSubmit = (event?: any, transcript?: string) => {
+        event?.preventDefault()
+        const content = transcript?.trim() || input.trim()
+        if (!content || isLoading[sessionId || ''] || forbidSubmit(transcript?.trim())) return
 
         const newMessage = { role: 'user', content }
         const firstMessage = sessions.length === 1 && !getSession().messages.length
@@ -1062,7 +1075,7 @@ export function Chat() {
         if (copyDiv && copyDiv.innerHTML.includes('Copy code')) {
             const prevHtml = copyDiv.innerHTML
             copyDiv.innerHTML = `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
                     <path fill-rule="evenodd" clip-rule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path>
                 </svg>
                 <p class="chat__code-header-copy-text">Copied!</p>
@@ -1221,8 +1234,8 @@ export function Chat() {
         URL.revokeObjectURL(url)
     }
 
-    const forbidSubmit = () => {
-        return !input || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')
+    const forbidSubmit = (ttl?: string) => {
+        return (!input && !ttl) || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')
     }
 
     const renderOptions = (id: number | null | undefined, event: React.MouseEvent<HTMLImageElement, MouseEvent>) => {
@@ -1411,6 +1424,8 @@ export function Chat() {
         }
         return ''
     }
+
+    const loadingResponse = () => isLoading[sessionId || ''] || getSession().isLoading
 
     const renderFullAppSidebar = () => {
         return (
@@ -1763,12 +1778,12 @@ export function Chat() {
                 : ''}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
-                {/* <div className="chat__form-attachment">
-                    <svg className={`chat__form-attachment-svg${theme}`} onClick={uploadDocuments}
-                        xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 24 24" fill="none">
-                        <path fill="#0F0F0F" d="M7 8.00092L7 17C7 17.5523 6.55228 18 6 18C5.44772 18 5.00001 17.4897 5 16.9374C5 16.9374 5 16.9374 5 16.9374C5 16.937 5.00029 8.01023 5.00032 8.00092C5.00031 7.96702 5.00089 7.93318 5.00202 7.89931C5.00388 7.84357 5.00744 7.76644 5.01426 7.67094C5.02788 7.4803 5.05463 7.21447 5.10736 6.8981C5.21202 6.27011 5.42321 5.41749 5.85557 4.55278C6.28989 3.68415 6.95706 2.78511 7.97655 2.10545C9.00229 1.42162 10.325 1 12 1C13.6953 1 14.9977 1.42162 16.0235 2.10545C17.0429 2.78511 17.7101 3.68415 18.1444 4.55278C18.5768 5.41749 18.788 6.27011 18.8926 6.8981C18.9454 7.21447 18.9721 7.4803 18.9857 7.67094C18.9926 7.76644 18.9961 7.84357 18.998 7.89931C18.9991 7.93286 18.9997 7.96641 19 7.99998C19.0144 10.7689 19.0003 17.7181 19 18.001C19 18.0268 18.9993 18.0525 18.9985 18.0782C18.9971 18.1193 18.9945 18.175 18.9896 18.2431C18.9799 18.3791 18.961 18.5668 18.9239 18.7894C18.8505 19.2299 18.7018 19.8325 18.3944 20.4472C18.0851 21.0658 17.6054 21.7149 16.8672 22.207C16.1227 22.7034 15.175 23 14 23C12.825 23 11.8773 22.7034 11.1328 22.207C10.3946 21.7149 9.91489 21.0658 9.60557 20.4472C9.29822 19.8325 9.14952 19.2299 9.07611 18.7894C9.039 18.5668 9.02007 18.3791 9.01035 18.2431C9.00549 18.175 9.0029 18.1193 9.00153 18.0782C9.00069 18.0529 9.00008 18.0275 9 18.0022C8.99621 15.0044 9 12.0067 9 9.00902C9.00101 8.95723 9.00276 8.89451 9.00645 8.84282C9.01225 8.76155 9.02338 8.65197 9.04486 8.5231C9.08702 8.27011 9.17322 7.91749 9.35558 7.55278C9.53989 7.18415 9.83207 6.78511 10.2891 6.48045C10.7523 6.17162 11.325 6 12 6C12.675 6 13.2477 6.17162 13.7109 6.48045C14.1679 6.78511 14.4601 7.18415 14.6444 7.55278C14.8268 7.91749 14.913 8.27011 14.9551 8.5231C14.9766 8.65197 14.9877 8.76155 14.9936 8.84282C14.9984 8.91124 14.9999 8.95358 15 8.99794L15 17C15 17.5523 14.5523 18 14 18C13.4477 18 13 17.5523 13 17V9.00902C12.9995 8.99543 12.9962 8.93484 12.9824 8.8519C12.962 8.72989 12.9232 8.58251 12.8556 8.44722C12.7899 8.31585 12.7071 8.21489 12.6015 8.14455C12.5023 8.07838 12.325 8 12 8C11.675 8 11.4977 8.07838 11.3985 8.14455C11.2929 8.21489 11.2101 8.31585 11.1444 8.44722C11.0768 8.58251 11.038 8.72989 11.0176 8.8519C11.0038 8.93484 11.0005 8.99543 11 9.00902V17.9957C11.0009 18.0307 11.0028 18.0657 11.0053 18.1006C11.0112 18.1834 11.0235 18.3082 11.0489 18.4606C11.1005 18.7701 11.2018 19.1675 11.3944 19.5528C11.5851 19.9342 11.8554 20.2851 12.2422 20.543C12.6227 20.7966 13.175 21 14 21C14.825 21 15.3773 20.7966 15.7578 20.543C16.1446 20.2851 16.4149 19.9342 16.6056 19.5528C16.7982 19.1675 16.8995 18.7701 16.9511 18.4606C16.9765 18.3082 16.9888 18.1834 16.9947 18.1006C16.9972 18.0657 16.9991 18.0307 17 17.9956L16.9999 7.99892C16.9997 7.98148 16.9982 7.91625 16.9908 7.81343C16.981 7.67595 16.9609 7.47303 16.9199 7.2269C16.837 6.72989 16.6732 6.08251 16.3556 5.44722C16.0399 4.81585 15.5821 4.21489 14.9141 3.76955C14.2523 3.32838 13.325 3 12 3C10.675 3 9.7477 3.32838 9.08595 3.76955C8.41793 4.21489 7.96011 4.81585 7.64443 5.44722C7.32678 6.08251 7.16298 6.72989 7.08014 7.2269C7.03912 7.47303 7.019 7.67595 7.00918 7.81343C7.0025 7.90687 7.00117 7.9571 7 8.00092Z" />
-                    </svg>
-                </div>  */}
+                {/* {loadingResponse() ? '' :
+                <Tooltip tooltip={'Upload file'} position='up'>
+                    <div className="chat__form-control">
+                        <img src={PlusIcon} draggable={false} className={`chat__form-control-svg${theme}`} onClick={uploadDocuments} />
+                    </div>
+                </Tooltip>} */}
                 <textarea
                     ref={messageRef}
                     id="message"
@@ -1785,7 +1800,8 @@ export function Chat() {
                     autoFocus
                     onChange={(event) => setInput(event.target.value)}
                     style={{
-                        marginLeft: prod ? '1.5rem' : ''
+                        // marginLeft: prod ? '.4rem' : ''
+                        marginLeft: prod ? '1.2rem' : ''
                     }}
                 />
                 {/* CHAT CONTEXT BUTTON (RESET CONTEXT) */}
@@ -1812,6 +1828,29 @@ export function Chat() {
                             />
                         </div>
                     </Tooltip>} */}
+                {speechAvailable ?
+                    <Tooltip tooltip={loadingResponse() ? 'Wait for response' : listening ? 'Listening...' : 'Dictate'} position='up'>
+                        <div
+                            className='chat__form-control'
+                            // onClick={listening ? stopListening : (!isLoading[sessionId || ''] || !getSession().isLoading) ? startListening : undefined}
+                            onClick={!loadingResponse() ? () => {
+                                lastSubmittedRef.current = ''
+                                startListening()
+                            } : undefined}
+                            style={{
+                                background: 'transparent',
+                                cursor: loadingResponse() ? 'not-allowed' : '',
+                                marginRight: 0
+                            }}>
+                            {listening ?
+                                <BounceLoader size={24} color={theme ? '#ffffffff' : '#000000ff'} speedMultiplier={0.75} />
+                                :
+                                <img src={Mic} className={`chat__form-control-svg${theme}${loadingResponse() ? '--loading' : ''}`} draggable={false} />
+                            }
+                        </div>
+                    </Tooltip>
+                    : ''
+                }
                 {isLoading[sessionId || ''] ? getSession().isLoading ? (
                     <Tooltip tooltip='Stop generation' position='up'>
                         <div

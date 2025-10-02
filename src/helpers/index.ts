@@ -66,8 +66,10 @@ export const whenDateIs = (date: Date | string | number | undefined, showDates =
     const lastMonth = new Date().getTime() - 2505600000
     const lastYear = new Date().getTime() - 31449600000
 
-    if (today === current.toLocaleDateString()) return 'Today'
-    if (yesterday === current.toLocaleDateString()) return 'Yesterday'
+    const hour = getDate(current)?.split(' ')[1]
+
+    if (today === current.toLocaleDateString()) return `Today ${hour}`
+    if (yesterday === current.toLocaleDateString()) return `Yesterday ${hour}`
 
     if (showDates) {
         if (current.getTime() >= lastWeek) return `Last week (${getDate(current)})`

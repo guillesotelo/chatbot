@@ -787,33 +787,49 @@
             }
         }
 
-        &-attachment {
+        &-control {
             background: transparent;
 
             &-svg {
                 cursor: pointer;
-                margin: .8rem;
-                height: 1.5rem;
+                margin: 0 0 -.1rem .6rem;
+                height: 1.3rem;
                 background: transparent;
                 width: fit-content;
                 transition: .1s;
+                border-radius: 50%;
+                padding: .4rem;
 
                 &:hover {
-                    opacity: .6;
+                    background: #7676762d;
                 }
 
                 &--dark {
                     cursor: pointer;
-                    margin: .8rem;
-                    height: 1.5rem;
+                    margin: 0 0 -.1rem .6rem;
+                    height: 1.3rem;
                     background: transparent;
                     width: fit-content;
-                    filter: invert(88%) sepia(0%) saturate(46%) hue-rotate(166deg) brightness(92%) contrast(106%);
+                    filter: invert(85%);
                     transition: .1s;
+                    border-radius: 50%;
+                    padding: .4rem;
 
                     &:hover {
-                        filter: invert(88%) sepia(0%) saturate(46%) hue-rotate(166deg) brightness(110%) contrast(106%);
+                        background: #76767638;
                     }
+
+                    &--loading {
+                        width: 22px;
+                        height: 22px;
+                        filter: invert(40%);
+                    }
+                }
+
+                &--loading {
+                    width: 22px;
+                    height: 22px;
+                    filter: invert(40%);
                 }
             }
         }
