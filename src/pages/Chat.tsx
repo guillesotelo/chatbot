@@ -951,8 +951,10 @@ export function Chat() {
                         ...s,
                         messages: [...s.messages, newMessage],
                         completion: null,
-                        name: s.name !== 'New chat' ? s.name : newMessage.content,
-                        updated: new Date().getTime()
+                        name: s.name !== 'New chat' ? s.name : newMessage.content.substring(0, 80),
+                        updated: new Date().getTime(),
+                        transcribed: Boolean(transcript?.trim()),
+                        context: Boolean(needsContext(content) && sessionId)
                     }
                 }
                 return s
@@ -1829,7 +1831,7 @@ export function Chat() {
                         </div>
                     </Tooltip>} */}
                 {speechAvailable ?
-                    <Tooltip tooltip={loadingResponse() ? 'Wait for response' : listening ? 'Listening...' : 'Dictate'} position='up'>
+                    <Tooltip tooltip={loadingResponse() ? 'Wait for response' : listening ? 'Listening...' : 'Speak'} position='up'>
                         <div
                             className='chat__form-control'
                             // onClick={listening ? stopListening : (!isLoading[sessionId || ''] || !getSession().isLoading) ? startListening : undefined}

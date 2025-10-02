@@ -18,6 +18,8 @@ export type messageType = {
     stopped?: boolean
     sessionId?: number | string
     date?: string | Date | number
+    transcribed?: boolean
+    context?: boolean
 }
 
 export type sessionType = dataObj & {
