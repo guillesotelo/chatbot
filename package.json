@@ -14,6 +14,7 @@
     "marked": "^15.0.1",
     "morgan": "^1.10.0",
     "path": "^0.12.7",
+    "plantuml-encoder": "^1.4.0",
     "prismjs": "^1.29.0",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",
@@ -54,6 +55,7 @@
     ]
   },
   "devDependencies": {
+    "@types/plantuml-encoder": "^1.4.2",
     "@types/prismjs": "^1.26.5",
     "@types/react": "^18.3.12",
     "@types/react-beautiful-dnd": "^13.1.8",

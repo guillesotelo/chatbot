@@ -1,4 +1,5 @@
 import { dataObj } from "../types";
+import { volvoModels } from "../constants/app"
 
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -42,11 +43,11 @@ export const sortArray = (arr: any[], key: string | number, order?: boolean) => 
     })
 }
 
-export const cleanText = (text: string) => 
+export const cleanText = (text: string) =>
     text
-    .replace(/[^a-zA-Z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
 
 export const getAverage = (data: dataObj[], key: string) => {
     let count = 0
@@ -80,4 +81,33 @@ export const whenDateIs = (date: Date | string | number | undefined, showDates =
     }
 
     return getDate(current)
+}
+
+export const normalizeVolvoIdentifier = (prompt: string) => {
+    let parsed = prompt
+    volvoModels.forEach(identifier => {
+        if (prompt.toUpperCase().includes(identifier)) {
+            const pattern = identifier
+                .split('')
+                .map(ch => (/\d/.test(ch) ? ch : ch))
+                .join('\\s*')
+
+            const regex = new RegExp(pattern, 'gi')
+            parsed = parsed.replace(regex, identifier)
+        }
+    })
+    return parsed
+}
+
+export const fixPlantUMLComments = (umlCode: string) => {
+    return umlCode
+        .split('\n')
+        .map(line => {
+            const trimmed = line.trim()
+            if (trimmed.startsWith('//')) {
+                return "'" + line.slice(line.indexOf('//') + 2)
+            }
+            return line
+        })
+        .join('\n')
 }

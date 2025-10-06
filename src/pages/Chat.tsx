@@ -69,6 +69,7 @@ import {
     instructionStart,
     NEW_USER_GREETINGS,
     pageReferences,
+    plantUmlServer,
     POPUP_HEIGHT,
     POPUP_WIDTH,
     POPUP_WINDOW_HEIGHT,
@@ -76,10 +77,11 @@ import {
     questionStarters,
     referencePatterns,
     RETURNING_USER_GREETINGS,
+    SOURCE_MAP,
     TECH_ISSUE_LLM,
     WELCOME_RESPONSES
 } from '../constants/app';
-import { autoScroll, cleanText, fixMarkdownLinks, sleep, sortArray } from '../helpers';
+import { autoScroll, cleanText, fixMarkdownLinks, fixPlantUMLComments, normalizeVolvoIdentifier, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
@@ -91,6 +93,7 @@ import SearchBar from '../components/SearchBar';
 import NewChat from '../assets/icons/new-chat.svg'
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition"
 import { BounceLoader } from 'react-spinners';
+import plantumlEncoder from "plantuml-encoder";
 
 const MODES = [
     {
@@ -136,6 +139,7 @@ export function Chat() {
     const [sessionDate, setSessionDate] = useState<Date | null>(null)
     const [sendAnalytics, setSendAnalytics] = useState(true)
     const [currentPage, setCurrentPage] = useState('')
+    const [source, setSource] = useState('')
     const [currentHref, setCurrentHref] = useState<{ href?: string, referenced?: boolean }>({})
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const { transcript, listening, startListening, stopListening, speechAvailable } = useSpeechRecognition()
@@ -158,6 +162,12 @@ export function Chat() {
         const _theme = new URLSearchParams(window.location.search).get('theme')
         const login = new URLSearchParams(window.location.search).get('login')
         const analytics = new URLSearchParams(window.location.search).get('analytics')
+        const portal = new URLSearchParams(window.location.search).get('source')
+
+        if (portal) {
+            const portalSource = (SOURCE_MAP as dataObj)[portal] || 'HPx Assistant'
+            setSource(portalSource)
+        }
 
         if (popup) {
             setRenderFullApp(false)
@@ -273,7 +283,7 @@ export function Chat() {
     useEffect(() => {
         if (messageRef.current) messageRef.current.focus()
         generateGreetings()
-        renderCodeBlockHeaders()
+        runPostRender()
     }, [sessionId, feedbackData])
 
     useEffect(() => {
@@ -283,7 +293,7 @@ export function Chat() {
     useEffect(() => {
         if (!minimized) {
             generateGreetings()
-            renderCodeBlockHeaders()
+            runPostRender()
         }
     }, [minimized])
 
@@ -615,7 +625,7 @@ export function Chat() {
 
                 setTimeout(() => {
                     setTimePassed(0)
-                    renderCodeBlockHeaders()
+                    runPostRender()
                 }, 100)
                 streamIdRef.current = null
                 stopGenerationRef.current = false
@@ -758,11 +768,13 @@ export function Chat() {
         else if (html) html.style.overflow = 'unset'
     }
 
-    const renderCodeBlockHeaders = () => {
+    const runPostRender = () => {
+        // Render code block headers
         // const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
         const codeBlocks = document.querySelectorAll('pre')
 
         codeBlocks.forEach((codeBlock, index) => {
+
             if (!codeBlock.hasAttribute("data-highlighted")) {
                 const child = codeBlock.querySelector('code') as HTMLElement
                 Prism.highlightElement(child)
@@ -771,6 +783,18 @@ export function Chat() {
 
             if (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark")) {
                 const language = (codeBlock.outerHTML.split('"')[1] || 'code').replace('language-', '')
+
+                // PlantUML diagram render
+                if (language.toLowerCase() === 'plantuml') {
+                    let code = codeBlock.textContent || ''
+                    code = code.includes('@startuml') ? code : `@startuml\n${code}\n@enduml`
+                    const encoded = plantumlEncoder.encode(fixPlantUMLComments(code))
+                    // svg or png
+                    const url = `${plantUmlServer}/svg/${encoded}`
+
+                    codeBlock.innerHTML = `<img style="max-width: inherit;" src="${url}" alt="PlantUML diagram" />`
+                    return
+                }
 
                 const header = document.createElement('div')
                 header.className = `chat__code-header`
@@ -972,7 +996,7 @@ export function Chat() {
     }
 
     const curatePrompt = (userPrompt: string) => {
-        let prompt = userPrompt
+        let prompt = normalizeVolvoIdentifier(userPrompt)
 
         pageReferences.forEach(reference => {
             if (currentPage && prompt.toLowerCase().includes(reference)) {
@@ -1154,7 +1178,7 @@ export function Chat() {
             window.parent.postMessage({ height: POPUP_WINDOW_HEIGHT, width: POPUP_WINDOW_WIDTH }, '*')
             resizeIframe(POPUP_WINDOW_HEIGHT, POPUP_WINDOW_WIDTH)
             setTimeout(() => {
-                renderCodeBlockHeaders()
+                runPostRender()
             }, 100)
             setPopupHeight('750px')
             setTimeout(() => autoScroll('.chat__main', 'smooth'), 200)
@@ -1546,7 +1570,7 @@ export function Chat() {
                         <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image`} />
                         <div className="chat__popup-window-header-info-text">
                             <p onClick={goToAboutVeronica} className='chat__popup-window-header-title'>Veronica</p>
-                            <p onClick={goToAboutVeronica} className="chat__popup-window-header-subtitle">HPx Assistant</p>
+                            <p onClick={goToAboutVeronica} className="chat__popup-window-header-subtitle">{source || 'HPx Assistant'}</p>
                         </div>
                     </div>
                 </Tooltip>
