@@ -81,7 +81,7 @@ import {
     TECH_ISSUE_LLM,
     WELCOME_RESPONSES
 } from '../constants/app';
-import { autoScroll, cleanText, fixMarkdownLinks, fixPlantUMLComments, normalizeVolvoIdentifier, sleep, sortArray } from '../helpers';
+import { autoScroll, checkPlantUML, cleanText, fixMarkdownLinks, fixPlantUMLComments, normalizeVolvoIdentifier, sleep, sortArray } from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
@@ -773,7 +773,7 @@ export function Chat() {
         // const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
         const codeBlocks = document.querySelectorAll('pre')
 
-        codeBlocks.forEach((codeBlock, index) => {
+        codeBlocks.forEach(async (codeBlock, index) => {
 
             if (!codeBlock.hasAttribute("data-highlighted")) {
                 const child = codeBlock.querySelector('code') as HTMLElement
@@ -791,9 +791,11 @@ export function Chat() {
                     const encoded = plantumlEncoder.encode(fixPlantUMLComments(code))
                     // svg or png
                     const url = `${plantUmlServer}/svg/${encoded}`
-
-                    codeBlock.innerHTML = `<img style="max-width: inherit;" src="${url}" alt="PlantUML diagram" />`
-                    return
+                    const diagramOk = await checkPlantUML(url)
+                    if(diagramOk) {
+                        codeBlock.innerHTML = `<img style="max-width: inherit;" src="${url}" alt="PlantUML diagram" />`
+                        return
+                    }
                 }
 
                 const header = document.createElement('div')
