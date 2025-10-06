@@ -111,3 +111,18 @@ export const fixPlantUMLComments = (umlCode: string) => {
         })
         .join('\n')
 }
+
+export const checkPlantUML = async (url: string) => {
+    try {
+        const res = await fetch(url);
+        const text = await res.text();
+
+        if (text.toLowerCase().includes("error")) {
+            return false
+        }
+        return true
+    } catch (err) {
+        console.error("PlantUML fetch error:", err)
+        return false
+    }
+}
