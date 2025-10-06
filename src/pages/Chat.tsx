@@ -69,7 +69,6 @@ import {
     instructionStart,
     NEW_USER_GREETINGS,
     pageReferences,
-    plantUmlServer,
     POPUP_HEIGHT,
     POPUP_WIDTH,
     POPUP_WINDOW_HEIGHT,
@@ -110,6 +109,7 @@ const MODES = [
 
 // const apiURl = process.env.REACT_APP_ENV === 'production' ? API_URL : LOCAL_API_URL
 const apiURl = process.env.REACT_APP_SERVER_URL
+const plantUmlServer = process.env.REACT_APP_PLANTUML_SERVER
 
 export function Chat() {
     const [mode, setMode] = useLocalStorage<(typeof MODES)[number]['value']>('chat-mode', 'query')
