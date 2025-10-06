@@ -1,5 +1,19 @@
-export const APP_VERSION = '3.2'
+export const APP_VERSION = '3.3'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
+
+export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
+export const instructionEnd = '", respond to this: '
+
+export const POPUP_WIDTH = 140
+export const POPUP_HEIGHT = 60
+export const POPUP_WINDOW_WIDTH = 650
+export const POPUP_WINDOW_HEIGHT = 750
+
+export const SOURCE_MAP = {
+    'cyberpunk': 'Cyber Punk',
+    'zonecontroller': 'Zone Controller',
+    'digitalkey': 'Digital Key',
+}
 
 export const NEW_USER_GREETINGS = [
     "Hi, what can I help you with today?",
@@ -177,10 +191,13 @@ export const pageReferences = [
     "this chapter", "where i am", "this content",
 ]
 
-export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
-export const instructionEnd = '", respond to this: '
+export const volvoModels = [
+ "EX30", "EX40", "EX60", "EX90",
+  "C40", "XC40", "XC60", "XC90",
+  "S40", "S60", "S70", "S80", "S90",
+  "V40", "V50", "V60", "V70", "V90",
+  "240", "260", "740", "760", "780", "850", "940", "960",
+  "C70"
+]
 
-export const POPUP_WIDTH = 140
-export const POPUP_HEIGHT = 60
-export const POPUP_WINDOW_WIDTH = 650
-export const POPUP_WINDOW_HEIGHT = 750
+REMOVED

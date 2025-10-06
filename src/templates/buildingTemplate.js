@@ -1,7 +1,7 @@
 const htmlBuildingTemplate = `
 <div style="display: flex; justify-content: center; align-items: center; background-color: #202020; border-radius: 4rem;">
     <div style="border-radius: 8px; text-align:center">
-        <p style="font-family: Arial, sans-serif; font-size: .75rem; font-weight: bold; color: #a5a5a5; margin: 0;">Updating Veronica<span id="ellipsis">.</span></p>
+        <p style="font-family: Arial, sans-serif; font-size: .75rem; font-weight: bold; color: #a5a5a5;">Updating Veronica<span id="ellipsis">.</span></p>
         <p style="font-family: Arial, sans-serif; display: none;  font-size: 1rem; color: #a5a5a5;">The chat will be reloaded in <span id="countdown">30</span> seconds. Please wait.</p>
     </div>
 </div>
