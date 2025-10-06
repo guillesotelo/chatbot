@@ -80,7 +80,16 @@ import {
     TECH_ISSUE_LLM,
     WELCOME_RESPONSES
 } from '../constants/app';
-import { autoScroll, checkPlantUML, cleanText, fixMarkdownLinks, fixPlantUMLComments, normalizeVolvoIdentifier, sleep, sortArray } from '../helpers';
+import {
+    autoScroll,
+    checkPlantUML,
+    cleanText,
+    fixMarkdownLinks,
+    fixPlantUML,
+    normalizeVolvoIdentifier,
+    sleep,
+    sortArray
+} from '../helpers';
 import ChatOptions from '../assets/icons/options.svg'
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
@@ -788,12 +797,14 @@ export function Chat() {
                 if (language.toLowerCase() === 'plantuml') {
                     let code = codeBlock.textContent || ''
                     code = code.includes('@startuml') ? code : `@startuml\n${code}\n@enduml`
-                    const encoded = plantumlEncoder.encode(fixPlantUMLComments(code))
+                    const encoded = plantumlEncoder.encode(fixPlantUML(code))
                     // svg or png
                     const url = `${plantUmlServer}/svg/${encoded}`
                     const diagramOk = await checkPlantUML(url)
-                    if(diagramOk) {
-                        codeBlock.innerHTML = `<img style="max-width: inherit;" src="${url}" alt="PlantUML diagram" />`
+                    if (diagramOk) {
+                        codeBlock.innerHTML = `<img style="max-width: 100%; margin: 1rem 0;" src="${url}" alt="PlantUML diagram" />`
+                        codeBlock.style.background = 'transparent'
+                        codeBlock.style.textAlign = 'center'
                         return
                     }
                 }
@@ -968,8 +979,15 @@ export function Chat() {
         const content = transcript?.trim() || input.trim()
         if (!content || isLoading[sessionId || ''] || forbidSubmit(transcript?.trim())) return
 
-        const newMessage = { role: 'user', content }
+        const newMessage = {
+            role: 'user',
+            content,
+            transcribed: Boolean(transcript?.trim()),
+            context: Boolean(needsContext(content) && sessionId)
+        }
+
         const firstMessage = sessions.length === 1 && !getSession().messages.length
+
         setSessions(prev => {
             return prev.map(s => {
                 if (s.id === getSession().id || prev.length === 1 && firstMessage) {
@@ -978,9 +996,7 @@ export function Chat() {
                         messages: [...s.messages, newMessage],
                         completion: null,
                         name: s.name !== 'New chat' ? s.name : newMessage.content.substring(0, 80),
-                        updated: new Date().getTime(),
-                        transcribed: Boolean(transcript?.trim()),
-                        context: Boolean(needsContext(content) && sessionId)
+                        updated: new Date().getTime()
                     }
                 }
                 return s

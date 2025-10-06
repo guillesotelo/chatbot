@@ -4,7 +4,7 @@ import { feedbackHeaders } from '../constants/app'
 import { dataObj, sessionType } from '../types'
 import { AppContext } from '../AppContext'
 import { useNavigate } from 'react-router-dom'
-import { getAverage, getDate, sortArray, whenDateIs } from '../helpers'
+import { checkPlantUML, fixPlantUML, getAverage, getDate, sortArray, whenDateIs } from '../helpers'
 import InputField from '../components/InputField'
 import { Button } from '../components/Button'
 import { toast, ToastContainer } from 'react-toastify'
@@ -55,9 +55,11 @@ import Tooltip from '../components/Tooltip'
 import Modal from '../components/Modal'
 import TextData from '../components/TextData'
 import Switch from '../components/Switch'
+import plantumlEncoder from "plantuml-encoder";
 
 type Props = {}
 const apiURl = process.env.REACT_APP_SERVER_URL
+const plantUmlServer = process.env.REACT_APP_PLANTUML_SERVER
 
 const analyticTimeOptions = [
     'Last minute',
@@ -101,6 +103,8 @@ export default function Admin({ }: Props) {
         Prism.highlightAll()
     }, [])
 
+    console.log(analyticsCopy)
+
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
     }, [isLoggedIn])
@@ -125,7 +129,7 @@ export default function Admin({ }: Props) {
         })
         setDeleteFeedback(false)
         Prism.highlightAll()
-        renderCodeBlockHeaders()
+        runPostRender()
 
     }, [selectedFeedback, selectedSession])
 
@@ -303,11 +307,13 @@ export default function Admin({ }: Props) {
         navigator.clipboard.writeText(text)
     }
 
-    const renderCodeBlockHeaders = () => {
+    const runPostRender = () => {
+        // Render code block headers
         // const codeBlocks = Array.from(document.querySelectorAll('pre[class*="language-"]'))
         const codeBlocks = document.querySelectorAll('pre')
 
-        codeBlocks.forEach((codeBlock, index) => {
+        codeBlocks.forEach(async (codeBlock, index) => {
+
             if (!codeBlock.hasAttribute("data-highlighted")) {
                 const child = codeBlock.querySelector('code') as HTMLElement
                 Prism.highlightElement(child)
@@ -317,6 +323,22 @@ export default function Admin({ }: Props) {
             if (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark")) {
                 const language = (codeBlock.outerHTML.split('"')[1] || 'code').replace('language-', '')
 
+                // PlantUML diagram render
+                if (language.toLowerCase() === 'plantuml') {
+                    let code = codeBlock.textContent || ''
+                    code = code.includes('@startuml') ? code : `@startuml\n${code}\n@enduml`
+                    const encoded = plantumlEncoder.encode(fixPlantUML(code))
+                    // svg or png
+                    const url = `${plantUmlServer}/svg/${encoded}`
+                    const diagramOk = await checkPlantUML(url)
+                    if (diagramOk) {
+                        codeBlock.innerHTML = `<img style="max-width: 100%; margin: 1rem 0;" src="${url}" alt="PlantUML diagram" />`
+                        codeBlock.style.background = 'transparent'
+                        codeBlock.style.textAlign = 'center'
+                        return
+                    }
+                }
+
                 const header = document.createElement('div')
                 header.className = `chat__code-header`
                 header.innerHTML = `<p class="chat__code-header-language">${language}</p>`
@@ -324,11 +346,11 @@ export default function Admin({ }: Props) {
                 const headerCopy = document.createElement('div')
                 headerCopy.className = 'chat__code-header-copy'
                 headerCopy.innerHTML = `
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="chat__code-header-copy-svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
-                    </svg>
-                    <p class="chat__code-header-copy-text">Copy code</p>
-                `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
+                        </svg>
+                        <p class="chat__code-header-copy-text">Copy code</p>
+                    `
                 headerCopy.onclick = () => copyCodeToClipboard(index)
 
                 header.appendChild(headerCopy)
@@ -338,6 +360,7 @@ export default function Admin({ }: Props) {
 
         // Apply source links styles
         Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
+            console.log('ye', message)
             Array.from(message.querySelectorAll('strong')).forEach(s => {
                 if (s.textContent?.includes('Source')) {
                     const header = document.createElement('p')
@@ -351,10 +374,13 @@ export default function Admin({ }: Props) {
                 if (ul.previousElementSibling &&
                     (ul.previousElementSibling.outerHTML.includes('Source:')
                         || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
+
+                    const sourceList: string[] = []
                     Array.from(ul.querySelectorAll('a')).forEach(a => {
                         a.target = '_blank'
                         if (a.textContent) {
                             if (!a.hasAttribute('data-source-processed')) {
+                                sourceList.push(a.href)
                                 const title = document.createElement('p')
                                 const subtitle = document.createElement('p')
                                 title.className = `chat__message-content-assistant-source${theme}-title`
@@ -380,7 +406,6 @@ export default function Admin({ }: Props) {
             })
         })
     }
-
 
     const handleSubmit = async (event: any) => {
         try {
@@ -466,7 +491,7 @@ export default function Admin({ }: Props) {
                                         <p><strong>Matches:</strong>
                                             <br /> {searchResults.matches ?
                                                 searchResults.matches.map((m: string, i: number) =>
-                                                    <div className='chat__admin-search-textresult'>
+                                                    <div key={i} className='chat__admin-search-textresult'>
                                                         <span>{m}</span>
                                                         <br />
                                                         <br />
@@ -572,32 +597,34 @@ export default function Admin({ }: Props) {
                     setShowUserQueries(false)
                     setSelectedSession(-1)
                 }}>
-                {selectedSession !== -1 ? <div>
-                    <div className="chat__feedback-content">
+                {selectedSession !== -1 ?
+                    <>
+                        <div className="chat__message-content" style={{ background: 'unset' }}>
+                            <Button
+                                label='Back to query list'
+                                className={`button__outline${theme}`}
+                                onClick={() => setSelectedSession(-1)}
+                                style={{ width: 'fit-content' }}
+                            />
+                            {analyticsCopy[selectedSession].messages.map((session: sessionType, i: number) => (
+                                <div
+                                    key={i}
+                                    className={`chat__message-content${theme} chat__message-content-${session.role}`}
+                                    style={{
+                                        borderColor: session.transcribed ? 'lightblue' : session.context ? 'orange' : 'transparent',
+                                        marginBottom: '1rem',
+                                    }}
+                                    dangerouslySetInnerHTML={{
+                                        __html: marked.parse(session.content || '') as string,
+                                    }} />
+                            ))}
+                        </div>
                         <Button
-                            label='Back to query list'
-                            className={`button__outline${theme}`}
-                            onClick={() => setSelectedSession(-1)}
-                            style={{ width: 'fit-content' }}
+                            label='Delete session analytics'
+                            className={`button__delete${theme}`}
+                            onClick={deleteAnalytic}
                         />
-                        {analyticsCopy[selectedSession].messages.map((session: sessionType) => (
-                            <div
-                                key={session.id}
-                                className={`chat__feedback-content-${session.role}${theme}`}
-                                style={{
-                                    borderColor: 'transparent',
-                                    marginBottom: '1rem'
-                                }}
-                                dangerouslySetInnerHTML={{
-                                    __html: marked.parse(session.content || '') as string,
-                                }} />))}
-                    </div>
-                    <Button
-                        label='Delete session analytics'
-                        className={`button__delete${theme}`}
-                        onClick={deleteAnalytic}
-                    />
-                </div>
+                    </>
                     :
                     <div className='chat__admin-queries'>
                         {analyticsCopy.filter(a => a.prompt).map((analytic, i) =>
@@ -624,11 +651,11 @@ export default function Admin({ }: Props) {
                 subtitle={getDate(userFeedback[selectedFeedback].createdAt)}
                 onClose={() => setSelectedFeedback(-1)}>
                 <div className={`chat__admin-session`}>
-                    <div className="chat__feedback-content">
+                    <div className="chat__message-content">
                         {userFeedback[selectedFeedback][(showFullChat[selectedFeedback] ? 'conversation' : 'messages')].map((feedback: sessionType) => (
                             <div
                                 key={feedback.id}
-                                className={`chat__feedback-content-${feedback.role}${theme}`}
+                                className={`chat__message-content${theme} chat__message-content-${feedback.role}`}
                                 style={{
                                     borderColor: feedback.score === false ? 'red' : feedback.score === true ? 'green' : 'transparent',
                                     marginBottom: typeof feedback.score === 'boolean' ? '1rem' : ''
