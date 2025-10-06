@@ -99,8 +99,8 @@ export const normalizeVolvoIdentifier = (prompt: string) => {
     return parsed
 }
 
-export const fixPlantUMLComments = (umlCode: string) => {
-    return umlCode
+export const fixPlantUML = (umlCode: string) => {
+    return removeExtraClosingParentheses(umlCode)
         .split('\n')
         .map(line => {
             const trimmed = line.trim()
@@ -125,4 +125,26 @@ export const checkPlantUML = async (url: string) => {
         console.error("PlantUML fetch error:", err)
         return false
     }
+}
+
+export const removeExtraClosingParentheses = (str: string) => {
+    let balance = 0
+    let result = ''
+
+    for (let char of str) {
+        if (char === '(') {
+            balance++
+            result += char
+        } else if (char === ')') {
+            if (balance > 0) {
+                balance--
+                result += char
+            }
+            // If balance is 0, we skip the extra ')'
+        } else {
+            result += char
+        }
+    }
+
+    return result
 }
