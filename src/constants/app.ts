@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.3'
+export const APP_VERSION = '3.4'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
@@ -8,6 +8,8 @@ export const POPUP_WIDTH = 140
 export const POPUP_HEIGHT = 60
 export const POPUP_WINDOW_WIDTH = 650
 export const POPUP_WINDOW_HEIGHT = 750
+
+export const MAX_CHARS = 3000
 
 export const SOURCE_MAP = {
     'cyberpunk': 'Cyber Punk',
@@ -167,7 +169,7 @@ export const referencePatterns = [
     // Commands that imply previous discussion
     "keep", "finish", "sum",
     "summary", "summarize", "key", "other",
-    "example",
+    "example", "not"
 ]
 
 export const greetingPatterns = [
@@ -179,7 +181,7 @@ export const greetingPatterns = [
 
 export const gratitudePatterns = [
     "thanks", "thank you", "thank you!", "thx", "appreciate it", "much appreciated",
-    "gracias", "merci", "danke", "thanks a lot", "thank you so much",
+    "gracias", "merci", "danke", "thanks a lot", "thank you so much", "yes", "yeahp", "yeah", "yup",
     "many thanks", "thanks a bunch", "thanks a million", "thanks again", "tack", "ok"
 ]
 
@@ -192,10 +194,10 @@ export const pageReferences = [
 ]
 
 export const volvoModels = [
- "EX30", "EX40", "EX60", "EX90",
-  "C40", "XC40", "XC60", "XC90",
-  "S40", "S60", "S70", "S80", "S90",
-  "V40", "V50", "V60", "V70", "V90",
-  "240", "260", "740", "760", "780", "850", "940", "960",
-  "C70"
+    "EX30", "EX40", "EX60", "EX90",
+    "C40", "XC40", "XC60", "XC70", "XC90",
+    "S40", "S60", "S70", "S80", "S90",
+    "V40", "V50", "V60", "V70", "V90",
+    "240", "260", "740", "760", "780", "850", "940", "960",
+    "C70"
 ]

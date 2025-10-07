@@ -94,6 +94,8 @@ export default function Admin({ }: Props) {
     const navigate = useNavigate()
     const containerRef = useRef(null)
 
+    console.log(analyticsCopy[selectedSession])
+
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
         else {
@@ -102,8 +104,6 @@ export default function Admin({ }: Props) {
         }
         Prism.highlightAll()
     }, [])
-
-    console.log(analyticsCopy)
 
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
@@ -320,7 +320,8 @@ export default function Admin({ }: Props) {
                 codeBlock.setAttribute("data-highlighted", "true")
             }
 
-            if (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark")) {
+            if (!codeBlock.parentElement?.className.includes('user') &&
+                (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark"))) {
                 const language = (codeBlock.outerHTML.split('"')[1] || 'code').replace('language-', '')
 
                 // PlantUML diagram render
@@ -360,7 +361,6 @@ export default function Admin({ }: Props) {
 
         // Apply source links styles
         Array.from(document.querySelectorAll('.chat__message-content-assistant')).forEach(message => {
-            console.log('ye', message)
             Array.from(message.querySelectorAll('strong')).forEach(s => {
                 if (s.textContent?.includes('Source')) {
                     const header = document.createElement('p')
@@ -604,7 +604,7 @@ export default function Admin({ }: Props) {
                                 label='Back to query list'
                                 className={`button__outline${theme}`}
                                 onClick={() => setSelectedSession(-1)}
-                                style={{ width: 'fit-content' }}
+                                style={{ width: 'fit-content', marginBottom: '1rem' }}
                             />
                             {analyticsCopy[selectedSession].messages.map((session: sessionType, i: number) => (
                                 <div
@@ -615,7 +615,7 @@ export default function Admin({ }: Props) {
                                         marginBottom: '1rem',
                                     }}
                                     dangerouslySetInnerHTML={{
-                                        __html: marked.parse(session.content || '') as string,
+                                        __html: session.role === 'user' ? session.content.replace(/\n/g, "<br>") : marked.parse(session.content || '') as string,
                                     }} />
                             ))}
                         </div>
@@ -661,7 +661,7 @@ export default function Admin({ }: Props) {
                                     marginBottom: typeof feedback.score === 'boolean' ? '1rem' : ''
                                 }}
                                 dangerouslySetInnerHTML={{
-                                    __html: marked.parse(feedback.content || '') as string,
+                                    __html: feedback.role === 'user' ? feedback.content.replace(/\n/g, "<br>") : marked.parse(feedback.content || '') as string,
                                 }} />))}
                         {showFullChat[selectedFeedback] ?
                             <Button

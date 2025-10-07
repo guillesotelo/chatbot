@@ -67,6 +67,7 @@ import {
     greetingPatterns,
     instructionEnd,
     instructionStart,
+    MAX_CHARS,
     NEW_USER_GREETINGS,
     pageReferences,
     POPUP_HEIGHT,
@@ -351,7 +352,6 @@ export function Chat() {
     const updateMemory = () => {
         if (!sessionId || isLoading[sessionId] || !memoryRef.current || !getSession().messages.length) return
         let chatContext = ['']
-        const maxChars = 2500
         const rMessages = [...getSession().messages].reverse() // mutation from the original
         const getPrompt = (ctx: string[]) => instructionStart + ctx.join('') + instructionEnd // instructions + user prompt
         const currentMemory = memoryRef.current[sessionId] || null
@@ -361,7 +361,7 @@ export function Chat() {
         rMessages.forEach((m: dataObj, i: number) => {
             const message = `\n${m.role === 'assistant' ? m.content.split('<br/><br/><strong>Source')[0] : m.content}\n`
             if (m.content
-                && getPrompt(chatContext.concat(message)).length <= maxChars
+                && getPrompt(chatContext.concat(message)).length <= MAX_CHARS
                 && (i < rIndex || !currentMemory)
                 && !TECH_ISSUE_LLM.includes(m.content)
                 && !m.content.includes('[STOPPED]')
@@ -370,9 +370,9 @@ export function Chat() {
                 chatContext.unshift(message)
                 index = rMessages.length - 1 - i
 
-            } else if (i === 0 && getPrompt(chatContext.concat(message)).length >= maxChars) {
+            } else if (i === 0 && getPrompt(chatContext.concat(message)).length >= MAX_CHARS) {
                 // case when the last message only is very long, then we truncate it
-                chatContext.unshift(message.split('').slice(0, maxChars).join(''))
+                chatContext.unshift(message.split('').slice(0, MAX_CHARS).join('') + ' [...]')
                 index = rMessages.length - 1
             }
         })
@@ -790,7 +790,8 @@ export function Chat() {
                 codeBlock.setAttribute("data-highlighted", "true")
             }
 
-            if (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark")) {
+            if (!codeBlock.parentElement?.className.includes('user') &&
+                (!codeBlock.querySelector(".chat__code-header") || !codeBlock.querySelector(".chat__code-header--dark"))) {
                 const language = (codeBlock.outerHTML.split('"')[1] || 'code').replace('language-', '')
 
                 // PlantUML diagram render
@@ -802,7 +803,7 @@ export function Chat() {
                     const url = `${plantUmlServer}/svg/${encoded}`
                     const diagramOk = await checkPlantUML(url)
                     if (diagramOk) {
-                        codeBlock.innerHTML = `<img style="max-width: 100%; margin: 1rem 0;" src="${url}" alt="PlantUML diagram" />`
+                        codeBlock.innerHTML = `<img style="max-width: 100%; margin: 1rem 0; border-radius: .3rem;" src="${url}" alt="PlantUML diagram" />`
                         codeBlock.style.background = 'transparent'
                         codeBlock.style.textAlign = 'center'
                         return
@@ -1030,6 +1031,18 @@ export function Chat() {
         const chatContext = needsContext(prompt) && sessionId ?
             instructionStart + memoryRef.current[sessionId].memory + instructionEnd : ''
 
+        const promptLength = prompt.length
+        const ctxLength = chatContext.length
+
+        // Slice prompt is too large
+        if (promptLength > MAX_CHARS) return prompt.substring(0, MAX_CHARS) + ' [...]'
+        // Slice context if combo is large
+        if (ctxLength && (promptLength + ctxLength) > MAX_CHARS) {
+            const maxCtxLength = MAX_CHARS - promptLength
+            const slicedCtx = chatContext.split(instructionEnd)[0].substring(0, maxCtxLength) + ' [...]' + instructionEnd
+            return slicedCtx + prompt
+        }
+
         return chatContext + prompt
     }
 
@@ -1098,17 +1111,27 @@ export function Chat() {
         style.height = `${textarea.scrollHeight + 2}px`
 
         const form = document.querySelector(`.chat__form${theme}`) as HTMLDivElement
-        const send = document.querySelectorAll(`.chat__form-send`) as NodeListOf<HTMLDivElement>
+        const sendBtn = document.querySelectorAll(`.chat__form-send`) as NodeListOf<HTMLDivElement>
+        const speakBtn = document.querySelector(`.chat__form-control-svg${theme}`) as HTMLDivElement
         const outputChat = document.querySelector(`.chat__output`) as HTMLDivElement
+        const greetings = document.querySelector(`.chat__box-greetings`) as HTMLDivElement
+        const output = document.querySelector(`.chat__output`) as HTMLDivElement
 
         form.style.alignItems = 'center'
-        send.forEach(s => s.style.marginBottom = '0')
+        sendBtn.forEach(s => s.style.marginBottom = '0')
+        if (speakBtn) speakBtn.style.marginBottom = '0'
 
         outputChat.style.marginBottom = textarea.scrollHeight > 80 ? '46vh' : renderFullApp ? '6rem' : '0'
         if (textarea.scrollHeight > 60) {
             style.padding = '1rem 0'
             form.style.alignItems = 'flex-end'
-            send.forEach(s => s.style.marginBottom = '.6rem')
+            sendBtn.forEach(s => s.style.marginBottom = '.6rem')
+            if (speakBtn) speakBtn.style.marginBottom = '.4rem'
+
+            if (getSession().messages.length < 2) {
+                greetings.style.marginBottom = '4rem'
+                output.style.marginBottom = '0'
+            }
         }
     }
 
@@ -1632,7 +1655,7 @@ export function Chat() {
                                 key={feedback.id}
                                 className={`chat__feedback-content-${feedback.role}${theme}`}
                                 dangerouslySetInnerHTML={{
-                                    __html: marked.parse(feedback.content || '') as string,
+                                    __html: feedback.role === 'user' ? feedback.content.replace(/\n/g, "<br>") : marked.parse(feedback.content || '') as string,
                                 }} />
                         ))}
                     </div>
@@ -1709,7 +1732,7 @@ export function Chat() {
                                     <div
                                         className={`chat__message-content${theme} chat__message-content-${message.role || ''}`}
                                         dangerouslySetInnerHTML={{
-                                            __html: marked.parse(message.content || '') as string,
+                                            __html: message.role === 'user' ? String(message.content).replace(/\n/g, "<br>") : marked.parse(message.content || '') as string,
                                         }} />
                                     {message.sources && message.sources?.length > 0 && (
                                         <div className='chat__message-sources'>
