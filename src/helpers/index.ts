@@ -55,7 +55,7 @@ export const getAverage = (data: dataObj[], key: string) => {
     return count / (data.length || 1)
 }
 
-export const fixMarkdownLinks = (text: string) => text.replace(/\[([^\]]+)\]\(([^)]+)\)\]+/g, "[$1]($2)")
+export const fixMarkdownLinks = (text: string) => text.replace(/\[([^\]]+)\]\(([^()\s]+)\)\)/g, '[$1]($2)')
 
 export const whenDateIs = (date: Date | string | number | undefined, showDates = false) => {
     if (!date) return ''

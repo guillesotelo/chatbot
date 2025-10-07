@@ -479,6 +479,7 @@
             line-height: 1.75;
             font-size: 14px;
             background: #ededed;
+            word-break: break-word;
 
             &>* {
                 background: inherit;
@@ -495,6 +496,7 @@
                 line-height: 1.75;
                 font-size: 14px;
                 background: #303030;
+                word-break: break-word;
 
                 &>* {
                     background: inherit;
