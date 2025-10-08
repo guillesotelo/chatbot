@@ -212,12 +212,10 @@ export function Chat() {
             try {
                 const { href } = event.data
                 if (href) {
-                    const splitUrl = href.split('/')
-                    const current = splitUrl[splitUrl.length - 1].replace('.html', '').replace(/[-_]/g, ' ')
-                    const parent = splitUrl[splitUrl.length - 2].replace(/[-_]/g, ' ')
-                    // If the page name is too short we add the parent page for context
-                    const context = current.length < 12 && parent !== current ? parent + ' - ' : ''
-                    const page = `${context}${current}`
+                    const splitUrl: string[] = href.split('/')
+                    const current = (splitUrl.pop() || '').replace('.html', '').replace(/[-_]/g, ' ')
+                    const context = splitUrl.map((p, i) => i > 2 ? p.replace(/[-_]/g, ' ') : false).filter(p => p).join(' - ')
+                    const page = `"${current}" (${context})`
                     setCurrentPage(prev => page || prev || '')
                     setCurrentHref({ href })
                 }
@@ -817,7 +815,7 @@ export function Chat() {
                 const headerCopy = document.createElement('div')
                 headerCopy.className = 'chat__code-header-copy'
                 headerCopy.innerHTML = `
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
                         <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
                     </svg>
                     <p class="chat__code-header-copy-text">Copy code</p>
@@ -1019,7 +1017,7 @@ export function Chat() {
 
         pageReferences.forEach(reference => {
             if (currentPage && prompt.toLowerCase().includes(reference)) {
-                prompt = prompt.replace(reference, `${reference} (${currentPage})`)
+                prompt = prompt.replace(reference, `${reference} ${currentPage}`)
                 setCurrentHref(prev => ({ ...prev, referenced: true }))
             }
         })
@@ -1142,7 +1140,7 @@ export function Chat() {
         if (copyDiv && copyDiv.innerHTML.includes('Copy code')) {
             const prevHtml = copyDiv.innerHTML
             copyDiv.innerHTML = `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
                     <path fill-rule="evenodd" clip-rule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path>
                 </svg>
                 <p class="chat__code-header-copy-text">Copied!</p>
