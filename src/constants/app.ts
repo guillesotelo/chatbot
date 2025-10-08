@@ -187,9 +187,9 @@ export const gratitudePatterns = [
 
 export const pageReferences = [
     "this page", "the page", "current page", " here", "the webpage", "current webpage",
-    "this section", "the section", "current section", "this part", "this parragraph", "this topic",
+    "this section", "current section", "this part", "this parragraph", "this topic",
     "this document", "this documentation",
-    "this article", "the article", "this post", "the post", "this site",
+    "this article", "this post", "this site",
     "this chapter", "where i am", "this content",
 ]
 
