@@ -20,6 +20,7 @@ export type messageType = {
     date?: string | Date | number
     transcribed?: boolean
     context?: boolean
+    regenerated?: number
 }
 
 export type sessionType = dataObj & {

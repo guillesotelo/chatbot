@@ -613,6 +613,35 @@
             }
         }
 
+         &-regenerate {
+            cursor: pointer;
+            transition: .1s;
+            height: 1.1rem;
+            padding: .4rem .2rem;
+            border-radius: .5rem;
+            opacity: 0;
+            animation: fade-in-controls .5s ease-in forwards;
+
+            &:hover {
+                background: #e7e7e7;
+            }
+
+            &--dark {
+                cursor: pointer;
+                transition: .1s;
+                height: 1.1rem;
+                padding: .4rem .2rem;
+                border-radius: .5rem;
+                opacity: 0;
+                animation: fade-in-controls .5s ease-in forwards;
+                filter: invert(1);
+
+                &:hover {
+                    background: #323232;
+                }
+            }
+        }
+
         &-controls {
             display: flex;
             flex-direction: row;
