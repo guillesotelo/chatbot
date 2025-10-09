@@ -168,7 +168,7 @@ export default function Admin({ }: Props) {
         try {
             const response = await fetch(`${apiURl}/api/get_feedback`, {
                 method: 'GET',
-                headers: { "Authorization": process.env.REACT_APP_API_TOKEN || '' }
+                headers: { "Authorization": process.env.REACT_APP_ADMIN_TOKEN || '' }
             })
 
             const feedback = await response.json()
@@ -193,7 +193,7 @@ export default function Admin({ }: Props) {
         try {
             const response = await fetch(`${apiURl}/api/get_analytics`, {
                 method: 'GET',
-                headers: { "Authorization": process.env.REACT_APP_API_TOKEN || '' }
+                headers: { "Authorization": process.env.REACT_APP_ADMIN_TOKEN || '' }
             })
 
             const analytics = await response.json()
@@ -226,7 +226,7 @@ export default function Admin({ }: Props) {
 
             const response = await fetch(`${apiURl}/api/update_feedback`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', "Authorization": process.env.REACT_APP_ADMIN_TOKEN || '' },
                 body: JSON.stringify(reviewDta)
             })
             if (response && response.ok) {
@@ -248,7 +248,7 @@ export default function Admin({ }: Props) {
             setIsLoading(true)
             const response = await fetch(`${apiURl}/api/delete_feedback`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', "Authorization": process.env.REACT_APP_ADMIN_TOKEN || '' },
                 body: JSON.stringify(userFeedback[selectedFeedback])
             })
             if (response && response.ok) {
@@ -270,7 +270,7 @@ export default function Admin({ }: Props) {
             setIsLoading(true)
             const response = await fetch(`${apiURl}/api/delete_analytics`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', "Authorization": process.env.REACT_APP_ADMIN_TOKEN || '' },
                 body: JSON.stringify(analyticsCopy[selectedSession])
             })
             if (response && response.ok) {
@@ -598,8 +598,8 @@ export default function Admin({ }: Props) {
                     setSelectedSession(-1)
                 }}>
                 {selectedSession !== -1 ?
-                    <>
-                        <div className="chat__message-content" style={{ background: 'unset' }}>
+                    <div style={{ margin: '1rem' }}>
+                        <div className="chat__message-content" style={{ background: 'unset', padding: 0 }}>
                             <Button
                                 label='Back to query list'
                                 className={`button__outline${theme}`}
@@ -624,7 +624,7 @@ export default function Admin({ }: Props) {
                             className={`button__delete${theme}`}
                             onClick={deleteAnalytic}
                         />
-                    </>
+                    </div>
                     :
                     <div className='chat__admin-queries'>
                         {analyticsCopy.filter(a => a.prompt).map((analytic, i) =>
@@ -651,7 +651,7 @@ export default function Admin({ }: Props) {
                 subtitle={getDate(userFeedback[selectedFeedback].createdAt)}
                 onClose={() => setSelectedFeedback(-1)}>
                 <div className={`chat__admin-session`}>
-                    <div className="chat__message-content">
+                    <div className="chat__message-content" style={{ background: 'unset' }}>
                         {userFeedback[selectedFeedback][(showFullChat[selectedFeedback] ? 'conversation' : 'messages')].map((feedback: sessionType) => (
                             <div
                                 key={feedback.id}

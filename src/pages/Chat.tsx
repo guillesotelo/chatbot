@@ -305,6 +305,48 @@ export function Chat() {
         }
     }, [minimized])
 
+    const regenerateResponse = () => {
+        const currentMessages = [...getSession().messages]
+        const lastMessage = { ...currentMessages[currentMessages.length - 2] }
+        const content = lastMessage.content
+        if (!content || isLoading[sessionId || '']) return
+
+        const newMessage = {
+            ...lastMessage,
+            regenerated: Number((lastMessage.regenerated || 0) + 1)
+        }
+
+        const filteredMessages = currentMessages[currentMessages.length - 2] &&
+            currentMessages[currentMessages.length - 2].role === 'user' ? currentMessages.slice(0, currentMessages.length - 2) :
+            currentMessages.slice(0, currentMessages.length - 1)
+
+        const firstMessage = sessions.length === 1 && !getSession().messages.length
+
+        setSessions(prev => {
+            return prev.map(s => {
+                if (s.id === getSession().id || prev.length === 1 && firstMessage) {
+                    return {
+                        ...s,
+                        messages: [...filteredMessages, newMessage],
+                        completion: null,
+                        name: s.name !== 'New chat' ? s.name : content.substring(0, 80),
+                        updated: new Date().getTime()
+                    }
+                }
+                return s
+            })
+        })
+        setInput('')
+        setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
+
+        const isGreeting = greetingPatterns.includes(cleanText(content).toLowerCase())
+        let isGratitude = gratitudePatterns.includes(cleanText(content).toLowerCase())
+
+        if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude')
+
+        getModelResponse(curatePrompt(content), content)
+    }
+
     const needsContext = (userPrompt: string): boolean => {
         let matches = false
         if (sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory) {
@@ -509,7 +551,7 @@ export function Chat() {
 
             const response = await fetch(`${apiURl}/api/save_analytics`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': process.env.REACT_APP_API_TOKEN || '' },
                 body: JSON.stringify(analytics)
             })
 
@@ -544,6 +586,7 @@ export function Chat() {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'Cache-Control': 'no-cache',
+                    'Authorization': process.env.REACT_APP_API_TOKEN || ''
                 },
                 body: new URLSearchParams({
                     user_prompt: content || '',
@@ -958,6 +1001,7 @@ export function Chat() {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'Cache-Control': 'no-cache',
+                    'Authorization': process.env.REACT_APP_API_TOKEN || ''
                 },
                 body: new URLSearchParams({
                     stream_id: String(streamIdRef.current),
@@ -1257,24 +1301,26 @@ export function Chat() {
     }
 
     const deleteSession = (id: number | null | undefined, e: any) => {
-        setShowOptions(null)
-        const remainingSessions = sortArray(sessions.filter(s => s.id !== id), 'updated', true)
-        if (remainingSessions.length && remainingSessions[0].messages.length) {
-            setSessionId(remainingSessions[0].id)
-            setSessions(remainingSessions)
-        } else {
-            const newId = new Date().getTime()
-            const newSession = {
-                id: newId,
-                messages: [],
-                name: 'New chat',
-                updated: newId
+        if (sessions.length) {
+            setShowOptions(null)
+            const remainingSessions = sortArray(sessions.filter(s => s.id !== id), 'updated', true)
+            if (remainingSessions.length && remainingSessions[0].messages.length) {
+                setSessionId(remainingSessions[0].id)
+                setSessions(remainingSessions)
+            } else {
+                const newId = new Date().getTime()
+                const newSession = {
+                    id: newId,
+                    messages: [],
+                    name: 'New chat',
+                    updated: newId
+                }
+                setSessions([newSession])
+                setTimeout(() => {
+                    setSessionId(newId)
+                    generateGreetings()
+                }, 100)
             }
-            setSessions([newSession])
-            setTimeout(() => {
-                setSessionId(newId)
-                generateGreetings()
-            }, 100)
         }
     }
 
@@ -1383,7 +1429,7 @@ export function Chat() {
             setFeedbackData(prev => ({ ...prev, loading: true }))
             const response = await fetch(`${apiURl}/api/save_feedback`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': process.env.REACT_APP_API_TOKEN || '' },
                 body: JSON.stringify(feedbackData)
             })
 
@@ -1405,7 +1451,7 @@ export function Chat() {
         try {
             await fetch(`${apiURl}/api/save_feedback`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': process.env.REACT_APP_API_TOKEN || '' },
                 body: JSON.stringify(data)
             })
             setTimeout(() => setFeedbackData(null), 100)
@@ -1761,6 +1807,8 @@ export function Chat() {
                                                 : <Tooltip tooltip='Bad response'><svg onClick={() => scoreMessage(index, false)} style={{ stroke: message.score === false ? 'blue' : '', animationDelay: '.3s' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M11.8727 21.4961C11.6725 21.8466 11.2811 22.0423 10.8805 21.9922L10.4267 21.9355C7.95958 21.6271 6.36855 19.1665 7.09975 16.7901L7.65054 15H6.93226C4.29476 15 2.37923 12.4921 3.0732 9.94753L4.43684 4.94753C4.91145 3.20728 6.49209 2 8.29589 2H18.0045C19.6614 2 21.0045 3.34315 21.0045 5V12C21.0045 13.6569 19.6614 15 18.0045 15H16.0045C15.745 15 15.5054 15.1391 15.3766 15.3644L11.8727 21.4961ZM14.0045 4H8.29589C7.39399 4 6.60367 4.60364 6.36637 5.47376L5.00273 10.4738C4.65574 11.746 5.61351 13 6.93226 13H9.00451C9.32185 13 9.62036 13.1506 9.8089 13.4059C9.99743 13.6612 10.0536 13.9908 9.96028 14.2941L9.01131 17.3782C8.6661 18.5002 9.35608 19.6596 10.4726 19.9153L13.6401 14.3721C13.9523 13.8258 14.4376 13.4141 15.0045 13.1902V5C15.0045 4.44772 14.5568 4 14.0045 4ZM17.0045 13V5C17.0045 4.64937 16.9444 4.31278 16.8338 4H18.0045C18.5568 4 19.0045 4.44772 19.0045 5V12C19.0045 12.5523 18.5568 13 18.0045 13H17.0045Z" fill="currentColor"></path></svg>
                                                 </Tooltip>
                                             }
+                                            <Tooltip tooltip='Try again'>
+                                                <svg onClick={regenerateResponse} width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ animationDelay: '.45s' }} className={`chat__message-copy${theme}`}><path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path></svg>                                            </Tooltip>
                                             {message.time && renderAdmin ? <span> ({message.time / 1000}s)</span> : ''}
                                         </div> : ''}
                                 </div>
@@ -1836,11 +1884,14 @@ export function Chat() {
                 width: renderFullApp ? '800px' : '100%',
                 margin: isMobile && !getSession().messages.length ? 0 : ''
             }}>
-            {getSession().messages.length > 1 && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
-                <div className='chat__message-memory-empty'>{!getSession().isLoading || !getSession().completion ?
-                    <img src={NewContext} alt='New Context' draggable={false} className={`chat__message-memory-empty-svg${theme}`} />
-                    : ''} {getSession().isLoading && getSession().completion ? 'Updating context...' : 'New chat context'}</div>
-                : ''}
+            {/* CONTEXT ICON */}
+            {/* {getSession().messages.length > 1 && sessionId && (!memoryRef.current[sessionId] || (memoryRef.current[sessionId] && memoryRef.current[sessionId].memory === '')) ?
+                <div className='chat__message-memory-empty'>
+                    {!getSession().isLoading || !getSession().completion ?
+                        <img src={NewContext} alt='New Context' draggable={false} className={`chat__message-memory-empty-svg${theme}`} />
+                        : ''} {getSession().isLoading && getSession().completion ? 'Updating context...' : 'New chat context'}
+                </div>
+                : ''} */}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
                 {/* {loadingResponse() ? '' :
