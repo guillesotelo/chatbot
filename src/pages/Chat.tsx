@@ -103,6 +103,7 @@ import NewChat from '../assets/icons/new-chat.svg'
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition"
 import { BounceLoader } from 'react-spinners';
 import plantumlEncoder from "plantuml-encoder";
+import Switch from '../components/Switch';
 
 const MODES = [
     {
@@ -150,6 +151,7 @@ export function Chat() {
     const [sendAnalytics, setSendAnalytics] = useState(true)
     const [currentPage, setCurrentPage] = useState('')
     const [source, setSource] = useState('')
+    const [useMemory, setUseMemory] = useState(true)
     const [currentHref, setCurrentHref] = useState<{ href?: string, referenced?: boolean }>({})
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const { transcript, listening, startListening, stopListening, speechAvailable } = useSpeechRecognition()
@@ -172,11 +174,12 @@ export function Chat() {
         const _theme = new URLSearchParams(window.location.search).get('theme')
         const login = new URLSearchParams(window.location.search).get('login')
         const analytics = new URLSearchParams(window.location.search).get('analytics')
-        const portal = new URLSearchParams(window.location.search).get('source')
+        const from_source = new URLSearchParams(window.location.search).get('source')
 
-        if (portal) {
-            const portalSource = (SOURCE_MAP as dataObj)[portal] || 'HPx Assistant'
-            setSource(portalSource)
+        if (from_source) {
+            const _source = (SOURCE_MAP as dataObj)[from_source] || 'HPx Assistant'
+            setSource(_source)
+            if (from_source === 'snok') setUseMemory(false)
         }
 
         if (popup) {
@@ -322,6 +325,8 @@ export function Chat() {
 
         const firstMessage = sessions.length === 1 && !getSession().messages.length
 
+        updateMemory([...filteredMessages, newMessage])
+
         setSessions(prev => {
             return prev.map(s => {
                 if (s.id === getSession().id || prev.length === 1 && firstMessage) {
@@ -355,7 +360,7 @@ export function Chat() {
                 splittedPrompt?.forEach(word => {
                     if (ref && word && word.includes(ref)) {
                         matches = true
-                        // console.log('Answer sent with conversation context because of match in word reference: ', ref)
+                        console.log('Answer sent with conversation context because of match in word reference: ', ref)
                     }
                 })
             })
@@ -389,13 +394,13 @@ export function Chat() {
         appUpdateRef.current = setInterval(checkAppVersion, 600000)
     }
 
-    const updateMemory = () => {
-        if (!sessionId || isLoading[sessionId] || !memoryRef.current || !getSession().messages.length) return
+    const updateMemory = (regeneratedMessages?: messageType[]) => {
+        if (!useMemory || !sessionId || isLoading[sessionId] || !memoryRef.current || !getSession().messages.length) return
         let chatContext = ['']
-        const rMessages = [...getSession().messages].reverse() // mutation from the original
+        const rMessages = [...(regeneratedMessages || getSession().messages)].reverse() // mutation from the original
         const getPrompt = (ctx: string[]) => instructionStart + ctx.join('') + instructionEnd // instructions + user prompt
         const currentMemory = memoryRef.current[sessionId] || null
-        let index = currentMemory && (currentMemory.index || currentMemory.index === 0) ? currentMemory.index : rMessages.length // the actual index from the messages array (ordered)
+        let index = regeneratedMessages?.length || currentMemory && (currentMemory.index || currentMemory.index === 0) ? currentMemory.index : rMessages.length // the actual index from the messages array (ordered)
         let rIndex = rMessages.length - index // reversed index, needed for our memory operation
 
         rMessages.forEach((m: dataObj, i: number) => {
@@ -592,6 +597,7 @@ export function Chat() {
                     user_prompt: content || '',
                     use_context,
                     first_query,
+                    source,
                     // use_history: useMemory ? 'true' : 'false',
                     // stream_id: streamId ? String(streamId) : ''
                 }),
@@ -1477,7 +1483,7 @@ export function Chat() {
     const handleChangeSearch = (e: any) => {
         const { value } = e.target
         if (value.trim()) setFilteredSessions([...sessions.filter(s => JSON.stringify(s).includes(value))])
-        else setFilteredSessions(sessions)
+        else setFilteredSessions(sortArray(sessions, 'updated', true))
     }
 
     const getResetMemoryTooltip = () => {
@@ -1566,6 +1572,16 @@ export function Chat() {
                                 </Tooltip>
                                 : ''}
                         </div>
+                        {!isMobile && source === 'snok' ?
+                            <Switch
+                                label='Memory'
+                                on='On'
+                                off='Off'
+                                value={useMemory}
+                                setValue={setUseMemory}
+                                style={{ marginTop: '1rem' }}
+                            />
+                            : ''}
                         {isMobile ?
                             <div className="chat__popup-window-header-options" style={{ justifyContent: 'space-between' }}>
                                 <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__panel-logo`} draggable={false} />
