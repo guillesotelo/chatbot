@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.4.3'
+export const APP_VERSION = '3.5'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
@@ -15,6 +15,7 @@ export const SOURCE_MAP = {
     'cyberpunk': 'Cyber Punk',
     'zonecontroller': 'Zone Controller',
     'digitalkey': 'Digital Key',
+    'snok': 'snok'
 }
 
 export const NEW_USER_GREETINGS = [
@@ -149,7 +150,7 @@ export const questionStarters = [
 
 export const referencePatterns = [
     // Pronouns and references
-    "it", "this", "that", "those", "them", "they", "he", "she", "him", "her",
+    "it", "this", "that", "those", "them", "they", "he", "she", "his", "him", "her", "its",
     "these", "one", "ones", "something", "someone", "somebody", "thing", "to",
 
     // Continuation words
@@ -169,7 +170,7 @@ export const referencePatterns = [
     // Commands that imply previous discussion
     "keep", "finish", "sum",
     "summary", "summarize", "key", "other",
-    "example", "not"
+    "example", "not", "incorrect", "correct", "wrong", "right"
 ]
 
 export const greetingPatterns = [

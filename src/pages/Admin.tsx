@@ -103,7 +103,7 @@ export default function Admin({ }: Props) {
             getAnalytics()
         }
         Prism.highlightAll()
-    }, [])
+    }, [isLoggedIn])
 
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
@@ -418,7 +418,7 @@ export default function Admin({ }: Props) {
 
             const response = await fetch(`${apiURl}/api/vectorstore_search`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', "Authorization": process.env.REACT_APP_ADMIN_TOKEN || '' },
                 body: JSON.stringify({
                     query: encodeURIComponent(content),
                     fulltext: fullSearch,
@@ -792,7 +792,7 @@ export default function Admin({ }: Props) {
                             selected={selectedFeedback}
                             setSelected={setSelectedFeedback}
                             highlight='notes'
-                            max={20}
+                            max={10}
                         />
                     </div>
                 </div>
