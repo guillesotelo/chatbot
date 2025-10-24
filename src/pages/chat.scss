@@ -613,7 +613,7 @@
             }
         }
 
-         &-regenerate {
+        &-regenerate {
             cursor: pointer;
             transition: .1s;
             height: 1.1rem;
@@ -800,7 +800,7 @@
             box-sizing: border-box;
             resize: none;
             font-size: 1rem;
-            padding: 1rem 0;
+            padding: 1rem 0 1rem 1.2rem;
             width: 100%;
             max-height: 40vh;
 
@@ -811,7 +811,7 @@
                 box-sizing: border-box;
                 resize: none;
                 font-size: 1rem;
-                padding: 1rem 0;
+                padding: 1rem 0 1rem 1.2rem;
                 width: 100%;
                 max-height: 40vh;
                 color: lightgray;

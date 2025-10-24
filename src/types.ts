@@ -9,6 +9,7 @@ export type AppContextType = {
 }
 
 export type messageType = {
+    id?: number | null,
     role?: string,
     content?: string,
     sources?: dataObj
@@ -21,6 +22,7 @@ export type messageType = {
     transcribed?: boolean
     context?: boolean
     regenerated?: number
+    loading?: boolean
 }
 
 export type sessionType = dataObj & {

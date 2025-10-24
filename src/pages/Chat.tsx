@@ -63,6 +63,7 @@ import { dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import {
     APP_VERSION,
+    commonWords,
     gratitudePatterns,
     greetingPatterns,
     instructionEnd,
@@ -87,6 +88,7 @@ import {
     cleanText,
     fixMarkdownLinks,
     fixPlantUML,
+    getDate,
     normalizeVolvoIdentifier,
     sleep,
     sortArray
@@ -128,7 +130,6 @@ export function Chat() {
     const [copyMessage, setCopyMessage] = useState(-1)
     const [goodScore, setGoodScore] = useState(-1)
     const [badScore, setBadScore] = useState(-1)
-    const [prod, setProd] = useState(true)
     const [renderFullApp, setRenderFullApp] = useState(true) // Change to window.innerWidth > 1050 when ready to use popup mode
     const [renderAdmin, setRenderAdmin] = useState(false)
     const [minimized, setMinimized] = useState(false) // Set to default true only for production (to use the button) * default false fixes Firefox issue
@@ -166,6 +167,7 @@ export function Chat() {
     const outputRef = useRef<HTMLDivElement>(null)
     const greetingsRef = useRef<HTMLDivElement>(null)
     const lastSubmittedRef = useRef("")
+    const unnamedSessionRef = useRef<null | number>(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -203,10 +205,14 @@ export function Chat() {
 
         const hideSessionOptions = (e: any) => {
             if (e.target && e.target.className && typeof e.target.className === 'string' &&
-                !e.target.className.includes('chat__panel-session-option')
+                (!e.target.className.includes('chat__panel-session-option') || (e.target.className.includes('chat__panel-session-options-img') && unnamedSessionRef.current))
                 && !e.target.className.includes('chat__panel-session-item')
                 && !e.target.className.includes('chat__panel-session-rename')) {
                 setShowOptions(null)
+                if (unnamedSessionRef.current) {
+                    updateSessionName({ target: { value: getDate(unnamedSessionRef.current) } }, unnamedSessionRef.current)
+                    unnamedSessionRef.current = null
+                }
                 setSessionNames({})
             }
         }
@@ -234,9 +240,9 @@ export function Chat() {
         window.addEventListener('message', getExternalData)
         document.addEventListener('click', hideSessionOptions)
 
-        if (messageRef.current) messageRef.current.focus()
-
         setSessionDate(new Date())
+
+        if (messageRef.current) messageRef.current.focus()
 
         return () => {
             window.removeEventListener('scroll', handleScroll)
@@ -308,7 +314,7 @@ export function Chat() {
         }
     }, [minimized])
 
-    const regenerateResponse = () => {
+    const regenerateResponse = (message: messageType, index: number) => {
         const currentMessages = [...getSession().messages]
         const lastMessage = { ...currentMessages[currentMessages.length - 2] }
         const content = lastMessage.content
@@ -352,15 +358,64 @@ export function Chat() {
         getModelResponse(curatePrompt(content), content)
     }
 
+    const regenerateResponse2 = (message: messageType, index: number) => {
+        const updatedMessages = [...getSession().messages].map(m => m.id === message.id ? ({ ...m, loading: true }) : m)
+        const firstMessage = sessions.length === 1 && !getSession().messages.length
+        const updatedMessage = {
+            ...message,
+            loading: true,
+            regenerated: Number((message.regenerated || 0) + 1)
+        }
+        const content = updatedMessage.content || ''
+
+        updateMemory([...updatedMessages])
+
+        setSessions(prev => {
+            return prev.map(s => {
+                if (s.id === getSession().id || prev.length === 1 && firstMessage) {
+                    return {
+                        ...s,
+                        messages: [...updatedMessages],
+                        completion: null,
+                        name: s.name !== 'New chat' ? s.name : content.substring(0, 80),
+                        updated: new Date().getTime()
+                    }
+                }
+                return s
+            })
+        })
+        setInput('')
+        setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
+
+        const isGreeting = greetingPatterns.includes(cleanText(content).toLowerCase())
+        let isGratitude = gratitudePatterns.includes(cleanText(content).toLowerCase())
+
+        if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude')
+
+        getModelResponse(curatePrompt(content), content)
+    }
+
     const needsContext = (userPrompt: string): boolean => {
         let matches = false
         if (sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory) {
             const splittedPrompt = userPrompt.toLowerCase().match(/\b[a-zA-Z]+\b/g)
+            const lastMessage = [...getSession().messages].reverse().filter(m => m.role === 'assistant')[0].content || ''
+            const lastMessageSplit: string[] = lastMessage.split(' ')
+
+            // Check for word-by-word matches between query and references
             referencePatterns.forEach(ref => {
                 splittedPrompt?.forEach(word => {
                     if (ref && word && word.includes(ref)) {
                         matches = true
-                        console.log('Answer sent with conversation context because of match in word reference: ', ref)
+                    }
+                })
+            })
+
+            // Check for word-by-word matches between the memory and the query
+            lastMessageSplit.forEach(memoRef => {
+                splittedPrompt?.forEach(word => {
+                    if (memoRef && word && word == memoRef && !commonWords.includes(word)) {
+                        matches = true
                     }
                 })
             })
@@ -389,9 +444,11 @@ export function Chat() {
         }
 
         if (appUpdateRef.current) clearInterval(appUpdateRef.current)
-        checkAppVersion()
 
-        appUpdateRef.current = setInterval(checkAppVersion, 600000)
+        if (!window.location.href?.includes('localhost')) {
+            checkAppVersion()
+            appUpdateRef.current = setInterval(checkAppVersion, 600000)
+        }
     }
 
     const updateMemory = (regeneratedMessages?: messageType[]) => {
@@ -442,8 +499,8 @@ export function Chat() {
             // Lets bring a new session each time we open the chat in popup mode
             let newChatId = null
             localSessions.forEach((s: sessionType) => {
-                if (s.name === 'New chat' && !s.messages.length)
-                    newChatId = s.id
+                if (s.name === 'New chat' && !s.messages.length) newChatId = s.id
+                if (!s.name) s.name = getDate(s.id || '')
             })
             if (newChatId) {
                 setSessionId(newChatId)
@@ -960,6 +1017,8 @@ export function Chat() {
     }
 
     const generateGreetings = () => {
+        if (messageRef.current) messageRef.current.focus()
+
         const firstUse = sessions.length <= 1
         const greetings = firstUse ? NEW_USER_GREETINGS : RETURNING_USER_GREETINGS
         const message = greetings[Math.floor(Math.random() * greetings.length)]
@@ -1171,13 +1230,15 @@ export function Chat() {
 
         outputChat.style.marginBottom = textarea.scrollHeight > 80 ? '46vh' : renderFullApp ? '6rem' : '0'
         if (textarea.scrollHeight > 60) {
-            style.padding = '1rem 0'
+            style.padding = '1rem 0 0 1.2rem'
+            style.marginBottom = '1rem'
             form.style.alignItems = 'flex-end'
             sendBtn.forEach(s => s.style.marginBottom = '.6rem')
             if (speakBtn) speakBtn.style.marginBottom = '.4rem'
 
             if (getSession().messages.length < 2) {
-                greetings.style.marginBottom = '4rem'
+                // greetings.style.marginBottom = '4rem'
+                outputChat.style.gap = '2rem'
                 output.style.marginBottom = '0'
             }
         }
@@ -1293,12 +1354,13 @@ export function Chat() {
 
     const updateSessionName = (e: any, id: number | null | undefined) => {
         const { value } = e.target
+        unnamedSessionRef.current = value || !id ? null : id
         setSessions(prev => {
             return prev.map(s => {
                 if (s.id === id) {
                     return {
                         ...s,
-                        name: value || `New chat [${new Date(s.id || '').toLocaleString('sv-SE')}]`
+                        name: value
                     }
                 }
                 return s
@@ -1606,32 +1668,30 @@ export function Chat() {
                                     <p style={{ fontSize: '.9rem' }}>No chats found.</p>
                                     :
                                     [...filteredSessions].map((s, i) =>
-                                        s.name ?
-                                            <div key={s.id}>
-                                                {renderSessionAge(i)}
-                                                <div
-                                                    className={`chat__panel-session${theme}`}
-                                                    onClick={() => selectSession(s)}
-                                                    style={{
-                                                        background: s.id === getSession().id ? theme ? '#2d2d2d' : '#e3e3e3' : '',
-                                                        border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
-                                                    }}>
-                                                    <div className="chat__panel-session-item">
-                                                        {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
-                                                            <input
-                                                                className='chat__panel-session-rename'
-                                                                value={s.name}
-                                                                onChange={e => updateSessionName(e, s.id)}
-                                                                onKeyDown={e => {
-                                                                    if (e.key === 'Enter') setSessionNames({})
-                                                                }} />
-                                                            : <p className='chat__panel-session-name'>{s.name}</p>}
-                                                        {/* <p className='chat__panel-session-name'>{s.name}</p> */}
-                                                        {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
-                                                    </div>
+                                        <div key={s.id}>
+                                            {renderSessionAge(i)}
+                                            <div
+                                                className={`chat__panel-session${theme}`}
+                                                onClick={() => selectSession(s)}
+                                                style={{
+                                                    background: s.id === getSession().id ? theme ? '#2d2d2d' : '#e3e3e3' : '',
+                                                    border: sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ? '1px solid blue' : ''
+                                                }}>
+                                                <div className="chat__panel-session-item">
+                                                    {sessionNames[s.id || ''] || sessionNames[s.id || ''] === '' ?
+                                                        <input
+                                                            className='chat__panel-session-rename'
+                                                            value={s.name}
+                                                            onChange={e => updateSessionName(e, s.id)}
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter' && !unnamedSessionRef.current) setSessionNames({})
+                                                            }} />
+                                                        : <p className='chat__panel-session-name'>{s.name}</p>}
+                                                    {/* <p className='chat__panel-session-name'>{s.name}</p> */}
+                                                    {showOptions ? '' : <img src={ChatOptions} onClick={(e) => renderOptions(s.id, e)} alt="Chat options" className="chat__panel-session-options-img" />}
                                                 </div>
                                             </div>
-                                            : ''
+                                        </div>
                                     )}
                             </div>}
                         {showOptions ?
@@ -1783,7 +1843,7 @@ export function Chat() {
             <div className="chat__box-list">
                 {!getSession().messages.length ?
                     <p ref={greetingsRef} className='chat__box-greetings'></p>
-                    : getSession().messages.map((message: messageType, index: number) => (
+                    : getSession().messages.map((message: messageType, index: number, arr) => (
                         <div key={index}>
                             {/* {conversationContextMessage(index)} */}
                             <div className={`chat__message chat__message-${message.role || ''}`}>
@@ -1823,8 +1883,11 @@ export function Chat() {
                                                 : <Tooltip tooltip='Bad response'><svg onClick={() => scoreMessage(index, false)} style={{ stroke: message.score === false ? 'blue' : '', animationDelay: '.3s' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M11.8727 21.4961C11.6725 21.8466 11.2811 22.0423 10.8805 21.9922L10.4267 21.9355C7.95958 21.6271 6.36855 19.1665 7.09975 16.7901L7.65054 15H6.93226C4.29476 15 2.37923 12.4921 3.0732 9.94753L4.43684 4.94753C4.91145 3.20728 6.49209 2 8.29589 2H18.0045C19.6614 2 21.0045 3.34315 21.0045 5V12C21.0045 13.6569 19.6614 15 18.0045 15H16.0045C15.745 15 15.5054 15.1391 15.3766 15.3644L11.8727 21.4961ZM14.0045 4H8.29589C7.39399 4 6.60367 4.60364 6.36637 5.47376L5.00273 10.4738C4.65574 11.746 5.61351 13 6.93226 13H9.00451C9.32185 13 9.62036 13.1506 9.8089 13.4059C9.99743 13.6612 10.0536 13.9908 9.96028 14.2941L9.01131 17.3782C8.6661 18.5002 9.35608 19.6596 10.4726 19.9153L13.6401 14.3721C13.9523 13.8258 14.4376 13.4141 15.0045 13.1902V5C15.0045 4.44772 14.5568 4 14.0045 4ZM17.0045 13V5C17.0045 4.64937 16.9444 4.31278 16.8338 4H18.0045C18.5568 4 19.0045 4.44772 19.0045 5V12C19.0045 12.5523 18.5568 13 18.0045 13H17.0045Z" fill="currentColor"></path></svg>
                                                 </Tooltip>
                                             }
-                                            <Tooltip tooltip='Try again'>
-                                                <svg onClick={regenerateResponse} width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ animationDelay: '.45s' }} className={`chat__message-copy${theme}`}><path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path></svg>                                            </Tooltip>
+                                            {arr.length - 1 === index ?
+                                                <Tooltip tooltip='Try again'>
+                                                    <svg onClick={() => regenerateResponse(message, index)} width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ animationDelay: '.45s' }} className={`chat__message-copy${theme}`}><path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path></svg>
+                                                </Tooltip>
+                                                : ''}
                                             {message.time && renderAdmin ? <span> ({message.time / 1000}s)</span> : ''}
                                         </div> : ''}
                                 </div>
@@ -1931,10 +1994,6 @@ export function Chat() {
                     }}
                     autoFocus
                     onChange={(event) => setInput(event.target.value)}
-                    style={{
-                        // marginLeft: prod ? '.4rem' : ''
-                        marginLeft: prod ? '1.2rem' : ''
-                    }}
                 />
                 {/* CHAT CONTEXT BUTTON (RESET CONTEXT) */}
                 {/* {sessionId && !memoryRef.current[sessionId] ? ''
