@@ -9,9 +9,10 @@ export type AppContextType = {
 }
 
 export type messageType = {
-    id?: number | null,
+    id?: string,
     role?: string,
     content?: string,
+    completion?: string,
     sources?: dataObj
     score?: boolean
     time?: number
@@ -23,6 +24,7 @@ export type messageType = {
     context?: boolean
     regenerated?: number
     loading?: boolean
+    edit?: boolean
 }
 
 export type sessionType = dataObj & {

@@ -642,6 +642,81 @@
             }
         }
 
+        &-edit {
+            padding: 0.75rem 1rem;
+            font-size: 14px;
+            line-height: 1.75;
+
+            &-input {
+                color: inherit;
+                border: none;
+                outline: none;
+                width: 100%;
+                resize: none;
+                font-size: 14px;
+                line-height: 1.75;
+                padding: 0;
+            }
+
+            &-buttons {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-end;
+                margin-top: 1rem;
+                gap: .5rem;
+            }
+
+            &-cancel {
+                border-radius: 1rem;
+                border: none;
+                cursor: pointer;
+                padding: .4rem .6rem;
+
+                &:hover {
+                    opacity: .8;
+                }
+
+                &--dark {
+                    border-radius: 1rem;
+                    border: none;
+                    cursor: pointer;
+                    padding: .4rem .6rem;
+                    background: #181818;
+                    color: #fff;
+
+                    &:hover {
+                        opacity: .8;
+                    }
+
+                }
+            }
+
+            &-send {
+                border-radius: 1rem;
+                border: none;
+                cursor: pointer;
+                padding: .4rem .6rem;
+
+                &:hover {
+                    opacity: .8;
+                }
+
+                &--dark {
+                    border-radius: 1rem;
+                    border: none;
+                    cursor: pointer;
+                    padding: .4rem .6rem;
+                    color: #181818;
+                    background: #fff;
+
+                    &:hover {
+                        opacity: .8;
+                    }
+
+                }
+            }
+        }
+
         &-controls {
             display: flex;
             flex-direction: row;
