@@ -59,7 +59,7 @@ import HP_DARK from '../assets/images/veronica-logo3_dark.png';
 import NewContext from '../assets/icons/new-context.svg';
 import Mic from '../assets/icons/mic.svg';
 import PlusIcon from '../assets/icons/plus.svg';
-import { dataObj, messageType, sessionType } from '../types';
+import { BufferEntry, dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import {
     APP_VERSION,
@@ -125,7 +125,6 @@ const apiURl = process.env.REACT_APP_SERVER_URL
 const plantUmlServer = process.env.REACT_APP_PLANTUML_SERVER
 
 export function Chat() {
-    const [mode, setMode] = useLocalStorage<(typeof MODES)[number]['value']>('chat-mode', 'query')
     const [input, setInput] = useState('')
     const [copyMessage, setCopyMessage] = useState(-1)
     const [goodScore, setGoodScore] = useState(-1)
@@ -133,9 +132,7 @@ export function Chat() {
     const [renderFullApp, setRenderFullApp] = useState(true) // Change to window.innerWidth > 1050 when ready to use popup mode
     const [renderAdmin, setRenderAdmin] = useState(false)
     const [minimized, setMinimized] = useState(false) // Set to default true only for production (to use the button) * default false fixes Firefox issue
-    const [isLoading, setIsLoading] = useState<dataObj>({})
-    const [useDocumentContext, setUseDocumentContext] = useState<boolean>(mode === 'query' || true)
-    const [scrollLocked, setScrollLocked] = useState(false)
+    const [useDocumentContext, setUseDocumentContext] = useState(true)
     const [timePassed, setTimePassed] = useState(0)
     const [sessions, setSessions] = useState<sessionType[]>([])
     const [filteredSessions, setFilteredSessions] = useState<sessionType[]>([])
@@ -153,6 +150,7 @@ export function Chat() {
     const [currentPage, setCurrentPage] = useState('')
     const [source, setSource] = useState('')
     const [editedMessage, setEditedMessage] = useState('')
+    const [showUserOptions, setShowUserOptions] = useState('')
     const [useMemory, setUseMemory] = useState(true)
     const [currentHref, setCurrentHref] = useState<{ href?: string, referenced?: boolean }>({})
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
@@ -165,8 +163,7 @@ export function Chat() {
     const resetMemoryRef = useRef<null | HTMLImageElement>(null)
     const memoryRef = useRef<dataObj>({})
     const appUpdateRef = useRef<any>(null)
-    const completionRef = useRef<HTMLDivElement>(null)
-    const completionIndex = useRef<number | null>(null)
+    const bufferRef = useRef<Record<string, BufferEntry>>({})
     const greetingsRef = useRef<HTMLDivElement>(null)
     const lastSubmittedRef = useRef("")
     const unnamedSessionRef = useRef<null | number>(null)
@@ -198,13 +195,6 @@ export function Chat() {
         if (analytics && analytics === 'false') setSendAnalytics(false)
 
         setShowLogin(Boolean(login))
-
-        const handleScroll = () => {
-            const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 10;
-            if (!isAtBottom) {
-                setScrollLocked(true);
-            }
-        }
 
         const hideSessionOptions = (e: any) => {
             if (e.target && e.target.className && typeof e.target.className === 'string' &&
@@ -239,7 +229,6 @@ export function Chat() {
         getLocalSessions(popup)
         checkForAppUpdates()
 
-        window.addEventListener('scroll', handleScroll)
         window.addEventListener('message', getExternalData)
         document.addEventListener('click', hideSessionOptions)
 
@@ -248,11 +237,9 @@ export function Chat() {
         if (messageRef.current) messageRef.current.focus()
 
         return () => {
-            window.removeEventListener('scroll', handleScroll)
             window.removeEventListener("message", getExternalData)
             document.removeEventListener('click', hideSessionOptions)
         }
-
     }, [])
 
     useEffect(() => {
@@ -265,10 +252,6 @@ export function Chat() {
     // useEffect(() => {
     //     if (sessionId) console.log('memory', memoryRef.current[sessionId])
     // }, [memoryRef.current])
-
-    useEffect(() => {
-        setUseDocumentContext(mode === 'query')
-    }, [mode])
 
     useEffect(() => {
         const textarea = document.getElementById('message')
@@ -317,6 +300,14 @@ export function Chat() {
         }
     }, [minimized])
 
+    const ensureBufferEntry = (id: string): BufferEntry => {
+        return (bufferRef.current[id] ??= {
+            el: null,
+            streaming: false,
+            sessionId: undefined
+        })
+    }
+
     const editMessage = (index: number) => {
         setSessions(prev => {
             return prev.map(s => {
@@ -348,60 +339,18 @@ export function Chat() {
         })
     }
 
-    // const regenerateResponse = (message: messageType, index: number) => {
-    //     const currentMessages = [...getSession().messages]
-    //     const lastMessage = { ...currentMessages[currentMessages.length - 2] }
-    //     const content = lastMessage.content
-    //     if (!content || isLoading[sessionId || '']) return
-    //     completionIndex.current = -1
-
-    //     const newMessage = {
-    //         ...lastMessage,
-    //         regenerated: Number((lastMessage.regenerated || 0) + 1)
-    //     }
-
-    //     const filteredMessages = currentMessages[currentMessages.length - 2] &&
-    //         currentMessages[currentMessages.length - 2].role === 'user' ? currentMessages.slice(0, currentMessages.length - 2) :
-    //         currentMessages.slice(0, currentMessages.length - 1)
-
-    //     const firstMessage = sessions.length === 1 && !getSession().messages.length
-
-    //     updateMemory([...filteredMessages, newMessage])
-
-    //     setSessions(prev => {
-    //         return prev.map(s => {
-    //             if (s.id === getSession().id || prev.length === 1 && firstMessage) {
-    //                 return {
-    //                     ...s,
-    //                     messages: [...filteredMessages, newMessage],
-    //                     completion: null,
-    //                     name: s.name !== 'New chat' ? s.name : content.substring(0, 80),
-    //                     updated: new Date().getTime()
-    //                 }
-    //             }
-    //             return s
-    //         })
-    //     })
-    //     setInput('')
-    //     setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
-
-    //     const isGreeting = greetingPatterns.includes(cleanText(content).toLowerCase())
-    //     let isGratitude = gratitudePatterns.includes(cleanText(content).toLowerCase())
-
-    //     if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude')
-
-    //     getModelResponse(curatePrompt(content), content)
-    // }
-
     const regenerateResponse = (message: messageType) => {
         // 1. Replace both user message with edited and following assistant message with loading placeholder
         // 2. Completion occurs on given index+1 assistant placeholder
         // 3. Replace assistant completion with finished message in its place
         let assistantId: string | null = null
+        let messageIndex = null
         const updatedMessages = [...getSession().messages].map((m, i, arr) => {
             if (m.id === message.id) {
-                // Target message from user
+                messageIndex = i
+                // Regeneration from edited user message
                 if (m.role === 'user') {
+                    assistantId = arr[i + 1]?.id || null
                     return {
                         ...m,
                         content: editedMessage,
@@ -410,39 +359,24 @@ export function Chat() {
                         date: new Date().getTime() // udpated datetime
                     }
                 }
-                // Message from assistant to regenerate
+                // Regeneration of any assistant message
                 else {
                     assistantId = m.id || null
                     return {
                         ...m,
-                        content: '',
-                        loading: true,
                         regenerated: Number((message.regenerated || 0) + 1),
-                        date: new Date().getTime() // udpated datetime
                     }
-                }
-            }
-            // Message from assistant following edited user message
-            if (arr[i - 1] && arr[i - 1].role === 'user' && arr[i - 1].id === message.id) {
-                assistantId = m.id || null
-                return {
-                    ...m,
-                    content: '',
-                    loading: true,
-                    date: new Date().getTime() // udpated datetime
                 }
             }
             // Fallback
             return m
         })
 
-        const assistantIndex = assistantId ? getSession().messages.findIndex(m => m.id === assistantId) : -1
-        completionIndex.current = assistantIndex
-
-        updateMemory([...updatedMessages])
+        const memoryMessages = messageIndex ? [...updatedMessages].slice(0, messageIndex) : [...updatedMessages]
+        updateMemory(memoryMessages)
 
         const isFirstMessage = sessions.length === 1 && !getSession().messages.length
-        let prevMessage: messageType = { content: '' }
+        let prevMessage: messageType = { id: '', content: '' }
 
         getSession().messages.forEach((m, i, arr) => {
             if (m.id === message.id) prevMessage = arr[i - 1] || null
@@ -464,15 +398,17 @@ export function Chat() {
             })
         })
 
-        setTimeout(() => setEditedMessage(''), 100)
+        setTimeout(() => {
+            if (message.edit) setEditedMessage('')
+        }, 100)
         // setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
 
         const isGreeting = greetingPatterns.includes(cleanText(content).toLowerCase())
         let isGratitude = gratitudePatterns.includes(cleanText(content).toLowerCase())
 
-        if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude', true)
+        if (isGreeting || isGratitude) return generateGreetingResponse(isGreeting ? 'greetings' : 'gratitude', assistantId || '', true)
 
-        getModelResponse(curatePrompt(content), content, assistantId, true)
+        getModelResponse(curatePrompt(content), content, assistantId)
     }
 
     const needsContext = (userPrompt: string): boolean => {
@@ -532,7 +468,7 @@ export function Chat() {
     }
 
     const updateMemory = (regeneratedMessages?: messageType[]) => {
-        if (!useMemory || !sessionId || isLoading[sessionId] || !memoryRef.current || !getSession().messages.length) return
+        if (!useMemory || !sessionId || chatIsStreaming() || !memoryRef.current || !getSession().messages.length) return
         let chatContext = ['']
         const rMessages = [...(regeneratedMessages || getSession().messages)].reverse() // mutation from the original
         const getPrompt = (ctx: string[]) => instructionStart + ctx.join('') + instructionEnd // instructions + user prompt
@@ -657,15 +593,17 @@ export function Chat() {
         return fixMarkdownLinks(stringWithoutPatterns)
     }
 
-    const addToken = async (tokenBuffer: string) => {
-        if (!completionRef.current) return
-
-        if (!tokenBuffer && getSession().messages.length > 2) {
-            completionRef.current.style.transition = '1s'
-            completionRef.current.style.minHeight = renderFullApp ? '65vh' : '45vh'
-            autoScroll(!renderFullApp ? '.chat__main' : 'body')
+    const addToken = async (id: string, tokenBuffer: string) => {
+        const entry = ensureBufferEntry(id)
+        if (entry.el) {
+            if (!tokenBuffer && getSession().messages.length > 2) {
+                entry.el.style.transition = '1s'
+                entry.el.style.minHeight = renderFullApp ? '65vh' : '45vh'
+                autoScroll(!renderFullApp ? '.chat__main' : 'body')
+            }
+            entry.el.classList.remove('chat__message-loading')
+            entry.el.innerHTML = await marked.parse(tokenBuffer)
         }
-        completionRef.current.innerHTML = await marked.parse(tokenBuffer)
     }
 
     const getPromptSubstract = (prompt: string) => {
@@ -703,26 +641,45 @@ export function Chat() {
         }
     }
 
-    const getModelResponse = async (content: string, unparsedContent: string, assistantId?: null | string, regenerated?: boolean) => {
-        const sId = sessionId || ''
-        if (isLoading[sId]) return
-        const assistantIndex = assistantId ? getSession().messages.findIndex(m => m.id === assistantId) : -1
-        if (completionRef.current) completionRef.current.innerHTML = ' ⬤'
+    const getModelResponse = async (content: string, unparsedContent: string, assistantId?: null | string) => {
+        const messageId = assistantId || crypto.randomUUID()
+        if (chatIsStreaming()) return
+
+        const entry = ensureBufferEntry(messageId)
+        entry.sessionId = getSession().id
+        entry.streaming = true
+        if (entry.el) entry.el.innerHTML = ' ⬤'
+
+        // First we add an message placeholder in place (new message or regenerated)
+        const newMessage = {
+            id: messageId,
+            role: 'assistant',
+            content: ' ⬤',
+            date: new Date().getTime()
+        }
+
+        setSessions(prev => {
+            return prev.map(s => {
+                if (s.id === getSession().id) {
+                    const updatedMessages = assistantId ? [...s.messages].map(m => {
+                        if (m.id === assistantId) return {
+                            ...m,
+                            ...newMessage
+                        }
+                        return m
+                    }) : [...s.messages, newMessage]
+
+                    return {
+                        ...s,
+                        messages: updatedMessages,
+                        updated: new Date().getTime()
+                    }
+                }
+                return s
+            })
+        })
 
         try {
-            setIsLoading(p => ({ ...p, [sId]: true }))
-            setSessions(prev => {
-                return prev.map(s => {
-                    if (s.id === getSession().id) {
-                        return {
-                            ...s,
-                            isLoading: true
-                        }
-                    }
-                    return s
-                })
-            })
-
             const use_context = useDocumentContext ? 'true' : 'false'
             const first_query = getSession().messages.length <= 2 ? 'true' : ''
 
@@ -756,7 +713,8 @@ export function Chat() {
 
                     if (stopGenerationRef.current) {
                         reader.cancel()
-                        setIsLoading(p => ({ ...p, [sId]: false }))
+                        entry.streaming = false
+                        if (entry.el) entry.el.innerHTML = ''
                         break
                     }
 
@@ -765,50 +723,39 @@ export function Chat() {
                         const cleanedChunk = curateResponse(chunk)
                         result += cleanedChunk
 
-                        addToken(result)
-
-                        setSessions(prev => {
-                            return prev.map(s => {
-                                if (s.id === getSession().id) {
-                                    return {
-                                        ...s,
-                                        completion: cleanedChunk
-                                    }
-                                }
-                                return s
-                            })
-                        })
+                        addToken(messageId, result)
                         // autoScroll(!renderFullApp ? '.chat__main' : 'body')
                     }
                 }
 
-                if (completionRef.current) completionRef.current.innerHTML = ''
+                entry.streaming = false
+                if (entry.el) entry.el.innerHTML = ''
 
-                setIsLoading(p => ({ ...p, [sId]: false }))
                 const time = timePassedRef.current
                 const finalContent = curateResponse(result) + (stopGenerationRef.current ? ' [STOPPED].' : '')
-                const newMessage = {
-                    role: 'assistant',
+
+                const updatedMessage = {
                     content: finalContent,
                     time,
                     stopped: stopGenerationRef.current || false,
-                    id: assistantId || crypto.randomUUID(),
                     date: new Date().getTime(),
-                    loading: false
                 }
 
                 setSessions(prev => {
                     return prev.map(s => {
                         if (s.id === getSession().id) {
-                            // If assistantId exist, then it's a re-generation of assistant message, so we replace instead of add
-                            const updatedMessages = assistantIndex !== -1
-                                ? [...s.messages.slice(0, assistantIndex), newMessage, ...s.messages.slice(assistantIndex + 1)]
-                                : [...s.messages, newMessage]
+                            const updatedMessages = [...s.messages].map(m => {
+                                if (m.id === messageId) return {
+                                    ...m,
+                                    ...updatedMessage,
+                                    regenerated: (m.regenerated || 0) + 1
+                                }
+                                return m
+                            })
+
                             return {
                                 ...s,
-                                completion: null,
                                 messages: updatedMessages,
-                                isLoading: false,
                                 updated: new Date().getTime()
                             }
                         }
@@ -816,40 +763,39 @@ export function Chat() {
                     })
                 })
 
-                const userMessage = {
-                    role: 'user',
-                    content: unparsedContent,
-                    id: crypto.randomUUID(),
-                    date: new Date().getTime()
-                }
                 const cachedSession = {
                     ...getSession(),
-                    completion: null,
-                    messages: [...getSession().messages, userMessage, newMessage],
-                    isLoading: false,
+                    messages: [...getSession().messages].map(m => {
+                        if (m.id === messageId) return {
+                            ...m,
+                            ...updatedMessage,
+                            regenerated: (m.regenerated || 0) + 1
+                        }
+                        return m
+                    }),
                     updated: new Date().getTime()
                 }
                 await saveAnalytics(cachedSession, unparsedContent)
 
                 setTimeout(() => {
                     setTimePassed(0)
-                    runPostRender(regenerated)
+                    runPostRender(Boolean(assistantId))
                 }, 100)
+
                 streamIdRef.current = null
                 stopGenerationRef.current = false
-                completionIndex.current = -1
 
             } else {
-                await saveAnalytics(getSession(), unparsedContent)
-                renderErrorResponse()
+                renderErrorResponse(messageId)
                 console.error('Failed to fetch streamed answer')
             }
+
+            entry.el?.classList.add('chat__message-loading')
         } catch (error) {
-            renderErrorResponse()
+            renderErrorResponse(messageId)
             console.error(error)
         }
     };
-
 
     const getModelSettings = async () => {
         try {
@@ -862,26 +808,14 @@ export function Chat() {
         }
     }
 
-    const renderErrorResponse = async () => {
+    const renderErrorResponse = async (id: string) => {
         stopGenerationRef.current = false
         const time = timePassedRef.current
-        setIsLoading(p => ({ ...p, [sessionId || '']: false }))
         streamIdRef.current = null
+        const entry = ensureBufferEntry(id)
 
-        if (getSession().completion) {
-            setSessions(prev => {
-                return prev.map(s => {
-                    if (s.id === getSession().id) {
-                        return {
-                            ...s,
-                            completion: s.completion + '\n\n',
-                            isLoading: false,
-                            updated: new Date().getTime()
-                        }
-                    }
-                    return s
-                })
-            })
+        if (entry.streaming && entry.el) {
+            entry.el.textContent = entry.el.textContent + '\n\n'
         }
 
         const randomIndex = Math.floor(Math.random() * TECH_ISSUE_LLM.length)
@@ -893,45 +827,35 @@ export function Chat() {
             autoScroll(!renderFullApp ? '.chat__main' : 'body')
             const newToken = issueResponse.split(' ')[index]
             chunk += newToken + ' '
-
-            addToken(chunk)
-
-            setSessions(prev => {
-                return prev.map(s => {
-                    if (s.id === getSession().id) {
-                        return {
-                            ...s,
-                            completion: chunk
-                        }
-                    }
-                    return s
-                })
-            })
+            addToken(id, chunk)
             await sleep(40)
             index++
         }
 
-        if (completionRef.current) completionRef.current.innerHTML = ''
+        entry.streaming = false
+        if (entry.el) entry.el.innerHTML = ''
 
-        const newMessage = {
+        const updatedMessage = {
             role: 'assistant',
             content: chunk,
             time,
             error: true,
-            id: crypto.randomUUID(),
+            id: id || crypto.randomUUID(),
             date: new Date().getTime()
         }
 
         setSessions(prev => {
             return prev.map(s => {
                 if (s.id === getSession().id) {
-                    const updatedMessages = completionIndex.current !== null && completionIndex.current !== -1
-                        ? [...s.messages.slice(0, completionIndex.current), newMessage, ...s.messages.slice(completionIndex.current + 1)]
-                        : [...s.messages, newMessage]
                     return {
                         ...s,
-                        messages: updatedMessages,
-                        completion: null,
+                        messages: [...s.messages].map(m => {
+                            if (m.id === id) return {
+                                ...m,
+                                ...updatedMessage
+                            }
+                            return m
+                        }),
                         updated: new Date().getTime()
                     }
                 }
@@ -939,6 +863,7 @@ export function Chat() {
             })
         })
         setTimeout(() => setTimePassed(0), 100)
+        entry.el?.classList.add('chat__message-loading')
     }
 
     const createSession = () => {
@@ -1183,23 +1108,40 @@ export function Chat() {
         }
     }
 
+    const chatIsStreaming = () => {
+        let stream = false
+        Object.values(bufferRef.current).forEach(data => {
+            if (data.streaming) stream = true
+        })
+        return stream
+    }
+
+    const sessionIsStreaming = () => {
+        let stream = false
+        Object.values(bufferRef.current).forEach(data => {
+            if (data.streaming && data.sessionId === getSession().id) stream = true
+        })
+        return stream
+    }
+
+    const forbidSubmit = () => (!input.trim() && !transcript?.trim()) || chatIsStreaming() || editedMessage
+
     const handleSubmit = (event?: any, transcript?: string) => {
         event?.preventDefault()
         const content = transcript?.trim() || input.trim()
-        if (!content || isLoading[sessionId || ''] || forbidSubmit(transcript?.trim()) || editedMessage) return
-
-        completionIndex.current = -1
+        if (forbidSubmit()) return
+        const newId = crypto.randomUUID()
 
         const newMessage = {
             role: 'user',
             content,
             transcribed: Boolean(transcript?.trim()),
             context: Boolean(needsContext(content) && sessionId),
-            id: crypto.randomUUID(),
+            id: newId,
             date: new Date().getTime()
         }
 
-        const firstMessage = sessions.length === 1 && !getSession().messages.length
+        const firstMessage = !getSession().messages.length
 
         setSessions(prev => {
             return prev.map(s => {
@@ -1207,8 +1149,7 @@ export function Chat() {
                     return {
                         ...s,
                         messages: [...s.messages, newMessage],
-                        completion: null,
-                        name: s.name !== 'New chat' ? s.name : newMessage.content.substring(0, 80),
+                        name: s.name === 'New chat' ? newMessage.content.substring(0, 80) : s.name,
                         updated: new Date().getTime()
                     }
                 }
@@ -1258,8 +1199,7 @@ export function Chat() {
         return chatContext + prompt
     }
 
-    const generateGreetingResponse = async (type: 'greetings' | 'gratitude', regenerated?: boolean) => {
-        setIsLoading(p => ({ ...p, [sessionId || '']: true }))
+    const generateGreetingResponse = async (type: 'greetings' | 'gratitude', assistantId?: string, regenerated?: boolean) => {
         const firstUse = sessions.length <= 1
         const greetings = firstUse ? NEW_USER_GREETINGS : RETURNING_USER_GREETINGS
         const welcomeMessage = greetings[Math.floor(Math.random() * greetings.length)]
@@ -1269,48 +1209,73 @@ export function Chat() {
         let chunk = ''
         let textResponse = type === 'greetings' ? welcomeMessage : welcomeResponse
 
-        while (index < textResponse.split(' ').length) {
-            if (!regenerated) autoScroll(!renderFullApp ? '.chat__main' : 'body')
-            const newToken = textResponse.split(' ')[index]
-            chunk += newToken + ' '
+        const id = assistantId || crypto.randomUUID()
 
-            addToken(chunk)
-
-            setSessions(prev => {
-                return prev.map(s => {
-                    if (s.id === getSession().id) {
-                        return {
-                            ...s,
-                            completion: chunk
-                        }
-                    }
-                    return s
-                })
-            })
-            await sleep(60)
-            index++
-        }
-
-        if (completionRef.current) completionRef.current.innerHTML = ''
+        const entry = ensureBufferEntry(id)
+        entry.sessionId = getSession().id
+        entry.streaming = true
+        if (entry.el) entry.el.innerHTML = ' ⬤'
 
         const newMessage = {
+            id,
             role: 'assistant',
-            content: chunk,
-            time,
-            id: crypto.randomUUID(),
+            content: ' ⬤',
             date: new Date().getTime()
         }
 
         setSessions(prev => {
             return prev.map(s => {
                 if (s.id === getSession().id) {
-                    const updatedMessages = completionIndex.current !== null && completionIndex.current !== -1
-                        ? [...s.messages.slice(0, completionIndex.current), newMessage, ...s.messages.slice(completionIndex.current + 1)]
-                        : [...s.messages, newMessage]
+                    const updatedMessages = assistantId ? [...s.messages].map(m => {
+                        if (m.id === assistantId) return {
+                            ...m,
+                            ...newMessage
+                        }
+                        return m
+                    }) : [...s.messages, newMessage]
+
                     return {
                         ...s,
                         messages: updatedMessages,
-                        completion: null,
+                        updated: new Date().getTime()
+                    }
+                }
+                return s
+            })
+        })
+
+        while (index < textResponse.split(' ').length) {
+            if (!regenerated) autoScroll(!renderFullApp ? '.chat__main' : 'body')
+            const newToken = textResponse.split(' ')[index]
+            chunk += newToken + ' '
+            addToken(id, chunk)
+            await sleep(60)
+            index++
+        }
+
+        entry.streaming = false
+        if (entry.el) entry.el.innerHTML = ''
+
+        const updatedMessage = {
+            role: 'assistant',
+            content: chunk,
+            time,
+            id,
+            date: new Date().getTime()
+        }
+
+        setSessions(prev => {
+            return prev.map(s => {
+                if (s.id === getSession().id) {
+                    return {
+                        ...s,
+                        messages: [...s.messages].map(m => {
+                            if (m.id === id) return {
+                                ...m,
+                                ...updatedMessage
+                            }
+                            return m
+                        }),
                         updated: new Date().getTime()
                     }
                 }
@@ -1318,7 +1283,7 @@ export function Chat() {
             })
         })
         setTimeout(() => setTimePassed(0), 100)
-        setIsLoading(p => ({ ...p, [sessionId || '']: false }))
+        entry.el?.classList.add('chat__message-loading')
     }
 
     const resizeEditingMessage = () => {
@@ -1532,10 +1497,6 @@ export function Chat() {
         URL.revokeObjectURL(url)
     }
 
-    const forbidSubmit = (ttl?: string) => {
-        return (!input && !ttl) || (getSession().messages.length && getSession().messages[getSession().messages.length - 1].role === 'user')
-    }
-
     const renderOptions = (id: number | null | undefined, event: React.MouseEvent<HTMLImageElement, MouseEvent>) => {
         const positionY = window.innerHeight - event.clientY < 250 ? event.clientY - 155 : event.clientY - 15
         setSessionOptionStyles(prev => ({
@@ -1591,7 +1552,7 @@ export function Chat() {
     }
 
     const resetMemory = () => {
-        if (isLoading[sessionId || ''] || !sessionId || !memoryRef.current[sessionId]) return
+        if (sessionIsStreaming() || !sessionId || !memoryRef.current[sessionId]) return
         if (resetMemoryRef.current) {
             resetMemoryRef.current.style.animation = 'transform-reload 1s ease-in'
             setTimeout(() => {
@@ -1722,8 +1683,6 @@ export function Chat() {
         }
         return ''
     }
-
-    const loadingResponse = () => isLoading[sessionId || ''] || getSession().isLoading
 
     const renderFullAppSidebar = () => {
         return (
@@ -1957,8 +1916,7 @@ export function Chat() {
         return ''
     }
 
-    const renderCompletion = (index: number, arr: messageType[]) => (completionIndex.current === index || (completionIndex.current === -1 && index === arr.length - 1))
-        && isLoading[sessionId || ''] && completionRef.current && completionRef.current.innerHTML
+    const renderCompletion = (message: messageType) => bufferRef.current && bufferRef.current[message.id] && bufferRef.current[message.id].streaming
 
     const renderChatBox = () => {
         return (<div className="chat__box">
@@ -1966,11 +1924,21 @@ export function Chat() {
                 {!getSession().messages.length ?
                     <p ref={greetingsRef} className='chat__box-greetings'></p>
                     : getSession().messages.map((message: messageType, index: number, arr) => (
-                        <div key={index}>
+                        <div key={message.id}>
                             {/* {conversationContextMessage(index)} */}
-                            <div className={`chat__message chat__message-${message.role || ''}`} style={{ display: index !== arr.length - 1 && renderCompletion(index, arr) ? 'none' : '' }}>
-                                {message.role === 'assistant' ? <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} /> : ''}
-                                <div className={`chat__message-bubble chat__message-bubble-${message.role || ''}`} style={{ width: message.edit ? '92%' : '', maxWidth: message.edit ? 'unset' : '' }}>
+                            <div className={`chat__message chat__message-${message.role || ''}`} style={{ display: renderCompletion(message) ? 'none' : '' }}>
+                                {message.role === 'assistant' ?
+                                    <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} />
+                                    : ''}
+                                <div
+                                    className={`chat__message-bubble chat__message-bubble-${message.role || ''}`}
+                                    onMouseEnter={() => setShowUserOptions(message.id)}
+                                    onMouseLeave={() => setShowUserOptions('')}
+                                    style={{
+                                        width: message.edit ? '92%' : '',
+                                        maxWidth: message.edit ? 'unset' : '',
+                                        paddingBottom: !message.edit && showUserOptions !== message.id && message.role === 'user' ? '1.9rem' : ''
+                                    }}>
                                     {message.edit ?
                                         <div className={`chat__message-content${theme} chat__message-content-user chat__message-edit`}>
                                             <textarea
@@ -2012,7 +1980,7 @@ export function Chat() {
                                             ))}
                                         </div>
                                     )}
-                                    {message.role === 'assistant' && !renderCompletion(index, arr) && !getSession().isLoading ?
+                                    {message.role === 'assistant' && !renderCompletion(message) && !sessionIsStreaming() ?
                                         <div className="chat__message-controls">
                                             {copyMessage === index ?
                                                 <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
@@ -2032,24 +2000,22 @@ export function Chat() {
                                                     <svg onClick={() => scoreMessage(index, false)} style={{ stroke: message.score === false ? 'blue' : '', animationDelay: '.3s' }} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M11.8727 21.4961C11.6725 21.8466 11.2811 22.0423 10.8805 21.9922L10.4267 21.9355C7.95958 21.6271 6.36855 19.1665 7.09975 16.7901L7.65054 15H6.93226C4.29476 15 2.37923 12.4921 3.0732 9.94753L4.43684 4.94753C4.91145 3.20728 6.49209 2 8.29589 2H18.0045C19.6614 2 21.0045 3.34315 21.0045 5V12C21.0045 13.6569 19.6614 15 18.0045 15H16.0045C15.745 15 15.5054 15.1391 15.3766 15.3644L11.8727 21.4961ZM14.0045 4H8.29589C7.39399 4 6.60367 4.60364 6.36637 5.47376L5.00273 10.4738C4.65574 11.746 5.61351 13 6.93226 13H9.00451C9.32185 13 9.62036 13.1506 9.8089 13.4059C9.99743 13.6612 10.0536 13.9908 9.96028 14.2941L9.01131 17.3782C8.6661 18.5002 9.35608 19.6596 10.4726 19.9153L13.6401 14.3721C13.9523 13.8258 14.4376 13.4141 15.0045 13.1902V5C15.0045 4.44772 14.5568 4 14.0045 4ZM17.0045 13V5C17.0045 4.64937 16.9444 4.31278 16.8338 4H18.0045C18.5568 4 19.0045 4.44772 19.0045 5V12C19.0045 12.5523 18.5568 13 18.0045 13H17.0045Z" fill="currentColor"></path></svg>
                                                 </Tooltip>
                                             }
-                                            {!getSession().isLoading ?
-                                                <Tooltip tooltip='Try again'>
-                                                    <svg onClick={() => regenerateResponse(message)} width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ animationDelay: '.45s' }} className={`chat__message-copy${theme}`}><path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path></svg>
-                                                </Tooltip>
-                                                : ''}
+                                            <Tooltip tooltip='Try again'>
+                                                <svg onClick={() => regenerateResponse(message)} width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ animationDelay: '.45s' }} className={`chat__message-copy${theme}`}><path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path></svg>
+                                            </Tooltip>
                                             {message.time && renderAdmin ? <span> ({message.time / 1000}s)</span> : ''}
                                         </div> :
                                         message.role === 'user' && !message.edit ?
                                             <div className="chat__message-controls" style={{ justifyContent: 'flex-end' }}>
                                                 {copyMessage === index ?
                                                     <svg className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M18.0633 5.67387C18.5196 5.98499 18.6374 6.60712 18.3262 7.06343L10.8262 18.0634C10.6585 18.3095 10.3898 18.4679 10.0934 18.4957C9.79688 18.5235 9.50345 18.4178 9.29289 18.2072L4.79289 13.7072C4.40237 13.3167 4.40237 12.6835 4.79289 12.293C5.18342 11.9025 5.81658 11.9025 6.20711 12.293L9.85368 15.9396L16.6738 5.93676C16.9849 5.48045 17.607 5.36275 18.0633 5.67387Z" fill="currentColor"></path></svg>
-                                                    : <Tooltip tooltip='Copy'>
+                                                    : <Tooltip tooltip='Copy' style={{ display: showUserOptions === message.id ? '' : 'none' }}>
                                                         <svg onClick={() => copyMessageToClipboard(index)} className={`chat__message-copy${theme}`} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path></svg>
                                                     </Tooltip>
                                                 }
-                                                {!getSession().isLoading ?
-                                                    <Tooltip tooltip='Edit'>
-                                                        <svg onClick={() => editMessage(index)} width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ animationDelay: '.3s' }} className={`chat__message-copy${theme}`}><path d="M11.3312 3.56837C12.7488 2.28756 14.9376 2.33009 16.3038 3.6963L16.4318 3.83106C17.6712 5.20294 17.6712 7.29708 16.4318 8.66895L16.3038 8.80372L10.0118 15.0947C9.68833 15.4182 9.45378 15.6553 9.22179 15.8457L8.98742 16.0225C8.78227 16.1626 8.56423 16.2832 8.33703 16.3828L8.10753 16.4756C7.92576 16.5422 7.73836 16.5902 7.5216 16.6348L6.75695 16.7705L4.36339 17.169C4.22053 17.1928 4.06908 17.2188 3.94054 17.2285C3.84177 17.236 3.70827 17.2386 3.56261 17.2031L3.41417 17.1543C3.19115 17.0586 3.00741 16.8908 2.89171 16.6797L2.84581 16.5859C2.75951 16.3846 2.76168 16.1912 2.7716 16.0596C2.7813 15.931 2.80736 15.7796 2.83117 15.6367L3.2296 13.2432L3.36437 12.4785C3.40893 12.2616 3.45789 12.0745 3.52453 11.8926L3.6173 11.6621C3.71685 11.4352 3.83766 11.2176 3.97765 11.0127L4.15343 10.7783C4.34386 10.5462 4.58164 10.312 4.90538 9.98829L11.1964 3.6963L11.3312 3.56837ZM5.84581 10.9287C5.49664 11.2779 5.31252 11.4634 5.18663 11.6162L5.07531 11.7627C4.98188 11.8995 4.90151 12.0448 4.83507 12.1963L4.77355 12.3506C4.73321 12.4607 4.70242 12.5761 4.66808 12.7451L4.54113 13.4619L4.14269 15.8555L4.14171 15.8574H4.14464L6.5382 15.458L7.25499 15.332C7.424 15.2977 7.5394 15.2669 7.64953 15.2266L7.80285 15.165C7.95455 15.0986 8.09947 15.0174 8.23644 14.9238L8.3839 14.8135C8.53668 14.6876 8.72225 14.5035 9.0714 14.1543L14.0587 9.16602L10.8331 5.94044L5.84581 10.9287ZM15.3634 4.63673C14.5281 3.80141 13.2057 3.74938 12.3097 4.48048L12.1368 4.63673L11.7735 5.00001L15.0001 8.22559L15.3634 7.86329L15.5196 7.68946C16.2015 6.85326 16.2015 5.64676 15.5196 4.81056L15.3634 4.63673Z"></path></svg>
+                                                {!sessionIsStreaming() ?
+                                                    <Tooltip tooltip='Edit' style={{ display: showUserOptions === message.id ? '' : 'none' }}>
+                                                        <svg onClick={() => editMessage(index)} width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ animationDelay: '.1s' }} className={`chat__message-copy${theme}`}><path d="M11.3312 3.56837C12.7488 2.28756 14.9376 2.33009 16.3038 3.6963L16.4318 3.83106C17.6712 5.20294 17.6712 7.29708 16.4318 8.66895L16.3038 8.80372L10.0118 15.0947C9.68833 15.4182 9.45378 15.6553 9.22179 15.8457L8.98742 16.0225C8.78227 16.1626 8.56423 16.2832 8.33703 16.3828L8.10753 16.4756C7.92576 16.5422 7.73836 16.5902 7.5216 16.6348L6.75695 16.7705L4.36339 17.169C4.22053 17.1928 4.06908 17.2188 3.94054 17.2285C3.84177 17.236 3.70827 17.2386 3.56261 17.2031L3.41417 17.1543C3.19115 17.0586 3.00741 16.8908 2.89171 16.6797L2.84581 16.5859C2.75951 16.3846 2.76168 16.1912 2.7716 16.0596C2.7813 15.931 2.80736 15.7796 2.83117 15.6367L3.2296 13.2432L3.36437 12.4785C3.40893 12.2616 3.45789 12.0745 3.52453 11.8926L3.6173 11.6621C3.71685 11.4352 3.83766 11.2176 3.97765 11.0127L4.15343 10.7783C4.34386 10.5462 4.58164 10.312 4.90538 9.98829L11.1964 3.6963L11.3312 3.56837ZM5.84581 10.9287C5.49664 11.2779 5.31252 11.4634 5.18663 11.6162L5.07531 11.7627C4.98188 11.8995 4.90151 12.0448 4.83507 12.1963L4.77355 12.3506C4.73321 12.4607 4.70242 12.5761 4.66808 12.7451L4.54113 13.4619L4.14269 15.8555L4.14171 15.8574H4.14464L6.5382 15.458L7.25499 15.332C7.424 15.2977 7.5394 15.2669 7.64953 15.2266L7.80285 15.165C7.95455 15.0986 8.09947 15.0174 8.23644 14.9238L8.3839 14.8135C8.53668 14.6876 8.72225 14.5035 9.0714 14.1543L14.0587 9.16602L10.8331 5.94044L5.84581 10.9287ZM15.3634 4.63673C14.5281 3.80141 13.2057 3.74938 12.3097 4.48048L12.1368 4.63673L11.7735 5.00001L15.0001 8.22559L15.3634 7.86329L15.5196 7.68946C16.2015 6.85326 16.2015 5.64676 15.5196 4.81056L15.3634 4.63673Z"></path></svg>
                                                     </Tooltip>
                                                     : ''}
                                             </div>
@@ -2060,14 +2026,20 @@ export function Chat() {
                             <div
                                 className='chat__message chat__message-assistant chat__message-completion'
                                 style={{
-                                    display: renderCompletion(index, arr) ? '' : 'none'
+                                    display: renderCompletion(message) ? '' : 'none'
                                 }}>
                                 <img src={theme ? HP_DARK : HP} alt='Assistant Avatar' className={`chat__message-avatar`} draggable={false} />
                                 <div className="chat__message-bubble">
                                     <div
-                                        className={`chat__message-content${theme} chat__message-content-assistant ${getSession().isLoading && completionRef.current?.innerHTML === ' ⬤' ? 'chat__message-loading' : ''}`}
-                                        ref={completionIndex.current === index || (completionIndex.current === -1 && index === arr.length - 1) ? completionRef : null}
-                                    >{getSession().isLoading ? ' ⬤' : ''}</div>
+                                        className={`chat__message-content${theme} chat__message-content-assistant chat__message-loading`}
+                                        ref={(el) => {
+                                            const entry = ensureBufferEntry(message.id)
+                                            entry.el = el
+                                            if (el && entry.streaming) {
+                                                el.innerHTML = ' ⬤'
+                                            }
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -2126,7 +2098,7 @@ export function Chat() {
                 : ''} */}
 
             <form className={`chat__form${theme}`} x-chunk="dashboard-03-chunk-1" onSubmit={handleSubmit}>
-                {/* {loadingResponse() ? '' :
+                {/* {chatIsStreaming() ? '' :
                 <Tooltip tooltip={'Upload file'} position='up'>
                     <div className="chat__form-control">
                         <img src={PlusIcon} draggable={false} className={`chat__form-control-svg${theme}`} onClick={uploadDocuments} />
@@ -2141,7 +2113,7 @@ export function Chat() {
                     name="content"
                     rows={1}
                     onKeyDown={(event) => {
-                        if (!isLoading[sessionId || ''] && event.key === 'Enter' && !event.shiftKey) {
+                        if (!chatIsStreaming() && event.key === 'Enter' && !event.shiftKey) {
                             handleSubmit(event)
                         }
                     }}
@@ -2174,11 +2146,11 @@ export function Chat() {
                         </div>
                     </Tooltip>} */}
                 {speechAvailable ?
-                    <Tooltip tooltip={loadingResponse() ? 'Wait for response' : listening ? 'Listening...' : 'Speak'} position='up'>
+                    <Tooltip tooltip={chatIsStreaming() ? 'Wait for response' : listening ? 'Listening...' : 'Speak'} position='up'>
                         <div
                             className='chat__form-control'
                             // onClick={listening ? stopListening : (!isLoading[sessionId || ''] || !getSession().isLoading) ? startListening : undefined}
-                            onClick={!loadingResponse() && !editedMessage ? () => {
+                            onClick={!chatIsStreaming() && !editedMessage ? () => {
                                 lastSubmittedRef.current = ''
                                 startListening()
                             } : undefined}
@@ -2191,8 +2163,8 @@ export function Chat() {
                                 :
                                 <img
                                     src={Mic}
-                                    className={`chat__form-control-svg${theme}${loadingResponse() ? '--loading' : ''}`}
-                                    style={{ cursor: loadingResponse() || Boolean(editedMessage) ? 'not-allowed' : '' }}
+                                    className={`chat__form-control-svg${theme}${chatIsStreaming() ? '--loading' : ''}`}
+                                    style={{ cursor: chatIsStreaming() || Boolean(editedMessage) ? 'not-allowed' : '' }}
                                     draggable={false}
                                 />
                             }
@@ -2200,7 +2172,7 @@ export function Chat() {
                     </Tooltip>
                     : ''
                 }
-                {isLoading[sessionId || ''] ? getSession().isLoading ? (
+                {sessionIsStreaming() ? (
                     <Tooltip tooltip='Stop generation' position='up'>
                         <div
                             className='chat__form-send'
@@ -2211,7 +2183,7 @@ export function Chat() {
                             <svg className='chat__form-send-svg' style={{ padding: '.5rem' }} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="15" height="15" rx="1.25" fill={theme ? '#303030' : '#fff'}></rect></svg>
                         </div>
                     </Tooltip>
-                ) : '' : (
+                ) : (
                     <Tooltip tooltip={input ? 'Send message' : !renderFullApp ? '' : 'Write a message to send'} position='up'>
                         <div
                             className='chat__form-send'

@@ -440,8 +440,13 @@
         gap: 2rem;
         width: 100%;
 
+        &-user {
+            margin: 2rem 0 0;
+        }
+
         &-assistant {
             justify-content: flex-start;
+            margin: 1.5rem 0 2rem;
         }
 
         &-completion {

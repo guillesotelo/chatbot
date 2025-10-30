@@ -9,7 +9,7 @@ export type AppContextType = {
 }
 
 export type messageType = {
-    id?: string,
+    id: string,
     role?: string,
     content?: string,
     completion?: string,
@@ -32,6 +32,12 @@ export type sessionType = dataObj & {
     messages: messageType[],
     id?: number | null,
     updated?: Date | string | number
+}
+
+export type BufferEntry = {
+    el: HTMLDivElement | null
+    sessionId?: number | null
+    streaming?: boolean
 }
 
 export type onChangeEventType = React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>
