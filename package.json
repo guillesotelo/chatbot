@@ -32,7 +32,8 @@
   "scripts": {
     "dev": "react-scripts start",
     "prod": "pm2 start server.js && pm2 logs",
-    "build": "react-scripts build",
+    "build": "if [ -d build ]; then mv build _build; fi && react-scripts build",
+    "restore": "if [ -d _build ]; then mv build __build && mv _build build; fi",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
