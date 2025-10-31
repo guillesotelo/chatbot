@@ -673,9 +673,11 @@
 
             &-cancel {
                 border-radius: 1rem;
-                border: none;
+                border: 1px solid lightgray;
                 cursor: pointer;
-                padding: .4rem .6rem;
+                padding: .5rem .6rem;
+                color: #181818;
+                background: #fff;
 
                 &:hover {
                     opacity: .8;
@@ -698,9 +700,11 @@
 
             &-send {
                 border-radius: 1rem;
-                border: none;
+                border: 1px solid transparent;
                 cursor: pointer;
-                padding: .4rem .6rem;
+                padding: .5rem .6rem;
+                background: #181818;
+                color: #fff;
 
                 &:hover {
                     opacity: .8;
