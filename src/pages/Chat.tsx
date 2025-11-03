@@ -741,41 +741,31 @@ export function Chat() {
                     date: new Date().getTime(),
                 }
 
-                setSessions(prev => {
-                    return prev.map(s => {
-                        if (s.id === getSession().id) {
-                            const updatedMessages = [...s.messages].map(m => {
-                                if (m.id === messageId) return {
-                                    ...m,
-                                    ...updatedMessage,
-                                    regenerated: (m.regenerated || 0) + 1
-                                }
-                                return m
-                            })
+                let updatedSession: sessionType | null = null
 
-                            return {
+                setSessions(prev => {
+                    const currentSessionId = getSession().id;
+                    const newSessions = prev.map(s => {
+                        if (s.id === currentSessionId) {
+                            const updatedMessages = s.messages.map(m =>
+                                m.id === messageId
+                                    ? { ...m, ...updatedMessage, regenerated: (m.regenerated || 0) + 1 }
+                                    : m
+                            )
+
+                            updatedSession = {
                                 ...s,
                                 messages: updatedMessages,
-                                updated: new Date().getTime()
+                                updated: Date.now(),
                             }
+                            return updatedSession
                         }
                         return s
                     })
+                    return newSessions
                 })
 
-                const cachedSession = {
-                    ...getSession(),
-                    messages: [...getSession().messages].map(m => {
-                        if (m.id === messageId) return {
-                            ...m,
-                            ...updatedMessage,
-                            regenerated: (m.regenerated || 0) + 1
-                        }
-                        return m
-                    }),
-                    updated: new Date().getTime()
-                }
-                await saveAnalytics(cachedSession, unparsedContent)
+                if (updatedSession)  await saveAnalytics(updatedSession, unparsedContent)
 
                 setTimeout(() => {
                     setTimePassed(0)
@@ -819,7 +809,8 @@ export function Chat() {
         }
 
         const randomIndex = Math.floor(Math.random() * TECH_ISSUE_LLM.length)
-        const issueResponse = TECH_ISSUE_LLM[randomIndex]
+        const errorRedirect = `\nPlease visit [Down@Volvo](${process.env.REACT_APP_ERROR_REDIRECT}) for more info.`
+        const issueResponse = TECH_ISSUE_LLM[randomIndex] + errorRedirect
         let index = 0
         let chunk = getSession().completion || ''
 
