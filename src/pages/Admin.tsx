@@ -94,8 +94,6 @@ export default function Admin({ }: Props) {
     const navigate = useNavigate()
     const containerRef = useRef(null)
 
-    console.log(analyticsCopy[selectedSession])
-
     useEffect(() => {
         if (isLoggedIn === false) navigate('/')
         else {
@@ -420,7 +418,7 @@ export default function Admin({ }: Props) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', "Authorization": process.env.REACT_APP_ADMIN_TOKEN || '' },
                 body: JSON.stringify({
-                    query: encodeURIComponent(content),
+                    query: content,
                     fulltext: fullSearch,
                     k: retrieveK
                 })
