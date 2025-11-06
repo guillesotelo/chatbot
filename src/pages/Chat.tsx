@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { memo, useContext, useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { marked } from 'marked';
 import { useLocalStorage } from 'usehooks-ts';
@@ -345,12 +345,14 @@ export function Chat() {
         // 3. Replace assistant completion with finished message in its place
         let assistantId: string | null = null
         let messageIndex = null
+        let assistantIndex = null
         const updatedMessages = [...getSession().messages].map((m, i, arr) => {
             if (m.id === message.id) {
                 messageIndex = i
                 // Regeneration from edited user message
                 if (m.role === 'user') {
                     assistantId = arr[i + 1]?.id || null
+                    assistantIndex = arr[i + 1] ? i + 1 : null
                     return {
                         ...m,
                         content: editedMessage,
@@ -362,6 +364,7 @@ export function Chat() {
                 // Regeneration of any assistant message
                 else {
                     assistantId = m.id || null
+                    assistantIndex = i
                     return {
                         ...m,
                         regenerated: Number((message.regenerated || 0) + 1),
@@ -372,7 +375,11 @@ export function Chat() {
             return m
         })
 
-        const memoryMessages = messageIndex ? [...updatedMessages].slice(0, messageIndex) : [...updatedMessages]
+        // If assistandId exits, we slice from before the previous user message, so memory doesnt repeat the query regenerated
+        const memoryMessages = assistantIndex ? [...updatedMessages].slice(0, assistantIndex - 1)
+            : messageIndex ? [...updatedMessages].slice(0, messageIndex)
+                : [...updatedMessages]
+
         updateMemory(memoryMessages)
 
         const isFirstMessage = sessions.length === 1 && !getSession().messages.length
@@ -477,6 +484,7 @@ export function Chat() {
         let rIndex = rMessages.length - index // reversed index, needed for our memory operation
 
         rMessages.forEach((m: dataObj, i: number) => {
+            // If it's an assistant message, we extract the message without sources
             const message = `\n${m.role === 'assistant' ? m.content.split('<br/><br/><strong>Source')[0] : m.content}\n`
             if (m.content
                 && getPrompt(chatContext.concat(message)).length <= MAX_CHARS
@@ -765,7 +773,7 @@ export function Chat() {
                     return newSessions
                 })
 
-                if (updatedSession)  await saveAnalytics(updatedSession, unparsedContent)
+                if (updatedSession) await saveAnalytics(updatedSession, unparsedContent)
 
                 setTimeout(() => {
                     setTimePassed(0)
@@ -853,7 +861,11 @@ export function Chat() {
                 return s
             })
         })
-        setTimeout(() => setTimePassed(0), 100)
+
+        setTimeout(() => {
+            setTimePassed(0)
+            runPostRender()
+        }, 100)
         entry.el?.classList.add('chat__message-loading')
     }
 
@@ -1017,6 +1029,9 @@ export function Chat() {
                 }
             })
         })
+
+        // All links should be opened outside the chat
+        Array.from(document.querySelectorAll('a')).forEach(a => a.target = '_blank')
 
         if (!regenerated) setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
     }
