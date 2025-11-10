@@ -4,7 +4,7 @@ import { feedbackHeaders } from '../constants/app'
 import { dataObj, sessionType } from '../types'
 import { AppContext } from '../AppContext'
 import { useNavigate } from 'react-router-dom'
-import { checkPlantUML, fixPlantUML, getAverage, getDate, sortArray, whenDateIs } from '../helpers'
+import { checkPlantUML, fixPlantUML, getAverage, getDate, getShortenedString, sortArray, whenDateIs } from '../helpers'
 import InputField from '../components/InputField'
 import { Button } from '../components/Button'
 import { toast, ToastContainer } from 'react-toastify'
@@ -633,7 +633,7 @@ export default function Admin({ }: Props) {
                                     background: analytic.messages.length ? '' : 'unset',
                                     cursor: analytic.messages.length ? 'pointer' : 'unset'
                                 }}>
-                                <p className='chat__admin-query-prompt'>{analytic.messages[0] ? analytic.messages[0].content : analytic.prompt}</p>
+                                <p className='chat__admin-query-prompt'>{getShortenedString(analytic.messages[0] ? analytic.messages[0].content : analytic.prompt)}</p>
                                 <p className='chat__admin-query-date'>{whenDateIs(analytic.timestamp)}</p>
                             </div>)}
                     </div>
