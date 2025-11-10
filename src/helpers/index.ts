@@ -148,3 +148,7 @@ export const removeExtraClosingParentheses = (str: string) => {
 
     return result
 }
+
+export const getShortenedString = (str: string, max?: number) => {
+    return str.substring(0, max || 100) + (max || 100 < str.length ? '...' : '')
+}

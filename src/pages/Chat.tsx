@@ -346,6 +346,8 @@ export function Chat() {
         let assistantId: string | null = null
         let messageIndex = null
         let assistantIndex = null
+        let userPrompt = null
+        const regenerated = Number((message.regenerated || 0) + 1)
         const updatedMessages = [...getSession().messages].map((m, i, arr) => {
             if (m.id === message.id) {
                 messageIndex = i
@@ -357,7 +359,7 @@ export function Chat() {
                         ...m,
                         content: editedMessage,
                         edit: false,
-                        regenerated: Number((message.regenerated || 0) + 1),
+                        regenerated,
                         date: new Date().getTime() // udpated datetime
                     }
                 }
@@ -365,9 +367,10 @@ export function Chat() {
                 else {
                     assistantId = m.id || null
                     assistantIndex = i
+                    userPrompt = arr[i - 1] && arr[i - 1].role === 'user' ? arr[i - 1].content : ''
                     return {
                         ...m,
-                        regenerated: Number((message.regenerated || 0) + 1),
+                        regenerated,
                     }
                 }
             }
@@ -381,15 +384,8 @@ export function Chat() {
                 : [...updatedMessages]
 
         updateMemory(memoryMessages)
-
         const isFirstMessage = sessions.length === 1 && !getSession().messages.length
-        let prevMessage: messageType = { id: '', content: '' }
-
-        getSession().messages.forEach((m, i, arr) => {
-            if (m.id === message.id) prevMessage = arr[i - 1] || null
-        })
-
-        const content = message.role === 'user' ? editedMessage : prevMessage?.content || ''
+        const content = `${(message.role === 'user' ? editedMessage : (userPrompt || ''))}${regenerated ? `\n<<retry_${regenerated}>>` : ''}`
 
         setSessions(prev => {
             return prev.map(s => {
@@ -757,7 +753,7 @@ export function Chat() {
                         if (s.id === currentSessionId) {
                             const updatedMessages = s.messages.map(m =>
                                 m.id === messageId
-                                    ? { ...m, ...updatedMessage, regenerated: (m.regenerated || 0) + 1 }
+                                    ? { ...m, ...updatedMessage }
                                     : m
                             )
 
