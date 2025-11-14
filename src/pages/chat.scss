@@ -454,7 +454,7 @@
         }
 
         &-loading {
-            animation: chat-loading 1.2s infinite;
+            animation: chat-loading 1.4s infinite;
         }
 
         &-avatar {
@@ -687,7 +687,7 @@
                     border-radius: 1rem;
                     border: none;
                     cursor: pointer;
-                    padding: .4rem .6rem;
+                    padding: .5rem .6rem;
                     background: #181818;
                     color: #fff;
 
@@ -700,7 +700,7 @@
 
             &-send {
                 border-radius: 1rem;
-                border: 1px solid transparent;
+                border: 1px solid #181818;
                 cursor: pointer;
                 padding: .5rem .6rem;
                 background: #181818;
@@ -714,7 +714,7 @@
                     border-radius: 1rem;
                     border: none;
                     cursor: pointer;
-                    padding: .4rem .6rem;
+                    padding: .5rem .6rem;
                     color: #181818;
                     background: #fff;
 
