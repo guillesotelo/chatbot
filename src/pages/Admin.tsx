@@ -441,12 +441,13 @@ export default function Admin({ }: Props) {
             <Modal title='Vector store search' onClose={() => setVectorSearchModal(false)} style={{ background: '#212121' }}>
                 <div className="chat__admin-col">
                     <div className="chat__admin-row" style={{ justifyContent: 'normal', gap: '2rem', minHeight: '15vh', minWidth: '35vw' }}>
-                        <Switch
-                            label='Full-text search'
-                            on='Yes'
-                            off='No'
-                            value={fullSearch}
-                            setValue={setFullSearch} />
+                        <Dropdown
+                            label='Search type'
+                            options={['Similarity', 'Full Text']}
+                            value={fullSearch ? 'Full Text' : 'Similarity'}
+                            selected={fullSearch ? 'Full Text' : 'Similarity'}
+                            setSelected={newVal => setFullSearch(newVal === 'Full Text')}
+                        />
                         <Dropdown
                             label='Retrieve K'
                             options={Array.from({ length: 50 }).map((_, i) => i + 1)}
