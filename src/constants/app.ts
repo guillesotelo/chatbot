@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.7.7'
+export const APP_VERSION = '3.7.8'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
@@ -170,7 +170,8 @@ export const referencePatterns = [
     // Commands that imply previous discussion
     "keep", "finish", "sum",
     "summary", "summarize", "key", "other",
-    "example", "not", "incorrect", "correct", "wrong", "right"
+    "example", "not", "incorrect", "correct", "wrong", "right",
+    "again", "retry"
 ]
 
 export const greetingPatterns = [
