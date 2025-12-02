@@ -148,7 +148,7 @@ export function Chat() {
     const [sessionDate, setSessionDate] = useState<Date | null>(null)
     const [sendAnalytics, setSendAnalytics] = useState(true)
     const [currentPage, setCurrentPage] = useState('')
-    const [source, setSource] = useState('')
+    const [source, setSource] = useState('HPx')
     const [editedMessage, setEditedMessage] = useState('')
     const [showUserOptions, setShowUserOptions] = useState('')
     const [useMemory, setUseMemory] = useState(true)
@@ -179,7 +179,7 @@ export function Chat() {
         const from_source = new URLSearchParams(window.location.search).get('source')
 
         if (from_source) {
-            const _source = (SOURCE_MAP as dataObj)[from_source] || 'HPx Assistant'
+            const _source = (SOURCE_MAP as dataObj)[from_source] || 'HPx'
             setSource(_source)
             if (from_source === 'snok') setUseMemory(false)
         }
@@ -645,6 +645,43 @@ export function Chat() {
         }
     }
 
+    const getSource = (text: string) => {
+        const lower = text.toLowerCase()
+        const words = lower.split(/\s+/)
+
+        const hasWord = (...targets: string[]) =>
+            words.some(w => targets.some(t => w.includes(t)))
+
+        const hasText = (...targets: string[]) =>
+            targets.some(t => lower.includes(t))
+
+        if (hasWord('snok', 'snock')) return 'SNOK'
+
+        if (hasWord('bazel', 'cstool') || hasText('cs tool'))
+            return 'CSTOOL'
+
+        if (hasWord('hpsdk') || hasText('hd sdk'))
+            return 'HPSDK'
+
+        if (hasWord('hpxa', 'hptcl') || hasText('test case library'))
+            return 'HPXA'
+
+        if (hasWord('zuul'))
+            return 'ZUUL'
+
+        if (hasWord('csstats') || hasText('cs stats'))
+            return 'CSSTATS'
+
+        if (hasWord('simulink', 'powertrain', 'targetlink', 'testweaver'))
+            return 'SIMULINK'
+
+        if (hasWord('spa3') || hasText('spa 3'))
+            return 'CSSTATS'
+
+        return 'HPx'
+    }
+
+
     const getModelResponse = async (content: string, unparsedContent: string, assistantId?: null | string) => {
         const messageId = assistantId || crypto.randomUUID()
         if (chatIsStreaming()) return
@@ -698,7 +735,7 @@ export function Chat() {
                     user_prompt: content || '',
                     use_context,
                     first_query,
-                    source,
+                    source: getSource(content),
                     // use_history: useMemory ? 'true' : 'false',
                     // stream_id: streamId ? String(streamId) : ''
                 }),
@@ -1811,7 +1848,7 @@ export function Chat() {
                         <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image`} />
                         <div className="chat__popup-window-header-info-text">
                             <p onClick={goToAboutVeronica} className='chat__popup-window-header-title'>Veronica</p>
-                            <p onClick={goToAboutVeronica} className="chat__popup-window-header-subtitle">{source || 'HPx Assistant'}</p>
+                            <p onClick={goToAboutVeronica} className="chat__popup-window-header-subtitle">HPx Assistant</p>
                         </div>
                     </div>
                 </Tooltip>

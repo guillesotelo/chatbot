@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import DataTable from '../components/DataTable'
-import { feedbackHeaders } from '../constants/app'
+import { CATEGORY_MAP, feedbackHeaders } from '../constants/app'
 import { dataObj, sessionType } from '../types'
 import { AppContext } from '../AppContext'
 import { useNavigate } from 'react-router-dom'
@@ -442,20 +442,24 @@ export default function Admin({ }: Props) {
         return (
             <Modal title='Vector store search' onClose={() => setVectorSearchModal(false)} style={{ background: '#212121' }}>
                 <div className="chat__admin-col">
-                    <div className="chat__admin-row" style={{ justifyContent: 'normal', gap: '2rem', minHeight: '15vh', minWidth: '35vw' }}>
+                    <div className="chat__admin-row" style={{ justifyContent: 'flex-start', gap: '1rem', minHeight: '25vh', minWidth: '40vw' }}>
                         <Dropdown
                             label='Search type'
                             options={['Similarity', 'Full Text']}
                             value={fullSearch ? 'Full Text' : 'Similarity'}
                             selected={fullSearch ? 'Full Text' : 'Similarity'}
                             setSelected={newVal => setFullSearch(newVal === 'Full Text')}
+                            maxHeight='20vh'
                         />
                         <Dropdown
                             label='Source'
-                            options={['HPx', 'SNOK']}
+                            options={CATEGORY_MAP}
                             value={searchSource}
                             selected={searchSource}
                             setSelected={setSearchSource}
+                            objKey='label'
+                            maxHeight='20vh'
+                            style={{ width: '10rem' }}
                         />
                         <Dropdown
                             label='Retrieve K'
@@ -463,6 +467,7 @@ export default function Admin({ }: Props) {
                             value={retrieveK}
                             selected={retrieveK}
                             setSelected={setRetrieveK}
+                            maxHeight='20vh'
                         />
                     </div>
                     <div
@@ -541,7 +546,7 @@ export default function Admin({ }: Props) {
                                 }}
                                 autoFocus
                                 onChange={(event) => setSearchQuery(event.target.value)}
-                                style={{ marginLeft: '1.5rem' }}
+                                style={{ marginLeft: '1.5rem', paddingLeft: 0 }}
                             />
                             <Tooltip tooltip={searchQuery ? 'Send message' : 'Write a message to send'} position='up'>
                                 <div
