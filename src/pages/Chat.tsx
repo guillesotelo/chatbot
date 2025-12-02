@@ -181,7 +181,7 @@ export function Chat() {
         if (from_source) {
             const _source = (SOURCE_MAP as dataObj)[from_source] || 'HPx'
             setSource(_source)
-            if (from_source === 'snok') setUseMemory(false)
+            // if (from_source === 'snok') setUseMemory(false)
         }
 
         if (popup) {
@@ -655,6 +655,8 @@ export function Chat() {
         const hasText = (...targets: string[]) =>
             targets.some(t => lower.includes(t))
 
+        if (source === 'legacy') return 'LEGACY_HPx'
+
         if (hasWord('snok', 'snock')) return 'SNOK'
 
         if (hasWord('bazel', 'cstool') || hasText('cs tool'))
@@ -669,13 +671,16 @@ export function Chat() {
         if (hasWord('zuul'))
             return 'ZUUL'
 
-        if (hasWord('csstats') || hasText('cs stats'))
-            return 'CSSTATS'
-
-        if (hasWord('simulink', 'powertrain', 'targetlink', 'testweaver'))
+        if (hasWord('simulink', 'powertrain', 'targetlink', 'testweaver') || hasText('function development'))
             return 'SIMULINK'
 
         if (hasWord('spa3') || hasText('spa 3'))
+            return 'SPA3'
+
+        if (hasText('mock'))
+            return 'MOCK'
+
+        if (hasWord('csstats') || hasText('cs stats'))
             return 'CSSTATS'
 
         return 'HPx'
@@ -1751,7 +1756,7 @@ export function Chat() {
                                 </Tooltip>
                                 : ''}
                         </div>
-                        {!isMobile && source === 'snok' ?
+                        {/* {!isMobile && source === 'snok' ?
                             <Switch
                                 label='Memory'
                                 on='On'
@@ -1760,7 +1765,7 @@ export function Chat() {
                                 setValue={setUseMemory}
                                 style={{ marginTop: '1rem' }}
                             />
-                            : ''}
+                            : ''} */}
                         {isMobile ?
                             <div className="chat__popup-window-header-options" style={{ justifyContent: 'space-between' }}>
                                 <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt='Ask Veronica' className={`chat__panel-logo`} draggable={false} />

@@ -15,7 +15,8 @@ export const SOURCE_MAP = {
     'cyberpunk': 'Cyber Punk',
     'zonecontroller': 'Zone Controller',
     'digitalkey': 'Digital Key',
-    'snok': 'snok'
+    'snok': 'snok',
+    'legacy': 'legacy'
 }
 
 export const NEW_USER_GREETINGS = [
