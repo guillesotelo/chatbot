@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.8'
+export const APP_VERSION = '3.8.1'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'

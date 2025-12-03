@@ -418,7 +418,7 @@ export function Chat() {
         let matches = false
         if (sessionId && memoryRef.current[sessionId] && memoryRef.current[sessionId].memory) {
             const splittedPrompt = userPrompt.toLowerCase().match(/\b[a-zA-Z]+\b/g)
-            const lastMessage = [...getSession().messages].reverse().filter(m => m.role === 'assistant')[0].content || ''
+            const lastMessage = [...getSession().messages].reverse().filter(m => m.role === 'assistant')[0]?.content || ''
             const lastMessageSplit: string[] = lastMessage.split(' ')
 
             // Check for word-by-word matches between query and references
