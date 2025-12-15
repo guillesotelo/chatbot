@@ -1223,7 +1223,7 @@ export function Chat() {
 
         const lastChar = prompt.split('')[prompt.length - 1]
         const firstWord = userPrompt.split(' ')[0].toLowerCase()
-        if (lastChar !== '?' && lastChar !== '.' && questionStarters.includes(firstWord)) prompt += '?'
+        if (!['?', '.', '>'].includes(lastChar) && questionStarters.includes(firstWord)) prompt += '?'
 
         const chatContext = needsContext(prompt) && sessionId ?
             instructionStart + memoryRef.current[sessionId].memory + instructionEnd : ''
