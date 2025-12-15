@@ -90,7 +90,7 @@ export default function Admin({ }: Props) {
     const [showFullChat, setShowFullChat] = useState<dataObj>({})
     const [selectedSession, setSelectedSession] = useState(-1)
     const [retrieveK, setRetrieveK] = useState(3)
-    const [searchSource, setSearchSource] = useState('HPx')
+    const [searchSource, setSearchSource] = useState({ label: 'HPx', value: 'HPx' })
     const { isLoggedIn, theme, setTheme } = useContext(AppContext)
     const navigate = useNavigate()
     const containerRef = useRef(null)
@@ -422,7 +422,7 @@ export default function Admin({ }: Props) {
                     query: content,
                     fulltext: fullSearch,
                     k: retrieveK,
-                    source: searchSource
+                    source: searchSource.value || 'HPx'
                 })
             })
 
