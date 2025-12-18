@@ -603,7 +603,7 @@ export default function Admin({ }: Props) {
         return (
             <Modal
                 title={selectedSession !== -1 ?
-                    `${analyticsCopy[selectedSession].messages[0].content}`
+                    `${getShortenedString(analyticsCopy[selectedSession].messages[0].content || getShortenedString(analyticsCopy[selectedSession].messages[0].prompt))}`
                     : `Registered user queries (${analyticsCopy.filter(a => a.prompt).length})`}
                 subtitle={`Total LLM queries ${analyticsCopy.length}`}
                 onClose={() => {
