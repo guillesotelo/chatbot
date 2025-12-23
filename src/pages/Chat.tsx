@@ -631,7 +631,8 @@ export function Chat() {
                 message_count: session.messages.length,
                 token_count: prompt.length,
                 prompt,
-                duration_seconds
+                duration_seconds,
+                app_version: APP_VERSION
             }
 
             const response = await fetch(`${apiURl}/api/save_analytics`, {

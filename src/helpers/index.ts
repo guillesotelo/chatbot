@@ -63,14 +63,18 @@ export const whenDateIs = (date: Date | string | number | undefined, showDates =
     const current = new Date(date)
     const today = new Date().toLocaleDateString()
     const yesterday = new Date(new Date().getTime() - 86400000).toLocaleDateString() // minus 1 day in miliseconds
+    const twoDaysAgo = new Date(new Date().getTime() - 172800000).toLocaleDateString()
+    const threeDaysAgo = new Date(new Date().getTime() - 259200000).toLocaleDateString()
     const lastWeek = new Date().getTime() - 604800000
     const lastMonth = new Date().getTime() - 2505600000
     const lastYear = new Date().getTime() - 31449600000
 
     const hour = getDate(current)?.split(' ')[1]
 
-    if (today === current.toLocaleDateString()) return `Today ${hour}`
-    if (yesterday === current.toLocaleDateString()) return `Yesterday ${hour}`
+    if (today === current.toLocaleDateString()) return `Today, ${hour}`
+    if (yesterday === current.toLocaleDateString()) return `Yesterday, ${hour}`
+    if (twoDaysAgo === current.toLocaleDateString()) return `Two days ago, ${hour}`
+    if (threeDaysAgo === current.toLocaleDateString()) return `Three days ago, ${hour}`
 
     if (showDates) {
         if (current.getTime() >= lastWeek) return `Last week (${getDate(current)})`

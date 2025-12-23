@@ -612,6 +612,7 @@ export default function Admin({ }: Props) {
                 }}>
                 {selectedSession !== -1 ?
                     <div style={{ margin: '1rem' }}>
+                        {analyticsCopy[selectedSession].app_version ? <p>App version: {analyticsCopy[selectedSession].app_version}</p> : ''}
                         <div className="chat__message-content" style={{ background: 'unset', padding: 0 }}>
                             <Button
                                 label='Back to query list'
