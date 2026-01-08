@@ -912,6 +912,8 @@ export function Chat() {
     }
 
     const createSession = () => {
+        if (!getSession().messages.length) return
+
         let newChatId = null
         sessions.forEach(s => {
             if (s.name === 'New chat' && !s.messages.length)

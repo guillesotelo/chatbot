@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.8.4'
+export const APP_VERSION = '3.8.5'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
@@ -191,9 +191,9 @@ export const gratitudePatterns = [
 export const pageReferences = [
     "this page", "the page", "current page", " here", "the webpage", "current webpage",
     "this section", "current section", "this part", "this parragraph", "this topic",
-    "this document", "this documentation",
+    "this document", "this documentation", "these documents", "this guideline", "these guidelines",
     "this article", "this post", "this site",
-    "this chapter", "where i am", "this content",
+    "this chapter", "where i am", "this content", "these instructions", "this instruction"
 ]
 
 export const volvoModels = [
