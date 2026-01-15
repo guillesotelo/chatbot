@@ -590,7 +590,7 @@ export function Chat() {
             'Response:',
             'Veronica:',
             "Answer:",
-            '", respond to this:'
+            instructionEnd
         ]
         const regex = new RegExp(unwantedPatterns.join('|'), 'g')
         const stringWithoutPatterns = str.replace(regex, '')
@@ -647,7 +647,8 @@ export function Chat() {
     }
 
     const getSource = (text: string) => {
-        const lower = text.toLowerCase()
+        const query = text.split(instructionEnd)[1] || text
+        const lower = query.toLowerCase()
         const words = lower.split(/\s+/)
 
         const hasWord = (...targets: string[]) =>
