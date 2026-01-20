@@ -685,7 +685,9 @@ export function Chat() {
         if (hasWord('csstats') || hasText('cs stats'))
             return 'CSSTATS'
 
-        if (hasWord('safetymanual') || hasText('safety manual') || hasText('safety manifest'))
+        if (hasWord('safetymanual') || hasText('safety manual') || hasText('safety manifest')
+            || (hasWord('safety') && hasText('requirement'))
+            || (hasWord('safety') && hasText('rule')))
             return 'SAFETYMANUAL'
 
         return 'HPx'

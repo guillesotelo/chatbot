@@ -671,11 +671,15 @@ export default function Admin({ }: Props) {
                                 key={feedback.id}
                                 className={`chat__message-content${theme} chat__message-content-${feedback.role}`}
                                 style={{
-                                    borderColor: feedback.score === false ? 'red' : feedback.score === true ? 'green' : 'transparent',
-                                    marginBottom: typeof feedback.score === 'boolean' ? '1rem' : ''
+                                    border: feedback.score === false ? '1px solid red' : feedback.score === true ? '1px solid green' : 'transparent',
+                                    margin: '1rem 0',
+                                    padding: feedback.role === 'user' ? '' : '1rem  ',
+                                    background: feedback.context ? '#9b70206e' : ''
                                 }}
                                 dangerouslySetInnerHTML={{
-                                    __html: feedback.role === 'user' ? feedback.content.replace(/\n/g, "<br>") : marked.parse(feedback.content || '') as string,
+                                    __html: feedback.role === 'user' ?
+                                        feedback.content.replace(/\n/g, "<br>")
+                                        : marked.parse(feedback.content || '') as string,
                                 }} />))}
                         {showFullChat[selectedFeedback] ?
                             <Button
