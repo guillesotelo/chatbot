@@ -63,6 +63,7 @@ import { BufferEntry, dataObj, messageType, sessionType } from '../types';
 import { toast } from 'react-toastify';
 import {
     APP_VERSION,
+    CATEGORY_MAP,
     commonWords,
     gratitudePatterns,
     greetingPatterns,
@@ -1870,12 +1871,22 @@ export function Chat() {
                     <div className="chat__popup-window-header-options">
                         <Dropdown
                             label=''
+                            options={CATEGORY_MAP}
+                            objKey='label'
+                            selected={source}
+                            setSelected={setSource}
+                            value={source}
+                            style={{ width: '25vw' }}
+                            noBorder
+                        />
+                        <Dropdown
+                            label=''
                             options={[...filteredSessions].filter(s => s.name)}
                             objKey='name'
                             selected={getSession()}
                             setSelected={selectSession}
                             value={getSession()}
-                            style={{ width: '35vw' }}
+                            style={{ width: '25vw' }}
                             noBorder
                         />
                         <Tooltip tooltip='Start new chat'>
