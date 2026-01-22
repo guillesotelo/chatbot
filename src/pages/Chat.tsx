@@ -648,6 +648,8 @@ export function Chat() {
     }
 
     const getSource = (text: string) => {
+        if (source !== 'HPx' && source !== 'legacy') return source
+
         const query = text.split(instructionEnd)[1] || text
         const lower = query.toLowerCase()
         const words = lower.split(/\s+/)
