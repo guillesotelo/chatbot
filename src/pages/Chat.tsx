@@ -154,6 +154,7 @@ export function Chat() {
     const [showUserOptions, setShowUserOptions] = useState('')
     const [useMemory, setUseMemory] = useState(true)
     const [currentHref, setCurrentHref] = useState<{ href?: string, referenced?: boolean }>({})
+    const [showTooltip, setShowTooltip] = useState(true)
     const { theme, setTheme, isMobile, isLoggedIn, setIsLoggedIn } = useContext(AppContext)
     const { transcript, listening, startListening, stopListening, speechAvailable } = useSpeechRecognition()
     const messageRef = useRef<HTMLTextAreaElement>(null)
@@ -1871,26 +1872,32 @@ export function Chat() {
                 </Tooltip>
                 <div className="chat__popup-window-header-controls">
                     <div className="chat__popup-window-header-options">
-                        <Dropdown
-                            label=''
-                            options={CATEGORY_MAP}
-                            objKey='label'
-                            selected={source}
-                            setSelected={setSource}
-                            value={source}
-                            style={{ width: '25vw' }}
-                            noBorder
-                        />
-                        <Dropdown
-                            label=''
-                            options={[...filteredSessions].filter(s => s.name)}
-                            objKey='name'
-                            selected={getSession()}
-                            setSelected={selectSession}
-                            value={getSession()}
-                            style={{ width: '25vw' }}
-                            noBorder
-                        />
+                        <Tooltip tooltip='Scope' show={showTooltip}>
+                            <Dropdown
+                                label=''
+                                options={CATEGORY_MAP}
+                                objKey='label'
+                                selected={source}
+                                setSelected={setSource}
+                                value={source}
+                                style={{ width: '23vw' }}
+                                noBorder
+                                setShowTooltip={setShowTooltip}
+                            />
+                        </Tooltip>
+                        <Tooltip tooltip='Chat session' show={showTooltip}>
+                            <Dropdown
+                                label=''
+                                options={[...filteredSessions].filter(s => s.name)}
+                                objKey='name'
+                                selected={getSession()}
+                                setSelected={selectSession}
+                                value={getSession()}
+                                style={{ width: '25vw' }}
+                                noBorder
+                                setShowTooltip={setShowTooltip}
+                            />
+                        </Tooltip>
                         <Tooltip tooltip='Start new chat'>
                             <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__popup-window-header-newchat${theme}`} />
                         </Tooltip>

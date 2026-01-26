@@ -11,7 +11,7 @@ type Props = {
 }
 
 export default function Tooltip({ tooltip, children, inline, style, boxStyle, show, position }: Props) {
-    const [showTooltip, setShowTooltip] = useState(show)
+    const [showTooltip, setShowTooltip] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
     const [childrenWidth, setChildrenWidth] = useState(0)
     const [childrenHeight, setChildrenHeight] = useState(0)
@@ -34,11 +34,13 @@ export default function Tooltip({ tooltip, children, inline, style, boxStyle, sh
         if (show === false || show === null) setShowTooltip(false)
     }, [show])
 
+    const st = () => show !== false && show !== null
+
     return (
         <div
             className="tooltip__container"
             style={{ ...style, placeContent: inline ? '' : 'center' }}
-            onMouseOver={() => setShowTooltip(true)}
+            onMouseOver={() => st() ? setShowTooltip(true) : null}
             onMouseOut={() => setShowTooltip(false)}
             ref={containerRef}>
             {children}

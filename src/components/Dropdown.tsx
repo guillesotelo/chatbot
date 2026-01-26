@@ -21,6 +21,7 @@ type Props = {
     bgColor?: string
     color?: string
     noBorder?: boolean
+    setShowTooltip?: (value: boolean) => void
 }
 
 export default function Dropdown(props: Props) {
@@ -46,7 +47,8 @@ export default function Dropdown(props: Props) {
         loading,
         bgColor,
         color,
-        noBorder
+        noBorder,
+        setShowTooltip
     } = props
 
     useEffect(() => {
@@ -76,6 +78,8 @@ export default function Dropdown(props: Props) {
                 optionsRef.current.style.width = (bounding.width - 2).toFixed(0) + 'px'
             }
         }
+
+        if(setShowTooltip) setShowTooltip(!openDrop)
     }, [openDrop])
 
     const getSelectValues = () => {
@@ -212,7 +216,7 @@ export default function Dropdown(props: Props) {
 
     const renderSimpleSelect = () => {
         return (
-            <div className={`dropdown__container${theme}`} style={{ ...style, backgroundColor: bgColor || '' }}>
+            <div className={`dropdown__container${theme}`} style={{ ...style, backgroundColor: bgColor || '', width: openDrop ? style?.width || '' : 'fit-content' }}>
                 {label ? <h4 className={`dropdown__label${theme}`}>{label}</h4> : ''}
                 <div ref={dropRef} className={`dropdown__select-section${theme}`}>
                     {loading ? renderLoading() : renderSelectedItem()}
