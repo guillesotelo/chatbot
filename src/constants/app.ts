@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.9'
+export const APP_VERSION = '3.9.1'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
@@ -197,7 +197,7 @@ export const pageReferences = [
 ]
 
 export const volvoModels = [
-    "EX30", "EX40", "EX60", "EX90",
+    "EX30", "EX40", "EX60", "EX90", "ES90",
     "C40", "XC40", "XC60", "XC70", "XC90",
     "S40", "S60", "S70", "S80", "S90",
     "V40", "V50", "V60", "V70", "V90",
