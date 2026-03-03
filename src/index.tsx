@@ -4,7 +4,7 @@ import './index.css';
 import App from './App';
 import { AppProvider } from './AppContext';
 import ReactGA from 'react-ga4';
-const TRACKING_ID = "G-V6HK4YH119";
+const TRACKING_ID = "G-94FJ2WWM6B";
 ReactGA.initialize(TRACKING_ID, {
   gaOptions: {
     anonymizeIp: true,
