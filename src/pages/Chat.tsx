@@ -1880,7 +1880,7 @@ export function Chat() {
                                 selected={source}
                                 setSelected={setSource}
                                 value={source}
-                                style={{ width: '23vw' }}
+                                style={{ width: '23vw', maxWidth: '23vw' }}
                                 noBorder
                                 setShowTooltip={setShowTooltip}
                             />
@@ -1893,7 +1893,7 @@ export function Chat() {
                                 selected={getSession()}
                                 setSelected={selectSession}
                                 value={getSession()}
-                                style={{ width: '25vw' }}
+                                style={{ width: '25vw', maxWidth: '23vw' }}
                                 noBorder
                                 setShowTooltip={setShowTooltip}
                             />
