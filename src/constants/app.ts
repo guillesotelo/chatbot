@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.9.2'
+export const APP_VERSION = '3.9.3'
 // export const APP_VERSION = '0.69' Latest BETA version before launch
 
 export const instructionStart = 'Based on the context and the following conversation history, which may or may not be relevant: "'
@@ -16,7 +16,8 @@ export const SOURCE_MAP = {
     'zonecontroller': 'Zone Controller',
     'digitalkey': 'Digital Key',
     'snok': 'snok',
-    'legacy': 'legacy'
+    'legacy': 'legacy',
+    'elarch': 'elarch'
 }
 
 export const NEW_USER_GREETINGS = [
