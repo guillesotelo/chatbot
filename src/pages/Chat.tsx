@@ -1741,6 +1741,11 @@ export function Chat() {
         return ''
     }
 
+    const getChatEnvironment = () => {
+        if (source === 'elarc') return 'Elarch Expert'
+        return 'HPx Assistant'
+    }
+
     const renderFullAppSidebar = () => {
         return (
             <>
@@ -1866,7 +1871,7 @@ export function Chat() {
                         <img onClick={goToAboutVeronica} src={theme ? HP_DARK : HP} alt="Veronica avatar" draggable={false} className={`chat__popup-window-header-image`} />
                         <div className="chat__popup-window-header-info-text">
                             <p onClick={goToAboutVeronica} className='chat__popup-window-header-title'>Veronica</p>
-                            <p onClick={goToAboutVeronica} className="chat__popup-window-header-subtitle">HPx Assistant</p>
+                            <p onClick={goToAboutVeronica} className="chat__popup-window-header-subtitle">{getChatEnvironment()}</p>
                         </div>
                     </div>
                 </Tooltip>
@@ -1885,19 +1890,21 @@ export function Chat() {
                                 setShowTooltip={setShowTooltip}
                             />
                         </Tooltip>
-                        <Tooltip tooltip='Chat session' show={showTooltip}>
-                            <Dropdown
-                                label=''
-                                options={[...filteredSessions].filter(s => s.name)}
-                                objKey='name'
-                                selected={getSession()}
-                                setSelected={selectSession}
-                                value={getSession()}
-                                style={{ width: '25vw', maxWidth: '23vw' }}
-                                noBorder
-                                setShowTooltip={setShowTooltip}
-                            />
-                        </Tooltip>
+                        {source !== 'elarch' ?
+                            <Tooltip tooltip='Chat session' show={showTooltip}>
+                                <Dropdown
+                                    label=''
+                                    options={[...filteredSessions].filter(s => s.name)}
+                                    objKey='name'
+                                    selected={getSession()}
+                                    setSelected={selectSession}
+                                    value={getSession()}
+                                    style={{ width: '25vw', maxWidth: '23vw' }}
+                                    noBorder
+                                    setShowTooltip={setShowTooltip}
+                                />
+                            </Tooltip>
+                            : ''}
                         <Tooltip tooltip='Start new chat'>
                             <img onClick={createSession} src={NewChat} alt="New Chat" draggable={false} className={`chat__popup-window-header-newchat${theme}`} />
                         </Tooltip>
