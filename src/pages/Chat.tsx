@@ -1741,10 +1741,7 @@ export function Chat() {
         return ''
     }
 
-    const getChatEnvironment = () => {
-        if (source === 'elarc') return 'Elarch Expert'
-        return 'HPx Assistant'
-    }
+    const getChatEnvironment = () => source === 'elarch' ? 'Elarch Expert' : 'HPx Assistant'
 
     const renderFullAppSidebar = () => {
         return (
