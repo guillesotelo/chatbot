@@ -649,6 +649,7 @@ export function Chat() {
     }
 
     const getSource = (text: string) => {
+        if (source === 'elarch') return 'ELARCH'
         if (source !== 'HPx' && source !== 'legacy') return source
 
         const query = text.split(instructionEnd)[1] || text
