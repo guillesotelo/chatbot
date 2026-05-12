@@ -1459,7 +1459,7 @@ export function Chat() {
         window.parent.postMessage({ height: POPUP_HEIGHT, width: POPUP_WIDTH }, '*')
         const anchor = document.createElement('a')
         // anchor.href = `${apiURl}?theme=${theme || 'false'}`
-        anchor.href = `${process.env.REACT_APP_FULL_APP}`
+        anchor.href = `${process.env.REACT_APP_SERVER_URL}`
         anchor.target = '_blank'
         anchor.click()
     }
