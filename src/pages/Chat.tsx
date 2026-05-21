@@ -1029,6 +1029,7 @@ export function Chat() {
                 if (ul.previousElementSibling &&
                     (ul.previousElementSibling.outerHTML.includes('Source:')
                         || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
+                    const webSearch = ul.previousElementSibling.outerHTML.includes('Web')
                     const sourceList: string[] = []
                     Array.from(ul.querySelectorAll('a')).forEach(a => {
                         a.target = '_blank'
@@ -1045,7 +1046,7 @@ export function Chat() {
                                 const titleText = parts.pop() || ''
                                 const subtitleText = parts.join(' / ')
                                 title.textContent = titleText
-                                subtitle.textContent = subtitleText || 'HP Developer Portal'
+                                subtitle.textContent = subtitleText || webSearch ? 'External' : 'HP Developer Portal'
 
                                 a.setAttribute('data-source-processed', 'true')
                                 a.replaceChildren(title, subtitle)
@@ -1072,7 +1073,7 @@ export function Chat() {
                         const titleText = parts.pop() || ''
                         const subtitleText = parts.join(' / ')
                         title.textContent = titleText
-                        subtitle.textContent = subtitleText || 'HP Developer Portal'
+                        subtitle.textContent = subtitleText || webSearch ? 'External' : 'HP Developer Portal'
                         currentPageSource.setAttribute('data-source-processed', 'true')
                         currentPageSource.replaceChildren(title, subtitle)
                         li.appendChild(currentPageSource)
