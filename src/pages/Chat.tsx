@@ -1029,7 +1029,7 @@ export function Chat() {
                 if (ul.previousElementSibling &&
                     (ul.previousElementSibling.outerHTML.includes('Source:')
                         || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
-                    const webSearch = ul.previousElementSibling.outerHTML.includes('Web')
+                    const webSearch = ul.previousElementSibling.outerHTML.includes('Web Source')
                     const sourceList: string[] = []
                     Array.from(ul.querySelectorAll('a')).forEach(a => {
                         a.target = '_blank'
@@ -1046,7 +1046,7 @@ export function Chat() {
                                 const titleText = parts.pop() || ''
                                 const subtitleText = parts.join(' / ')
                                 title.textContent = titleText
-                                subtitle.textContent = subtitleText || webSearch ? 'External' : 'HP Developer Portal'
+                                subtitle.textContent = subtitleText || (webSearch ? 'External' : 'HP Developer Portal')
 
                                 a.setAttribute('data-source-processed', 'true')
                                 a.replaceChildren(title, subtitle)
@@ -1073,7 +1073,7 @@ export function Chat() {
                         const titleText = parts.pop() || ''
                         const subtitleText = parts.join(' / ')
                         title.textContent = titleText
-                        subtitle.textContent = subtitleText || webSearch ? 'External' : 'HP Developer Portal'
+                        subtitle.textContent = subtitleText || (webSearch ? 'External' : 'HP Developer Portal')
                         currentPageSource.setAttribute('data-source-processed', 'true')
                         currentPageSource.replaceChildren(title, subtitle)
                         li.appendChild(currentPageSource)
@@ -1084,7 +1084,13 @@ export function Chat() {
         })
 
         // All links should be opened outside the chat
-        Array.from(document.querySelectorAll('a')).forEach(a => a.target = '_blank')
+        Array.from(document.querySelectorAll('a')).forEach(a => {
+            if(a.href.includes('#web-search-indicator')) {
+                a.remove()
+                if(a.parentElement?.tagName === 'P') a.parentElement.remove()
+            }
+            a.target = '_blank'
+        })
 
         if (!regenerated) setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
     }

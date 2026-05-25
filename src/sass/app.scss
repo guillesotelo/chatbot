@@ -144,3 +144,17 @@ a {
         color: #9c5ffd !important;
     }
 }
+
+a[href="#web-search-indicator"] {
+  text-decoration: none;
+  color: inherit;
+  cursor: default;
+  pointer-events: none;
+  display: inline-block;
+}
+
+a[href="#web-search-indicator"] em {
+  font-style: italic;
+  display: inline-block;
+    animation: pulse 1.5s infinite;
+}
