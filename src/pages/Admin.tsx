@@ -332,7 +332,7 @@ export default function Admin({ }: Props) {
                     const url = `${plantUmlServer}/svg/${encoded}`
                     const diagramOk = await checkPlantUML(url)
                     if (diagramOk) {
-                        codeBlock.innerHTML = `<img style="max-width: 100%; margin: 1rem 0;" src="${url}" alt="PlantUML diagram" />`
+                        codeBlock.innerHTML = `<img style="max-width: 100%; margin: 1rem 0; border-radius: .3rem;" src="${url}" alt="PlantUML diagram" />`
                         codeBlock.style.background = 'transparent'
                         codeBlock.style.textAlign = 'center'
                         return
@@ -346,11 +346,11 @@ export default function Admin({ }: Props) {
                 const headerCopy = document.createElement('div')
                 headerCopy.className = 'chat__code-header-copy'
                 headerCopy.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
-                        </svg>
-                        <p class="chat__code-header-copy-text">Copy code</p>
-                    `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="chat__code-header-copy-svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H19C20.6569 2 22 3.34315 22 5V14C22 15.6569 20.6569 17 19 17H17V19C17 20.6569 15.6569 22 14 22H5C3.34315 22 2 20.6569 2 19V10C2 8.34315 3.34315 7 5 7H7V5ZM9 7H14C15.6569 7 17 8.34315 17 10V15H19C19.5523 15 20 14.5523 20 14V5C20 4.44772 19.5523 4 19 4H10C9.44772 4 9 4.44772 9 5V7ZM5 9C4.44772 9 4 9.44772 4 10V19C4 19.5523 4.44772 20 5 20H14C14.5523 20 15 19.5523 15 19V10C15 9.44772 14.5523 9 14 9H5Z" fill="currentColor"></path>
+                    </svg>
+                    <p class="chat__code-header-copy-text">Copy code</p>
+                `
                 headerCopy.onclick = () => copyCodeToClipboard(index)
 
                 header.appendChild(headerCopy)
@@ -374,7 +374,10 @@ export default function Admin({ }: Props) {
                     (ul.previousElementSibling.outerHTML.includes('Source:')
                         || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
 
+                    const prevHtml = ul.previousElementSibling.outerHTML.toLowerCase()
+                    const webSearch = prevHtml.includes('web source') || prevHtml.includes('web search')
                     const sourceList: string[] = []
+
                     Array.from(ul.querySelectorAll('a')).forEach(a => {
                         a.target = '_blank'
                         if (a.textContent) {
@@ -389,8 +392,17 @@ export default function Admin({ }: Props) {
                                 const parts = a.textContent.split('»').map(s => s.trim())
                                 const titleText = parts.pop() || ''
                                 const subtitleText = parts.join(' / ')
+
                                 title.textContent = titleText
-                                subtitle.textContent = subtitleText || 'HP Developer Portal'
+                                let fallbackSubtitle = 'HP Developer Portal'
+                                if (webSearch) {
+                                    try {
+                                        fallbackSubtitle = new URL(a.href).hostname.replace('www.', '')
+                                    } catch {
+                                        fallbackSubtitle = 'External Source'
+                                    }
+                                }
+                                subtitle.textContent = subtitleText || fallbackSubtitle
 
                                 a.setAttribute('data-source-processed', 'true')
                                 a.replaceChildren(title, subtitle)
@@ -403,6 +415,15 @@ export default function Admin({ }: Props) {
                     if (lastChild) lastChild.style.marginBottom = '.5rem'
                 }
             })
+        })
+
+        // All links should be opened outside the chat
+        Array.from(document.querySelectorAll('a')).forEach(a => {
+            if (a.href.includes('#web-search-indicator')) {
+                a.remove()
+                if (a.parentElement?.tagName === 'P') a.parentElement.remove()
+            }
+            a.target = '_blank'
         })
     }
 

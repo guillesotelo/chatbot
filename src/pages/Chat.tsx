@@ -125,6 +125,22 @@ const MODES = [
 const apiURl = process.env.REACT_APP_SERVER_URL
 const plantUmlServer = process.env.REACT_APP_PLANTUML_SERVER
 
+const appendWithFade = (parent: HTMLElement, el: HTMLElement) => {
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(6px)'
+    parent.appendChild(el)
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = 'opacity 0.65s ease-out, transform 0.45s ease-out'
+        el.style.opacity = '1'
+        el.style.transform = 'translateY(0)'
+        el.addEventListener('transitionend', () => {
+            el.style.removeProperty('opacity')
+            el.style.removeProperty('transform')
+            el.style.removeProperty('transition')
+        }, { once: true })
+    }))
+}
+
 export function Chat() {
     const [input, setInput] = useState('')
     const [copyMessage, setCopyMessage] = useState(-1)
@@ -608,7 +624,37 @@ export function Chat() {
                 autoScroll(!renderFullApp ? '.chat__main' : 'body')
             }
             entry.el.classList.remove('chat__message-loading')
-            entry.el.innerHTML = await marked.parse(tokenBuffer)
+
+            const parsed = await marked.parse(tokenBuffer) as string
+            const temp = document.createElement('div')
+            temp.innerHTML = parsed
+
+            const newCount = temp.children.length
+            if (newCount === 0) return
+
+            const currentCount = entry.el.children.length
+            if (currentCount === 0) entry.el.innerHTML = ''  // clear loading dot text node
+
+            // Finalize existing completed blocks
+            for (let i = 0; i < Math.min(currentCount, newCount - 1); i++) {
+                const existing = entry.el.children[i] as HTMLElement
+                const latest = temp.children[i]
+                if (existing.innerHTML !== latest.innerHTML) existing.innerHTML = latest.innerHTML
+            }
+
+            // Append newly completed blocks with fade-in
+            for (let i = currentCount; i < newCount - 1; i++) {
+                appendWithFade(entry.el, temp.children[i].cloneNode(true) as HTMLElement)
+            }
+
+            // Update or create the last (actively streaming) element
+            const lastNew = temp.children[newCount - 1]
+            const existingLast = entry.el.children[newCount - 1] as HTMLElement | undefined
+            if (existingLast) {
+                existingLast.innerHTML = lastNew.innerHTML
+            } else {
+                appendWithFade(entry.el, lastNew.cloneNode(true) as HTMLElement)
+            }
         }
     }
 
@@ -1029,8 +1075,11 @@ export function Chat() {
                 if (ul.previousElementSibling &&
                     (ul.previousElementSibling.outerHTML.includes('Source:')
                         || ul.previousElementSibling.outerHTML.includes('Sources:'))) {
-                    const webSearch = ul.previousElementSibling.outerHTML.includes('Web Source')
+
+                    const prevHtml = ul.previousElementSibling.outerHTML.toLowerCase()
+                    const webSearch = prevHtml.includes('web source') || prevHtml.includes('web search')
                     const sourceList: string[] = []
+
                     Array.from(ul.querySelectorAll('a')).forEach(a => {
                         a.target = '_blank'
                         if (a.textContent) {
@@ -1045,8 +1094,17 @@ export function Chat() {
                                 const parts = a.textContent.split('»').map(s => s.trim())
                                 const titleText = parts.pop() || ''
                                 const subtitleText = parts.join(' / ')
+
                                 title.textContent = titleText
-                                subtitle.textContent = subtitleText || (webSearch ? 'External' : 'HP Developer Portal')
+                                let fallbackSubtitle = 'HP Developer Portal'
+                                if (webSearch) {
+                                    try {
+                                        fallbackSubtitle = new URL(a.href).hostname.replace('www.', '')
+                                    } catch {
+                                        fallbackSubtitle = 'External Source'
+                                    }
+                                }
+                                subtitle.textContent = subtitleText || fallbackSubtitle
 
                                 a.setAttribute('data-source-processed', 'true')
                                 a.replaceChildren(title, subtitle)
@@ -1069,11 +1127,15 @@ export function Chat() {
                         currentPageSource.className = `chat__message-content-assistant-source${theme}`
                         currentPageSource.href = currentHref.href
                         currentPageSource.target = '_blank'
+
                         const parts = currentHref.href.split('/').map(s => s.trim().replace('.html', ''))
                         const titleText = parts.pop() || ''
                         const subtitleText = parts.join(' / ')
                         title.textContent = titleText
-                        subtitle.textContent = subtitleText || (webSearch ? 'External' : 'HP Developer Portal')
+                        const prevHtml = ul.previousElementSibling.outerHTML.toLowerCase();
+                        const webSearchForCurrent = prevHtml.includes('web source') || prevHtml.includes('web search');
+                        subtitle.textContent = subtitleText || (webSearchForCurrent ? 'External Source' : 'HP Developer Portal')
+
                         currentPageSource.setAttribute('data-source-processed', 'true')
                         currentPageSource.replaceChildren(title, subtitle)
                         li.appendChild(currentPageSource)
@@ -1085,9 +1147,9 @@ export function Chat() {
 
         // All links should be opened outside the chat
         Array.from(document.querySelectorAll('a')).forEach(a => {
-            if(a.href.includes('#web-search-indicator')) {
+            if (a.href.includes('#web-search-indicator')) {
                 a.remove()
-                if(a.parentElement?.tagName === 'P') a.parentElement.remove()
+                if (a.parentElement?.tagName === 'P') a.parentElement.remove()
             }
             a.target = '_blank'
         })
