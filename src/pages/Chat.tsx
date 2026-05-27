@@ -710,7 +710,7 @@ export function Chat() {
 
         if (source === 'legacy') return 'LEGACY_HPx'
 
-        if (hasWord('snok', 'snock')) return 'SNOK'
+        if (hasWord('snok', 'snock', 'snook')) return 'SNOK'
 
         if (hasWord('bazel', 'cstool') || hasText('cs tool'))
             return 'CSTOOL'
@@ -1944,7 +1944,7 @@ export function Chat() {
                 </Tooltip>
                 <div className="chat__popup-window-header-controls">
                     <div className="chat__popup-window-header-options">
-                        {source !== 'elarch' ?
+                        {/* {source !== 'elarch' ?
                             <Tooltip tooltip='Scope' show={showTooltip}>
                                 <Dropdown
                                     label=''
@@ -1958,7 +1958,7 @@ export function Chat() {
                                     setShowTooltip={setShowTooltip}
                                 />
                             </Tooltip>
-                            : ''}
+                            : ''} */}
                         <Tooltip tooltip='Chat session' show={showTooltip}>
                             <Dropdown
                                 label=''
