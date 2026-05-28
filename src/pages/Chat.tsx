@@ -1772,6 +1772,8 @@ export function Chat() {
         a.remove()
     }
 
+    console.log('source', source)
+
     const renderSessionAge = (index: number) => {
         const sessions = [...filteredSessions]
         const currentSessionTime = new Date(sessions[index].updated || '').getTime()
@@ -1841,6 +1843,19 @@ export function Chat() {
                                 </Tooltip>
                                 : ''}
                         </div>
+                        {/* {source !== 'elarch' ?
+                            <Dropdown
+                                label='Source'
+                                options={CATEGORY_MAP}
+                                objKey='label'
+                                selected={source}
+                                setSelected={newVal => setSource(newVal.value)}
+                                value={source}
+                                style={{ width: '90%', margin: '1rem 1rem 0 0' }}
+                                // noBorder
+                                setShowTooltip={setShowTooltip}
+                            />
+                            : ''} */}
                         {/* {!isMobile && source === 'snok' ?
                             <Switch
                                 label='Memory'
@@ -1951,11 +1966,12 @@ export function Chat() {
                                     options={CATEGORY_MAP}
                                     objKey='label'
                                     selected={source}
-                                    setSelected={setSource}
+                                    setSelected={newVal => setSource(newVal.value)}
                                     value={source}
                                     style={{ width: '23vw', maxWidth: '23vw' }}
                                     noBorder
                                     setShowTooltip={setShowTooltip}
+                                    fit
                                 />
                             </Tooltip>
                             : ''} */}

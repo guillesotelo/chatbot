@@ -22,6 +22,7 @@ type Props = {
     color?: string
     noBorder?: boolean
     setShowTooltip?: (value: boolean) => void
+    fit?: boolean
 }
 
 export default function Dropdown(props: Props) {
@@ -48,7 +49,8 @@ export default function Dropdown(props: Props) {
         bgColor,
         color,
         noBorder,
-        setShowTooltip
+        setShowTooltip,
+        fit
     } = props
 
     useEffect(() => {
@@ -79,7 +81,7 @@ export default function Dropdown(props: Props) {
             }
         }
 
-        if(setShowTooltip) setShowTooltip(!openDrop)
+        if (setShowTooltip) setShowTooltip(!openDrop)
     }, [openDrop])
 
     const getSelectValues = () => {
@@ -114,7 +116,7 @@ export default function Dropdown(props: Props) {
             }}
             ref={selectRef}
             onClick={() => setOpenDrop(!openDrop)}>
-            <p className={`dropdown__selected${theme}`} style={{ color: color || '', backgroundColor: bgColor || '' }}>
+            <p className={`dropdown__selected${theme}`} style={{ color: color || '', backgroundColor: bgColor || '', width: fit ? '' : 'fit-content' }}>
                 {getSelectValue()}
             </p>
             <img src={Chevron} alt='Chevron' draggable={false} style={{ transform: openDrop ? 'rotate(180deg)' : '' }} className={`dropdown__chevron${theme}`} />
@@ -195,6 +197,7 @@ export default function Dropdown(props: Props) {
                     style={{
                         height: multiselect ? 'fit-content' : '',
                         flexWrap: multiselect ? 'wrap' : 'unset',
+                        width: fit ? '' : 'fit-content'
                     }}>
                     <BeatLoader color='lightgray' size='1rem' />
                 </p>
@@ -216,7 +219,7 @@ export default function Dropdown(props: Props) {
 
     const renderSimpleSelect = () => {
         return (
-            <div className={`dropdown__container${theme}`} style={{ ...style, backgroundColor: bgColor || '', width: openDrop ? style?.width || '' : 'fit-content' }}>
+            <div className={`dropdown__container${theme}`} style={{ ...style, backgroundColor: bgColor || '', width: openDrop ? style?.width || '' : fit ? 'fit-content' : style?.width }}>
                 {label ? <h4 className={`dropdown__label${theme}`}>{label}</h4> : ''}
                 <div ref={dropRef} className={`dropdown__select-section${theme}`}>
                     {loading ? renderLoading() : renderSelectedItem()}
