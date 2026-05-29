@@ -710,9 +710,12 @@ export function Chat() {
 
         if (source === 'legacy') return 'LEGACY_HPx'
 
+        if (hasWord('bazel', 'basel', 'baazel'))
+            return 'BAZEL'
+
         if (hasWord('snok', 'snock', 'snook')) return 'SNOK'
 
-        if (hasWord('bazel', 'cstool') || hasText('cs tool'))
+        if (hasWord('cstool') || hasText('cs tool'))
             return 'CSTOOL'
 
         if (hasWord('hpsdk') || hasText('hd sdk'))
