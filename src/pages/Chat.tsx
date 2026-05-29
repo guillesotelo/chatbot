@@ -165,7 +165,7 @@ export function Chat() {
     const [sessionDate, setSessionDate] = useState<Date | null>(null)
     const [sendAnalytics, setSendAnalytics] = useState(true)
     const [currentPage, setCurrentPage] = useState('')
-    const [source, setSource] = useState('HPx')
+    const [source, setSource] = useState<string[]>(['HPx'])
     const [editedMessage, setEditedMessage] = useState('')
     const [showUserOptions, setShowUserOptions] = useState('')
     const [useMemory, setUseMemory] = useState(true)
@@ -198,7 +198,7 @@ export function Chat() {
 
         if (from_source) {
             const _source = (SOURCE_MAP as dataObj)[from_source] || 'HPx'
-            setSource(_source)
+            setSource([_source])
             // if (from_source === 'snok') setUseMemory(false)
         }
 
@@ -694,9 +694,12 @@ export function Chat() {
         }
     }
 
-    const getSource = (text: string) => {
-        if (source === 'elarch') return 'ELARCH'
-        if (source !== 'HPx' && source !== 'legacy') return source
+    const getSource = (text: string): string[] => {
+        if (source.includes('elarch')) return ['ELARCH']
+        if (source[0] === 'legacy') return ['LEGACY_HPx']
+
+        const isDefault = source.length === 1 && source[0] === 'HPx'
+        const manualSources = isDefault ? [] : source
 
         const query = text.split(instructionEnd)[1] || text
         const lower = query.toLowerCase()
@@ -708,43 +711,45 @@ export function Chat() {
         const hasText = (...targets: string[]) =>
             targets.some(t => lower.includes(t))
 
-        if (source === 'legacy') return 'LEGACY_HPx'
+        const detected: string[] = []
 
         if (hasWord('bazel', 'basel', 'baazel'))
-            return 'BAZEL'
+            detected.push('BAZEL')
 
-        if (hasWord('snok', 'snock', 'snook')) return 'SNOK'
+        if (hasWord('snok', 'snock', 'snook'))
+            detected.push('SNOK')
 
         if (hasWord('cstool') || hasText('cs tool'))
-            return 'CSTOOL'
+            detected.push('CSTOOL')
 
         if (hasWord('hpsdk') || hasText('hd sdk'))
-            return 'HPSDK'
+            detected.push('HPSDK')
 
         if (hasWord('hpxa', 'hptcl') || hasText('test case library'))
-            return 'HPXA'
+            detected.push('HPXA')
 
         if (hasWord('zuul'))
-            return 'ZUUL'
+            detected.push('ZUUL')
 
         if (hasWord('simulink', 'powertrain', 'targetlink', 'testweaver') || hasText('function development'))
-            return 'SIMULINK'
+            detected.push('SIMULINK')
 
         if (hasWord('spa3') || hasText('spa 3'))
-            return 'SPA3'
+            detected.push('SPA3')
 
         if (hasText('mock'))
-            return 'MOCK'
+            detected.push('MOCK')
 
         if (hasWord('csstats') || hasText('cs stats'))
-            return 'CSSTATS'
+            detected.push('CSSTATS')
 
         if (hasWord('safetymanual') || hasText('safety manual') || hasText('safety manifest')
             || (hasWord('safety') && hasText('requirement'))
             || (hasWord('safety') && hasText('rule')))
-            return 'SAFETYMANUAL'
+            detected.push('SAFETYMANUAL')
 
-        return 'HPx'
+        const merged = Array.from(new Set([...manualSources, ...detected]))
+        return merged.length ? merged : ['HPx']
     }
 
 
@@ -801,7 +806,7 @@ export function Chat() {
                     user_prompt: content || '',
                     use_context,
                     first_query,
-                    source: getSource(content),
+                    source: getSource(content).join(','),
                     // use_history: useMemory ? 'true' : 'false',
                     // stream_id: streamId ? String(streamId) : ''
                 }),
@@ -1816,7 +1821,7 @@ export function Chat() {
         return ''
     }
 
-    const getChatEnvironment = () => source === 'elarch' ? 'Elarch Expert' : 'HPx Assistant'
+    const getChatEnvironment = () => source.includes('elarch') ? 'Elarch Expert' : 'AI Assistant'
 
     const renderFullAppSidebar = () => {
         return (
@@ -1846,16 +1851,16 @@ export function Chat() {
                                 </Tooltip>
                                 : ''}
                         </div>
-                        {/* {source !== 'elarch' ?
+                        {/* {!source.includes('elarch') ?
                             <Dropdown
-                                label='Source'
+                                label='Sources'
                                 options={CATEGORY_MAP}
                                 objKey='label'
-                                selected={source}
-                                setSelected={newVal => setSource(newVal.value)}
-                                value={source}
+                                selected={source.map(s => CATEGORY_MAP.find(c => c.value === s)).filter(Boolean)}
+                                setSelected={(newArr: any[]) => setSource(newArr.map((o: any) => o.value))}
+                                value={source.map(s => CATEGORY_MAP.find(c => c.value === s)).filter(Boolean)}
                                 style={{ width: '90%', margin: '1rem 1rem 0 0' }}
-                                // noBorder
+                                multiselect
                                 setShowTooltip={setShowTooltip}
                             />
                             : ''} */}
@@ -1962,21 +1967,20 @@ export function Chat() {
                 </Tooltip>
                 <div className="chat__popup-window-header-controls">
                     <div className="chat__popup-window-header-options">
-                        {/* {source !== 'elarch' ?
-                            <Tooltip tooltip='Scope' show={showTooltip}>
-                                <Dropdown
-                                    label=''
-                                    options={CATEGORY_MAP}
-                                    objKey='label'
-                                    selected={source}
-                                    setSelected={newVal => setSource(newVal.value)}
-                                    value={source}
-                                    style={{ width: '23vw', maxWidth: '23vw' }}
-                                    noBorder
-                                    setShowTooltip={setShowTooltip}
-                                    fit
-                                />
-                            </Tooltip>
+                        {/* {!source.includes('elarch') ?
+                            <Dropdown
+                                label=''
+                                options={CATEGORY_MAP}
+                                objKey='label'
+                                selected={source.map(s => CATEGORY_MAP.find(c => c.value === s)).filter(Boolean)}
+                                setSelected={(newArr: any[]) => setSource(newArr.map((o: any) => o.value))}
+                                value={source.map(s => CATEGORY_MAP.find(c => c.value === s)).filter(Boolean)}
+                                style={{ width: '23vw', maxWidth: '23vw' }}
+                                multiselect
+                                noBorder
+                                setShowTooltip={setShowTooltip}
+                                fit
+                            />
                             : ''} */}
                         <Tooltip tooltip='Chat session' show={showTooltip}>
                             <Dropdown
