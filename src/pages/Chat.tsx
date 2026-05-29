@@ -1159,7 +1159,13 @@ export function Chat() {
                 a.remove()
                 if (a.parentElement?.tagName === 'P') a.parentElement.remove()
             }
+            // Always open in new tab
             a.target = '_blank'
+
+            // Replace any markdown page to HTML -> only supported in hpdevp
+            if ((a.href.includes('hpdevp.') || a.href.includes('elarch.')) && a.href.includes('.md')) {
+                a.href = a.href.replace('.md', '.html')
+            }
         })
 
         if (!regenerated) setTimeout(() => autoScroll(!renderFullApp ? '.chat__main' : 'body'), 5)
